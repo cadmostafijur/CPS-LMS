@@ -1,0 +1,37 @@
+﻿# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+.next/
+out/
+build/
+dist/
+.strapi/
+.cache/
+tmp/
+*.tsbuildinfo
+
+# Env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs / OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Uploads / coverage
+backend/public/uploads/*
+!backend/public/uploads/.gitkeep
+coverage/
+.turbo/

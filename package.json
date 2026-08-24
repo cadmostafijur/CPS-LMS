@@ -1,0 +1,17 @@
+{
+  "name": "cps-academy-lms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CPS Academy Learning Management System — Next.js + Strapi + PostgreSQL",
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run develop --prefix backend",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "test:backend": "npm test --prefix backend",
+    "lint:frontend": "npm run lint --prefix frontend"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
