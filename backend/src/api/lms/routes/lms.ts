@@ -90,6 +90,24 @@ export default {
       config: { policies: ['global::is-admin'] },
     },
     {
+      method: 'GET',
+      path: '/lms/courses/:courseId/player',
+      handler: 'lms.getCoursePlayer',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/catalog',
+      handler: 'lms.listCatalog',
+      config: { auth: false },
+    },
+    {
+      method: 'GET',
+      path: '/lms/catalog/:slug',
+      handler: 'lms.getCatalogCourse',
+      config: { auth: false },
+    },
+    {
       method: 'POST',
       path: '/lms/courses',
       handler: 'lms.createCourse',

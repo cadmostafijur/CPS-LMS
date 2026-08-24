@@ -991,6 +991,142 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     return { data: { id: quiz.id, documentId: quiz.documentId } };
   },
 
+  async getCoursePlayer(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    const course = await findCourse(strapi, ctx.params.courseId, {
+      instructor: true,
+      lessons: true,
+      quizzes: true,
+    });
+    if (!course) throw new NotFoundError('Course not found');
+
+    const enrollment = await strapi.db.query('api::enrollment.enrollment').findOne({
+      where: { student: user.id, course: course.id },
+    });
+
+    const canManage = canManageCourse(user, course);
+    if (!enrollment && !canManage && !isAdmin(user) && !isContentManager(user)) {
+      throw new ForbiddenError('You are not enrolled in this course');
+    }
+
+    const lessons = await strapi.db.query('api::lesson.lesson').findMany({
+      where: { course: course.id },
+      orderBy: { order: 'asc' },
+    });
+
+    const quizzes = await strapi.db.query('api::quiz.quiz').findMany({
+      where: { course: course.id },
+    });
+
+    return {
+      data: {
+        id: course.id,
+        documentId: course.documentId,
+        title: course.title,
+        slug: course.slug,
+        description: course.description,
+        shortDescription: course.shortDescription,
+        thumbnailUrl: course.thumbnailUrl,
+        status: course.status,
+        instructor: sanitizeUser(course.instructor),
+        lessons,
+        quizzes: quizzes.map((q: any) => ({
+          id: q.id,
+          documentId: q.documentId,
+          title: q.title,
+          description: q.description,
+        })),
+      },
+    };
+  },
+
+  async listCatalog(ctx: Ctx) {
+    const search = String(ctx.query?.search || '').trim();
+    const where: Record<string, unknown> = { status: 'PUBLISHED' };
+    if (search) {
+      where.$or = [
+        { title: { $containsi: search } },
+        { shortDescription: { $containsi: search } },
+        { description: { $containsi: search } },
+      ];
+    }
+
+    const courses = await strapi.db.query('api::course.course').findMany({
+      where,
+      populate: {
+        instructor: true,
+        lessons: true,
+        quizzes: true,
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    return {
+      data: courses.map((course: any) => ({
+        id: course.id,
+        documentId: course.documentId,
+        title: course.title,
+        slug: course.slug,
+        description: course.description,
+        shortDescription: course.shortDescription,
+        thumbnailUrl: course.thumbnailUrl,
+        status: course.status,
+        instructor: sanitizeUser(course.instructor),
+        lessonCount: course.lessons?.length ?? 0,
+        quizCount: course.quizzes?.length ?? 0,
+        createdAt: course.createdAt,
+        updatedAt: course.updatedAt,
+      })),
+    };
+  },
+
+  async getCatalogCourse(ctx: Ctx) {
+    const slug = ctx.params.slug;
+    const course = await strapi.db.query('api::course.course').findOne({
+      where: { slug, status: 'PUBLISHED' },
+      populate: {
+        instructor: true,
+        lessons: { orderBy: { order: 'asc' } },
+        quizzes: true,
+      },
+    });
+
+    if (!course) throw new NotFoundError('Course not found');
+
+    return {
+      data: {
+        id: course.id,
+        documentId: course.documentId,
+        title: course.title,
+        slug: course.slug,
+        description: course.description,
+        shortDescription: course.shortDescription,
+        thumbnailUrl: course.thumbnailUrl,
+        status: course.status,
+        instructor: sanitizeUser(course.instructor),
+        lessons: (course.lessons || []).map((lesson: any) => ({
+          id: lesson.id,
+          documentId: lesson.documentId,
+          title: lesson.title,
+          slug: lesson.slug,
+          lessonType: lesson.lessonType,
+          order: lesson.order,
+          // Content/video withheld until enrollment (learning player fetches securely)
+        })),
+        quizzes: (course.quizzes || []).map((quiz: any) => ({
+          id: quiz.id,
+          documentId: quiz.documentId,
+          title: quiz.title,
+          description: quiz.description,
+        })),
+        lessonCount: course.lessons?.length ?? 0,
+        quizCount: course.quizzes?.length ?? 0,
+        createdAt: course.createdAt,
+        updatedAt: course.updatedAt,
+      },
+    };
+  },
+
   async listBlog(_ctx: Ctx) {
     const posts = await strapi.db.query('api::blog-post.blog-post').findMany({
       where: { status: 'PUBLISHED' },

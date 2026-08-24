@@ -44,6 +44,15 @@ export default ({ strapi }: { strapi: any }) => ({
   async adminUpdateUserStatus(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').adminUpdateUserStatus(ctx);
   },
+  async getCoursePlayer(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').getCoursePlayer(ctx);
+  },
+  async listCatalog(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listCatalog(ctx);
+  },
+  async getCatalogCourse(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').getCatalogCourse(ctx);
+  },
   async createCourse(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').createCourse(ctx);
   },

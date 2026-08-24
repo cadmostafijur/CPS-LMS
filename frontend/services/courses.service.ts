@@ -1,4 +1,4 @@
-import { apiFetch, unwrapStrapiEntity, unwrapStrapiList } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import type {
   ApiDataResponse,
   Course,
@@ -7,44 +7,26 @@ import type {
 } from "@/types";
 
 export async function listPublishedCourses(search?: string) {
-  const params: Record<string, string> = {
-    "filters[status][$eq]": "PUBLISHED",
-    populate: "*",
-    "sort[0]": "createdAt:desc",
-  };
-  if (search) {
-    params["filters[$or][0][title][$containsi]"] = search;
-    params["filters[$or][1][shortDescription][$containsi]"] = search;
-  }
-
-  const res = await apiFetch<{ data: unknown[] }>(`/courses`, {
+  const res = await apiFetch<ApiDataResponse<Course[]>>(`/lms/catalog`, {
     auth: false,
-    searchParams: params,
+    searchParams: search ? { search } : undefined,
   });
-
-  return unwrapStrapiList<Course>(res as never) as Course[];
+  return res.data ?? [];
 }
 
 export async function getCourseBySlug(slug: string) {
-  const res = await apiFetch<{ data: unknown[] }>(`/courses`, {
+  const res = await apiFetch<ApiDataResponse<Course>>(`/lms/catalog/${slug}`, {
     auth: false,
-    searchParams: {
-      "filters[slug][$eq]": slug,
-      populate: "*",
-    },
   });
-  const list = unwrapStrapiList<Course>(res as never) as Course[];
-  return list[0] ?? null;
+  return res.data ?? null;
 }
 
 export async function getCourseById(id: string | number, token?: string | null) {
-  const res = await apiFetch<{ data: unknown }>(`/courses/${id}`, {
-    token,
-    searchParams: {
-      populate: "*",
-    },
-  });
-  return unwrapStrapiEntity<Course>(res as never) as Course | null;
+  const res = await apiFetch<ApiDataResponse<Course>>(
+    `/lms/courses/${id}/player`,
+    { token }
+  );
+  return res.data ?? null;
 }
 
 export async function enrollInCourse(courseId: string | number, token?: string | null) {
