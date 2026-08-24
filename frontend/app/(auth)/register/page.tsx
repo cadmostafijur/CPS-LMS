@@ -1,0 +1,34 @@
+import Image from "next/image";
+import Link from "next/link";
+import { RegisterForm } from "@/features/auth/register-form";
+
+export const metadata = {
+  title: "Create account",
+  description: "Join CPS Academy",
+};
+
+export default function RegisterPage() {
+  return (
+    <div className="grid min-h-screen lg:grid-cols-2">
+      <div className="relative hidden overflow-hidden bg-navy lg:flex lg:flex-col lg:justify-between lg:p-10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(245,197,24,0.25),transparent_45%),radial-gradient(circle_at_70%_80%,rgba(249,115,22,0.22),transparent_40%)]" />
+        <Link href="/" className="relative z-10 flex items-center gap-3 text-white">
+          <Image src="/logo.png" alt="CPS Academy" width={44} height={44} />
+          <span className="font-display text-xl font-bold">CPS Academy</span>
+        </Link>
+        <div className="relative z-10 max-w-md text-white">
+          <p className="font-display text-3xl font-semibold">
+            Start learning with CPS Academy
+          </p>
+          <p className="mt-3 text-white/70">
+            Create your account and enroll in courses built for real skills.
+          </p>
+        </div>
+        <p className="relative z-10 text-sm text-white/40">Modern SaaS education.</p>
+      </div>
+      <div className="flex items-center justify-center bg-surface px-4 py-12">
+        <RegisterForm />
+      </div>
+    </div>
+  );
+}
