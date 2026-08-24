@@ -1,0 +1,183 @@
+/**
+ * Custom LMS content-api routes.
+ * Policies enforce role gates; student identity always comes from JWT.
+ */
+export default {
+  type: 'content-api' as const,
+  routes: [
+    {
+      method: 'POST',
+      path: '/lms/enroll/:courseId',
+      handler: 'lms.enroll',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/my-courses',
+      handler: 'lms.myCourses',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/lessons/:lessonId/complete',
+      handler: 'lms.completeLesson',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/courses/:courseId/progress',
+      handler: 'lms.courseProgress',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/quizzes/:quizId/take',
+      handler: 'lms.takeQuiz',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/quizzes/:quizId/submit',
+      handler: 'lms.submitQuiz',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/quizzes/:quizId/attempts',
+      handler: 'lms.quizAttempts',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/dashboard/student',
+      handler: 'lms.studentDashboard',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/dashboard/instructor',
+      handler: 'lms.instructorDashboard',
+      config: { policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/dashboard/content-manager',
+      handler: 'lms.contentManagerDashboard',
+      config: { policies: ['global::is-content-manager-or-admin'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/dashboard/admin',
+      handler: 'lms.adminDashboard',
+      config: { policies: ['global::is-admin'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/admin/users',
+      handler: 'lms.adminListUsers',
+      config: { policies: ['global::is-admin'] },
+    },
+    {
+      method: 'PATCH',
+      path: '/lms/admin/users/:userId/role',
+      handler: 'lms.adminUpdateUserRole',
+      config: { policies: ['global::is-admin'] },
+    },
+    {
+      method: 'PATCH',
+      path: '/lms/admin/users/:userId/status',
+      handler: 'lms.adminUpdateUserStatus',
+      config: { policies: ['global::is-admin'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/courses',
+      handler: 'lms.createCourse',
+      config: { policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'PUT',
+      path: '/lms/courses/:id',
+      handler: 'lms.updateCourse',
+      config: { policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'DELETE',
+      path: '/lms/courses/:id',
+      handler: 'lms.deleteCourse',
+      config: { policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/courses/:courseId/lessons',
+      handler: 'lms.createLesson',
+      config: { policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'PUT',
+      path: '/lms/lessons/:id',
+      handler: 'lms.updateLesson',
+      config: { policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'DELETE',
+      path: '/lms/lessons/:id',
+      handler: 'lms.deleteLesson',
+      config: { policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/courses/:courseId/quizzes',
+      handler: 'lms.createQuiz',
+      config: { policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'PUT',
+      path: '/lms/quizzes/:id',
+      handler: 'lms.updateQuiz',
+      config: { policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'DELETE',
+      path: '/lms/quizzes/:id',
+      handler: 'lms.deleteQuiz',
+      config: { policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/blog',
+      handler: 'lms.listBlog',
+      config: { auth: false },
+    },
+    {
+      method: 'GET',
+      path: '/lms/blog/manage',
+      handler: 'lms.manageBlog',
+      config: { policies: ['global::is-content-manager-or-admin'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/blog/:slug',
+      handler: 'lms.getBlogBySlug',
+      config: { auth: false },
+    },
+    {
+      method: 'POST',
+      path: '/lms/blog',
+      handler: 'lms.createBlog',
+      config: { policies: ['global::is-content-manager-or-admin'] },
+    },
+    {
+      method: 'PUT',
+      path: '/lms/blog/:id',
+      handler: 'lms.updateBlog',
+      config: { policies: ['global::is-content-manager-or-admin'] },
+    },
+    {
+      method: 'DELETE',
+      path: '/lms/blog/:id',
+      handler: 'lms.deleteBlog',
+      config: { policies: ['global::is-content-manager-or-admin'] },
+    },
+  ],
+};
