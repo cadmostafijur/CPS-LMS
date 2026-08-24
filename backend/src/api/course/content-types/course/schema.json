@@ -1,0 +1,68 @@
+{
+  "kind": "collectionType",
+  "collectionName": "courses",
+  "info": {
+    "singularName": "course",
+    "pluralName": "courses",
+    "displayName": "Course",
+    "description": "LMS course"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "shortDescription": {
+      "type": "string"
+    },
+    "thumbnailUrl": {
+      "type": "string"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"],
+      "default": "DRAFT"
+    },
+    "instructor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "instructedCourses"
+    },
+    "createdByUser": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "createdCourses"
+    },
+    "lessons": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::lesson.lesson",
+      "mappedBy": "course"
+    },
+    "enrollments": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::enrollment.enrollment",
+      "mappedBy": "course"
+    },
+    "quizzes": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quiz.quiz",
+      "mappedBy": "course"
+    }
+  }
+}

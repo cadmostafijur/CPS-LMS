@@ -1,0 +1,37 @@
+{
+  "kind": "collectionType",
+  "collectionName": "lesson_progresses",
+  "info": {
+    "singularName": "lesson-progress",
+    "pluralName": "lesson-progresses",
+    "displayName": "Lesson Progress",
+    "description": "Student lesson completion tracking"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "student": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course"
+    },
+    "lesson": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::lesson.lesson"
+    },
+    "completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "completedAt": {
+      "type": "datetime"
+    }
+  }
+}

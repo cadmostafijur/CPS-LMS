@@ -1,0 +1,44 @@
+{
+  "kind": "collectionType",
+  "collectionName": "quiz_attempts",
+  "info": {
+    "singularName": "quiz-attempt",
+    "pluralName": "quiz-attempts",
+    "displayName": "Quiz Attempt",
+    "description": "Student quiz attempt"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "quiz": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::quiz.quiz",
+      "inversedBy": "attempts"
+    },
+    "student": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "score": {
+      "type": "integer"
+    },
+    "totalQuestions": {
+      "type": "integer"
+    },
+    "percentage": {
+      "type": "decimal"
+    },
+    "submittedAt": {
+      "type": "datetime"
+    },
+    "answers": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quiz-answer.quiz-answer",
+      "mappedBy": "attempt"
+    }
+  }
+}

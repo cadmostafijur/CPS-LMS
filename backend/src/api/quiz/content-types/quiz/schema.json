@@ -1,0 +1,45 @@
+{
+  "kind": "collectionType",
+  "collectionName": "quizzes",
+  "info": {
+    "singularName": "quiz",
+    "pluralName": "quizzes",
+    "displayName": "Quiz",
+    "description": "Course quiz"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course",
+      "inversedBy": "quizzes"
+    },
+    "createdByUser": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "questions": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quiz-question.quiz-question",
+      "mappedBy": "quiz"
+    },
+    "attempts": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quiz-attempt.quiz-attempt",
+      "mappedBy": "quiz"
+    }
+  }
+}

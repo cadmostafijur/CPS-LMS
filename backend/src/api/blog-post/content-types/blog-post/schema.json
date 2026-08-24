@@ -1,0 +1,46 @@
+{
+  "kind": "collectionType",
+  "collectionName": "blog_posts",
+  "info": {
+    "singularName": "blog-post",
+    "pluralName": "blog-posts",
+    "displayName": "Blog Post",
+    "description": "LMS blog post"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "body": {
+      "type": "text"
+    },
+    "excerpt": {
+      "type": "text"
+    },
+    "coverImageUrl": {
+      "type": "string"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["DRAFT", "PUBLISHED"],
+      "default": "DRAFT"
+    },
+    "author": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "publishedAt": {
+      "type": "datetime"
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "kind": "collectionType",
+  "collectionName": "quiz_answers",
+  "info": {
+    "singularName": "quiz-answer",
+    "pluralName": "quiz-answers",
+    "displayName": "Quiz Answer",
+    "description": "Individual quiz answer"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "attempt": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::quiz-attempt.quiz-attempt",
+      "inversedBy": "answers"
+    },
+    "question": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::quiz-question.quiz-question"
+    },
+    "selectedOption": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::quiz-option.quiz-option"
+    },
+    "isCorrect": {
+      "type": "boolean"
+    }
+  }
+}
