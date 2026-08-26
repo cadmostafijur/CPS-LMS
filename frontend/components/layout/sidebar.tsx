@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Award,
   BookOpen,
   FileText,
   LayoutDashboard,
@@ -30,6 +31,8 @@ function navForRole(role: string | null | undefined): NavItem[] {
         { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/admin/users", label: "Users", icon: Users },
         { href: "/admin/courses", label: "Courses", icon: BookOpen },
+        { href: "/admin/enrollments", label: "Enrollments", icon: GraduationCap },
+        { href: "/admin/certificates", label: "Certificates", icon: Award },
         { href: "/admin/blog", label: "Blog", icon: FileText },
       ];
     case ROLE_NAMES.CONTENT_MANAGER:
@@ -58,6 +61,11 @@ function navForRole(role: string | null | undefined): NavItem[] {
           href: "/student/my-courses",
           label: "My courses",
           icon: GraduationCap,
+        },
+        {
+          href: "/student/certificates",
+          label: "Certificates",
+          icon: Award,
         },
       ];
   }

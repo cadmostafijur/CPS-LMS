@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
@@ -7,6 +8,8 @@ import { SearchInput } from "@/components/shared/search-input";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,6 +25,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ALL_ROLES, ROLE_NAMES, type RoleName } from "@/lib/roles";
 import { bffFetch, ApiError } from "@/lib/api";
@@ -38,6 +49,14 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
     user: User;
     role: RoleName;
   } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: ROLE_NAMES.STUDENT as RoleName,
+  });
 
   function load() {
     startTransition(async () => {
@@ -79,17 +98,52 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
     }
   }
 
-  async function toggleStatus(user: User) {
-    const next = !(user.isActive ?? !user.blocked);
+  async function toggleBan(user: User) {
+    const active = user.isActive ?? !user.blocked;
+    const next = !active;
     try {
       await bffFetch(`/api/lms/admin/users/${user.id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ isActive: next }),
       });
-      toast.success(next ? "User activated" : "User deactivated");
+      toast.success(next ? "User unbanned" : "User banned");
       load();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Status update failed");
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      await bffFetch(`/api/lms/admin/users/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+      toast.success("User deleted");
+      setDeleteTarget(null);
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Delete failed");
+    }
+  }
+
+  async function createUser() {
+    try {
+      await bffFetch(`/api/lms/admin/users`, {
+        method: "POST",
+        body: JSON.stringify(createForm),
+      });
+      toast.success("User created");
+      setCreateOpen(false);
+      setCreateForm({
+        name: "",
+        email: "",
+        password: "",
+        role: ROLE_NAMES.STUDENT,
+      });
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Create failed");
     }
   }
 
@@ -100,7 +154,10 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
     <div className="space-y-6">
       <PageHeader
         title="Users"
-        description="Search, change roles, and activate or deactivate accounts."
+        description="Create accounts for any role, ban, or permanently delete users."
+        actions={
+          <Button onClick={() => setCreateOpen(true)}>Create user</Button>
+        }
       />
       <div className="flex flex-col gap-3 sm:flex-row">
         <SearchInput
@@ -129,7 +186,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
           <SelectContent>
             <SelectItem value="all">All status</SelectItem>
             <SelectItem value="true">Active</SelectItem>
-            <SelectItem value="false">Inactive</SelectItem>
+            <SelectItem value="false">Banned</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -141,12 +198,13 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
               <TableHead>User</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.map((user) => {
               const active = user.isActive ?? !user.blocked;
+              const isSelf = String(user.id) === String(currentUserId);
               return (
                 <TableRow key={String(user.id)}>
                   <TableCell>
@@ -174,18 +232,28 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
                   </TableCell>
                   <TableCell>
                     <Badge variant={active ? "success" : "danger"}>
-                      {active ? "Active" : "Inactive"}
+                      {active ? "Active" : "Banned"}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={pending || String(user.id) === String(currentUserId)}
-                      onClick={() => void toggleStatus(user)}
-                    >
-                      {active ? "Deactivate" : "Activate"}
-                    </Button>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={pending || isSelf}
+                        onClick={() => void toggleBan(user)}
+                      >
+                        {active ? "Ban" : "Unban"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={pending || isSelf}
+                        onClick={() => setDeleteTarget(user)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -206,6 +274,87 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
         confirmLabel={isSelfChange ? "Yes, change my role" : "Confirm"}
         onConfirm={() => applyRoleChange(Boolean(isSelfChange))}
       />
+
+      <ConfirmDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete user permanently?"
+        description={`This removes ${deleteTarget?.email} and their enrollments, progress, and certificates. This cannot be undone.`}
+        confirmLabel="Delete user"
+        destructive
+        onConfirm={() => void confirmDelete()}
+      />
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create user</DialogTitle>
+            <DialogDescription>
+              Create a real account for any role (Admin, Content Manager, Instructor, or Student).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="create-name">Full name</Label>
+              <Input
+                id="create-name"
+                value={createForm.name}
+                onChange={(e) =>
+                  setCreateForm((f) => ({ ...f, name: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="create-email">Email</Label>
+              <Input
+                id="create-email"
+                type="email"
+                value={createForm.email}
+                onChange={(e) =>
+                  setCreateForm((f) => ({ ...f, email: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="create-password">Password</Label>
+              <Input
+                id="create-password"
+                type="password"
+                value={createForm.password}
+                onChange={(e) =>
+                  setCreateForm((f) => ({ ...f, password: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <Select
+                value={createForm.role}
+                onValueChange={(value) =>
+                  setCreateForm((f) => ({ ...f, role: value as RoleName }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALL_ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void createUser()}>Create account</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -34,6 +34,18 @@
       "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"],
       "default": "DRAFT"
     },
+    "isFree": {
+      "type": "boolean",
+      "default": true
+    },
+    "price": {
+      "type": "decimal",
+      "default": 0
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    },
     "instructor": {
       "type": "relation",
       "relation": "manyToOne",
@@ -62,6 +74,12 @@
       "type": "relation",
       "relation": "oneToMany",
       "target": "api::quiz.quiz",
+      "mappedBy": "course"
+    },
+    "certificates": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::certificate.certificate",
       "mappedBy": "course"
     }
   }

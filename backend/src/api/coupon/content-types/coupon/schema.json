@@ -1,0 +1,51 @@
+{
+  "kind": "collectionType",
+  "collectionName": "coupons",
+  "info": {
+    "singularName": "coupon",
+    "pluralName": "coupons",
+    "displayName": "Coupon",
+    "description": "Discount coupons for paid courses"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "code": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "string"
+    },
+    "discountType": {
+      "type": "enumeration",
+      "enum": ["PERCENT", "FIXED"],
+      "default": "PERCENT",
+      "required": true
+    },
+    "discountValue": {
+      "type": "decimal",
+      "required": true
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    },
+    "maxUses": {
+      "type": "integer"
+    },
+    "usedCount": {
+      "type": "integer",
+      "default": 0
+    },
+    "expiresAt": {
+      "type": "datetime"
+    },
+    "minAmount": {
+      "type": "decimal",
+      "default": 0
+    }
+  }
+}

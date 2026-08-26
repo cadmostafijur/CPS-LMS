@@ -1,0 +1,49 @@
+{
+  "kind": "collectionType",
+  "collectionName": "certificates",
+  "info": {
+    "singularName": "certificate",
+    "pluralName": "certificates",
+    "displayName": "Certificate",
+    "description": "Course completion certificate"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "code": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "issuedAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "studentName": {
+      "type": "string",
+      "required": true
+    },
+    "courseTitle": {
+      "type": "string",
+      "required": true
+    },
+    "student": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "certificates"
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course",
+      "inversedBy": "certificates"
+    },
+    "enrollment": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::enrollment.enrollment"
+    }
+  }
+}

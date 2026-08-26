@@ -81,6 +81,23 @@ export interface Enrollment {
   course?: Course | null;
   student?: User | null;
   progress?: CourseProgressSummary;
+  certificate?: Certificate | null;
+}
+
+export interface Certificate {
+  id: number | string;
+  documentId?: string;
+  code: string;
+  issuedAt: string;
+  studentName: string;
+  courseTitle: string;
+  student?: User | null;
+  course?: {
+    id: number | string;
+    documentId?: string;
+    title?: string;
+    slug?: string;
+  } | null;
 }
 
 export interface CourseProgressSummary {
@@ -195,6 +212,8 @@ export interface AdminDashboard {
   enrollments: number;
   blogPosts: number;
   quizzes: number;
+  certificates?: number;
+  bannedUsers?: number;
   usersByRole: Record<string, number>;
 }
 

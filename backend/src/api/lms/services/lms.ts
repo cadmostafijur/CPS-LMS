@@ -62,6 +62,64 @@ async function findQuiz(strapi: Core.Strapi, quizId: string, populate: any = tru
   return strapi.db.query('api::quiz.quiz').findOne({ where, populate });
 }
 
+function makeCertificateCode() {
+  const part = () => Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `CPS-${part()}-${part()}`;
+}
+
+async function issueCertificateIfNeeded(
+  strapi: Core.Strapi,
+  student: any,
+  course: any,
+  enrollment: any
+) {
+  const existing = await strapi.db.query('api::certificate.certificate').findOne({
+    where: {
+      student: student.id,
+      course: course.id,
+    },
+  });
+  if (existing) return existing;
+
+  const studentName =
+    student.name || student.username || student.email || 'Student';
+  const courseTitle = course.title || 'Course';
+
+  return strapi.db.query('api::certificate.certificate').create({
+    data: {
+      code: makeCertificateCode(),
+      issuedAt: new Date().toISOString(),
+      studentName,
+      courseTitle,
+      student: student.id,
+      course: course.id,
+      enrollment: enrollment.id,
+    },
+    populate: { student: true, course: true },
+  });
+}
+
+function sanitizeCertificate(cert: any) {
+  if (!cert) return null;
+  return {
+    id: cert.id,
+    documentId: cert.documentId,
+    code: cert.code,
+    issuedAt: cert.issuedAt,
+    studentName: cert.studentName,
+    courseTitle: cert.courseTitle,
+    student: cert.student ? sanitizeUser(cert.student) : null,
+    course: cert.course
+      ? {
+          id: cert.course.id,
+          documentId: cert.course.documentId,
+          title: cert.course.title,
+          slug: cert.course.slug,
+        }
+      : null,
+  };
+}
+
 async function getCourseProgressForStudent(
   strapi: Core.Strapi,
   studentId: number,
@@ -181,9 +239,29 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           ? await getCourseProgressForStudent(strapi, user.id, enrollment.course.id)
           : { totalLessons: 0, completedCount: 0, percentage: 0 };
 
+        let certificate = enrollment.course
+          ? await strapi.db.query('api::certificate.certificate').findOne({
+              where: { student: user.id, course: enrollment.course.id },
+            })
+          : null;
+
+        if (
+          !certificate &&
+          enrollment.course &&
+          (enrollment.completedAt || progress.percentage >= 100)
+        ) {
+          certificate = await issueCertificateIfNeeded(
+            strapi,
+            user,
+            enrollment.course,
+            enrollment
+          );
+        }
+
         return {
           ...enrollment,
           progress,
+          certificate: sanitizeCertificate(certificate),
           student: sanitizeUser(enrollment.student || user),
         };
       })
@@ -246,14 +324,29 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       lesson.course.id
     );
 
-    if (courseProgress.percentage >= 100 && !enrollment.completedAt) {
-      await strapi.db.query('api::enrollment.enrollment').update({
-        where: { id: enrollment.id },
-        data: { completedAt: new Date().toISOString() },
-      });
+    let certificate = null;
+    if (courseProgress.percentage >= 100) {
+      if (!enrollment.completedAt) {
+        await strapi.db.query('api::enrollment.enrollment').update({
+          where: { id: enrollment.id },
+          data: { completedAt: new Date().toISOString() },
+        });
+      }
+      certificate = await issueCertificateIfNeeded(
+        strapi,
+        user,
+        lesson.course,
+        enrollment
+      );
     }
 
-    return { data: { progress, courseProgress } };
+    return {
+      data: {
+        progress,
+        courseProgress,
+        certificate: sanitizeCertificate(certificate),
+      },
+    };
   },
 
   async courseProgress(ctx: Ctx) {
@@ -537,13 +630,18 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     const user = await getAuthUser(ctx, strapi);
     if (!isAdmin(user)) throw new ForbiddenError('Admin required');
 
-    const [users, courses, enrollments, blogPosts, quizzes] = await Promise.all([
-      strapi.db.query('plugin::users-permissions.user').count(),
-      strapi.db.query('api::course.course').count(),
-      strapi.db.query('api::enrollment.enrollment').count(),
-      strapi.db.query('api::blog-post.blog-post').count(),
-      strapi.db.query('api::quiz.quiz').count(),
-    ]);
+    const [users, courses, enrollments, blogPosts, quizzes, certificates, bannedUsers] =
+      await Promise.all([
+        strapi.db.query('plugin::users-permissions.user').count(),
+        strapi.db.query('api::course.course').count(),
+        strapi.db.query('api::enrollment.enrollment').count(),
+        strapi.db.query('api::blog-post.blog-post').count(),
+        strapi.db.query('api::quiz.quiz').count(),
+        strapi.db.query('api::certificate.certificate').count(),
+        strapi.db.query('plugin::users-permissions.user').count({
+          where: { $or: [{ blocked: true }, { isActive: false }] },
+        }),
+      ]);
 
     const roles = await strapi.db.query('plugin::users-permissions.role').findMany();
     const usersByRole: Record<string, number> = {};
@@ -561,6 +659,8 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         enrollments,
         blogPosts,
         quizzes,
+        certificates,
+        bannedUsers,
         usersByRole,
       },
     };
@@ -692,6 +792,256 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     });
 
     return { data: sanitizeUser(updated) };
+  },
+
+  async adminCreateUser(ctx: Ctx) {
+    const admin = await getAuthUser(ctx, strapi);
+    if (!isAdmin(admin)) throw new ForbiddenError('Admin required');
+
+    const body = ctx.request.body || {};
+    const { name, email, username, password, role: roleName } = body;
+
+    if (!name || !email || !password) {
+      throw new ValidationError('name, email, and password are required');
+    }
+    if (!roleName || !Object.values(ROLE_NAMES).includes(roleName)) {
+      throw new ValidationError(
+        `role must be one of: ${Object.values(ROLE_NAMES).join(', ')}`
+      );
+    }
+    if (String(password).length < 8) {
+      throw new ValidationError('password must be at least 8 characters');
+    }
+
+    const role = await strapi.db.query('plugin::users-permissions.role').findOne({
+      where: { name: roleName },
+    });
+    if (!role) throw new NotFoundError(`Role ${roleName} not found`);
+
+    const existingEmail = await strapi.db.query('plugin::users-permissions.user').findOne({
+      where: { email: String(email).toLowerCase().trim() },
+    });
+    if (existingEmail) throw new ValidationError('Email already in use');
+
+    const uname =
+      (username && String(username).trim()) ||
+      String(email)
+        .split('@')[0]
+        .replace(/[^a-zA-Z0-9._-]/g, '')
+        .slice(0, 24) ||
+      `user${Date.now()}`;
+
+    const existingUsername = await strapi.db
+      .query('plugin::users-permissions.user')
+      .findOne({ where: { username: uname } });
+    const finalUsername = existingUsername ? `${uname}${Date.now().toString().slice(-4)}` : uname;
+
+    const created = await strapi.plugin('users-permissions').service('user').add({
+      username: finalUsername,
+      email: String(email).toLowerCase().trim(),
+      password: String(password),
+      name: String(name).trim(),
+      confirmed: true,
+      blocked: false,
+      isActive: true,
+      provider: 'local',
+      role: role.id,
+    });
+
+    const withRole = await strapi.db.query('plugin::users-permissions.user').findOne({
+      where: { id: created.id },
+      populate: { role: true },
+    });
+
+    return { data: sanitizeUser(withRole) };
+  },
+
+  async adminDeleteUser(ctx: Ctx) {
+    const admin = await getAuthUser(ctx, strapi);
+    if (!isAdmin(admin)) throw new ForbiddenError('Admin required');
+
+    const { userId } = ctx.params;
+    const target = await resolveByIdOrDocumentId(
+      strapi,
+      'plugin::users-permissions.user',
+      userId
+    );
+    if (!target) throw new NotFoundError('User not found');
+
+    if (String(target.id) === String(admin.id)) {
+      throw new ValidationError('Cannot delete your own account');
+    }
+
+    // Clean related LMS data before removing the user
+    const attempts = await strapi.db.query('api::quiz-attempt.quiz-attempt').findMany({
+      where: { student: target.id },
+      select: ['id'],
+    });
+    for (const attempt of attempts) {
+      await strapi.db.query('api::quiz-answer.quiz-answer').deleteMany({
+        where: { attempt: attempt.id },
+      });
+    }
+    await strapi.db.query('api::quiz-attempt.quiz-attempt').deleteMany({
+      where: { student: target.id },
+    });
+    await strapi.db.query('api::lesson-progress.lesson-progress').deleteMany({
+      where: { student: target.id },
+    });
+    await strapi.db.query('api::certificate.certificate').deleteMany({
+      where: { student: target.id },
+    });
+    await strapi.db.query('api::enrollment.enrollment').deleteMany({
+      where: { student: target.id },
+    });
+
+    await strapi.db.query('plugin::users-permissions.user').delete({
+      where: { id: target.id },
+    });
+
+    return { data: { id: target.id, deleted: true } };
+  },
+
+  async myCertificates(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    const certs = await strapi.db.query('api::certificate.certificate').findMany({
+      where: { student: user.id },
+      populate: { course: true, student: true },
+      orderBy: { issuedAt: 'desc' },
+    });
+    return { data: certs.map(sanitizeCertificate) };
+  },
+
+  async getCertificate(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    const { id } = ctx.params;
+    const cert = await resolveByIdOrDocumentId(strapi, 'api::certificate.certificate', id);
+    if (!cert) throw new NotFoundError('Certificate not found');
+
+    const full = await strapi.db.query('api::certificate.certificate').findOne({
+      where: { id: cert.id },
+      populate: { course: true, student: true },
+    });
+    if (!full) throw new NotFoundError('Certificate not found');
+
+    const isOwner = String(full.student?.id) === String(user.id);
+    if (!isOwner && !isAdmin(user) && !isContentManager(user)) {
+      throw new ForbiddenError('Not allowed to view this certificate');
+    }
+
+    return { data: sanitizeCertificate(full) };
+  },
+
+  async adminListCertificates(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+
+    const { page = 1, pageSize = 25, search } = ctx.query;
+    const pageNum = Math.max(1, Number(page) || 1);
+    const size = Math.min(100, Math.max(1, Number(pageSize) || 25));
+    const where: any = {};
+    if (search) {
+      where.$or = [
+        { code: { $containsi: search } },
+        { studentName: { $containsi: search } },
+        { courseTitle: { $containsi: search } },
+      ];
+    }
+
+    const [results, total] = await Promise.all([
+      strapi.db.query('api::certificate.certificate').findMany({
+        where,
+        populate: { student: true, course: true },
+        offset: (pageNum - 1) * size,
+        limit: size,
+        orderBy: { issuedAt: 'desc' },
+      }),
+      strapi.db.query('api::certificate.certificate').count({ where }),
+    ]);
+
+    return {
+      data: results.map(sanitizeCertificate),
+      meta: {
+        pagination: {
+          page: pageNum,
+          pageSize: size,
+          pageCount: Math.ceil(total / size),
+          total,
+        },
+      },
+    };
+  },
+
+  async adminListEnrollments(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+
+    const { page = 1, pageSize = 25, search } = ctx.query;
+    const pageNum = Math.max(1, Number(page) || 1);
+    const size = Math.min(100, Math.max(1, Number(pageSize) || 25));
+
+    const enrollments = await strapi.db.query('api::enrollment.enrollment').findMany({
+      populate: {
+        student: true,
+        course: true,
+      },
+      orderBy: { enrolledAt: 'desc' },
+    });
+
+    let filtered = enrollments;
+    if (search) {
+      const q = String(search).toLowerCase();
+      filtered = enrollments.filter((e: any) => {
+        const email = e.student?.email?.toLowerCase() || '';
+        const name = e.student?.name?.toLowerCase() || '';
+        const title = e.course?.title?.toLowerCase() || '';
+        return email.includes(q) || name.includes(q) || title.includes(q);
+      });
+    }
+
+    const total = filtered.length;
+    const slice = filtered.slice((pageNum - 1) * size, pageNum * size);
+
+    const data = await Promise.all(
+      slice.map(async (enrollment: any) => {
+        const progress =
+          enrollment.student && enrollment.course
+            ? await getCourseProgressForStudent(
+                strapi,
+                enrollment.student.id,
+                enrollment.course.id
+              )
+            : { totalLessons: 0, completedCount: 0, percentage: 0 };
+        return {
+          id: enrollment.id,
+          documentId: enrollment.documentId,
+          enrolledAt: enrollment.enrolledAt,
+          completedAt: enrollment.completedAt,
+          progress,
+          student: sanitizeUser(enrollment.student),
+          course: enrollment.course
+            ? {
+                id: enrollment.course.id,
+                documentId: enrollment.course.documentId,
+                title: enrollment.course.title,
+                slug: enrollment.course.slug,
+              }
+            : null,
+        };
+      })
+    );
+
+    return {
+      data,
+      meta: {
+        pagination: {
+          page: pageNum,
+          pageSize: size,
+          pageCount: Math.ceil(total / size),
+          total,
+        },
+      },
+    };
   },
 
   async createCourse(ctx: Ctx) {

@@ -47,6 +47,24 @@ export default ({ strapi }: { strapi: any }) => ({
   async adminUpdateUserStatus(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').adminUpdateUserStatus(ctx);
   },
+  async adminCreateUser(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminCreateUser(ctx);
+  },
+  async adminDeleteUser(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminDeleteUser(ctx);
+  },
+  async myCertificates(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').myCertificates(ctx);
+  },
+  async getCertificate(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').getCertificate(ctx);
+  },
+  async adminListCertificates(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminListCertificates(ctx);
+  },
+  async adminListEnrollments(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminListEnrollments(ctx);
+  },
   async getCoursePlayer(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').getCoursePlayer(ctx);
   },

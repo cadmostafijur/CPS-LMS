@@ -230,18 +230,30 @@ npm run dev:frontend
 
 ---
 
-## Seed Data & Demo Accounts
+## Seed Data & First Admin
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | `admin@lms-demo.com` | `DemoAdmin123!` |
-| Content Manager | `content@lms-demo.com` | `DemoContent123!` |
-| Instructor | `instructor@lms-demo.com` | `DemoInstructor123!` |
-| Student | `student@lms-demo.com` | `DemoStudent123!` |
+On first boot, seed may create a bootstrap admin (override with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). Prefer creating real accounts from **Admin → Users → Create user** for Admin, Content Manager, Instructor, and Student roles.
 
-Seeded courses: Next.js Fundamentals, React Mastery, Node.js Backend Development, TypeScript Essentials — each with lessons and a quiz. Blog includes published and draft posts.
+Public registration always creates a **Student**. Admins assign other roles or create staff accounts directly.
 
-Override admin credentials via `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`. Set `SEED_ON_BOOTSTRAP=false` after initial seed if desired.
+Seeded sample courses and blog posts may still appear for catalog demos. Set `SEED_ON_BOOTSTRAP=false` after initial setup if desired.
+
+---
+
+## Certificates
+
+When a student completes every lesson in a course, the LMS issues a certificate automatically. Students view them under **Certificates**; print/save as PDF from the certificate page. Admins can audit all certificates under **Admin → Certificates**.
+
+---
+
+## Admin panel
+
+Admins can:
+
+- Create users for any role
+- Ban / unban users
+- Permanently delete users (and related enrollments/progress/certificates)
+- Manage courses, enrollments, certificates, and blog
 
 ---
 
@@ -250,10 +262,10 @@ Override admin credentials via `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`. Set `
 Primary secure API lives under `/api/lms/*` (see `backend/src/api/lms/routes/lms.ts`):
 
 - Auth: Strapi `/api/auth/local`, `/api/auth/local/register` (forced Student)
-- Enroll, my-courses, lesson complete, progress
+- Enroll, my-courses, lesson complete, progress, certificates
 - Quiz take / submit / attempts
 - Course / lesson / quiz / blog management
-- Role dashboards & admin users
+- Role dashboards & admin users (create / ban / delete)
 
 Frontend BFF routes: `/api/auth/*`, `/api/lms/[...path]` (JWT in httpOnly `cps_token`).
 

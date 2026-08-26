@@ -5,6 +5,8 @@ import {
   Users,
   GraduationCap,
   ClipboardList,
+  Award,
+  Ban,
 } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/shared/page-header";
@@ -26,17 +28,24 @@ export default async function AdminDashboardPage() {
         title="Admin dashboard"
         description="Platform-wide overview and controls."
         actions={
-          <Button asChild variant="outline">
-            <Link href="/admin/users">Manage users</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href="/admin/users">Manage users</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/admin/users">Create account</Link>
+            </Button>
+          </div>
         }
       />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatsCard title="Users" value={data.users} icon={<Users className="h-4 w-4 text-muted-foreground" />} />
         <StatsCard title="Courses" value={data.courses} icon={<BookOpen className="h-4 w-4 text-muted-foreground" />} />
         <StatsCard title="Enrollments" value={data.enrollments} icon={<GraduationCap className="h-4 w-4 text-muted-foreground" />} />
+        <StatsCard title="Certificates" value={data.certificates ?? 0} icon={<Award className="h-4 w-4 text-muted-foreground" />} />
         <StatsCard title="Blog posts" value={data.blogPosts} icon={<FileText className="h-4 w-4 text-muted-foreground" />} />
         <StatsCard title="Quizzes" value={data.quizzes} icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />} />
+        <StatsCard title="Banned users" value={data.bannedUsers ?? 0} icon={<Ban className="h-4 w-4 text-muted-foreground" />} />
       </div>
 
       <Card className="mt-8">
@@ -55,6 +64,23 @@ export default async function AdminDashboardPage() {
           ))}
         </CardContent>
       </Card>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { href: "/admin/users", label: "Users & roles" },
+          { href: "/admin/courses", label: "All courses" },
+          { href: "/admin/enrollments", label: "Enrollments" },
+          { href: "/admin/certificates", label: "Certificates" },
+        ].map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-navy transition-colors hover:border-orange/40 hover:bg-orange/5"
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
     </DashboardShell>
   );
 }

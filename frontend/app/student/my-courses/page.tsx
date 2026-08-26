@@ -64,6 +64,15 @@ export default async function MyCoursesPage() {
                       Open course
                     </Link>
                   </Button>
+                  {enrollment.certificate ? (
+                    <Button asChild variant="outline" className="w-full">
+                      <Link
+                        href={`/certificates/${enrollment.certificate.documentId || enrollment.certificate.id}`}
+                      >
+                        View certificate
+                      </Link>
+                    </Button>
+                  ) : null}
                 </CardContent>
               </Card>
             );

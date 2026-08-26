@@ -103,10 +103,26 @@ export function LearningPlayer({
   function markComplete() {
     startTransition(async () => {
       try {
-        await bffFetch(`/api/lms/lessons/${currentId}/complete`, {
+        const result = await bffFetch<{
+          data?: {
+            certificate?: { documentId?: string; id?: string | number } | null;
+            courseProgress?: { percentage?: number };
+          };
+        }>(`/api/lms/lessons/${currentId}/complete`, {
           method: "POST",
         });
-        toast.success("Lesson marked complete");
+        const cert = result?.data?.certificate;
+        if (cert) {
+          toast.success("Course complete — certificate issued!", {
+            action: {
+              label: "View",
+              onClick: () =>
+                router.push(`/certificates/${cert.documentId || cert.id}`),
+            },
+          });
+        } else {
+          toast.success("Lesson marked complete");
+        }
         router.refresh();
       } catch (err) {
         toast.error(

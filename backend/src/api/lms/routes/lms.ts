@@ -97,6 +97,42 @@ export default {
       config: { policies: ['global::is-admin'] },
     },
     {
+      method: 'POST',
+      path: '/lms/admin/users',
+      handler: 'lms.adminCreateUser',
+      config: { policies: ['global::is-admin'] },
+    },
+    {
+      method: 'DELETE',
+      path: '/lms/admin/users/:userId',
+      handler: 'lms.adminDeleteUser',
+      config: { policies: ['global::is-admin'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/certificates/me',
+      handler: 'lms.myCertificates',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/certificates/:id',
+      handler: 'lms.getCertificate',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/admin/certificates',
+      handler: 'lms.adminListCertificates',
+      config: { policies: ['global::is-admin'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/admin/enrollments',
+      handler: 'lms.adminListEnrollments',
+      config: { policies: ['global::is-admin'] },
+    },
+    {
       method: 'GET',
       path: '/lms/courses/:courseId/player',
       handler: 'lms.getCoursePlayer',

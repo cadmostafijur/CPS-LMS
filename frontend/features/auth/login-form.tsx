@@ -24,29 +24,6 @@ const schema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-const DEMO_ACCOUNTS = [
-  {
-    role: "Admin",
-    email: "admin@lms-demo.com",
-    password: "DemoAdmin123!",
-  },
-  {
-    role: "Content Manager",
-    email: "content@lms-demo.com",
-    password: "DemoContent123!",
-  },
-  {
-    role: "Instructor",
-    email: "instructor@lms-demo.com",
-    password: "DemoInstructor123!",
-  },
-  {
-    role: "Student",
-    email: "student@lms-demo.com",
-    password: "DemoStudent123!",
-  },
-] as const;
-
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -55,12 +32,6 @@ export function LoginForm() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  function fillDemo(email: string, pass: string) {
-    setIdentifier(email);
-    setPassword(pass);
-    setErrors({});
-  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -96,7 +67,7 @@ export function LoginForm() {
       <CardHeader>
         <CardTitle className="font-display text-2xl text-navy">Sign in</CardTitle>
         <CardDescription>
-          Access your CPS Academy learning workspace.
+          Use your real CPS Academy account. Admins can create accounts for any role.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -133,36 +104,8 @@ export function LoginForm() {
             {loading ? "Signing in…" : "Sign in"}
           </Button>
         </form>
-
-        <div className="mt-6 rounded-xl border border-border bg-surface p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Demo accounts — click to fill
-          </p>
-          <ul className="space-y-2">
-            {DEMO_ACCOUNTS.map((account) => (
-              <li key={account.email}>
-                <button
-                  type="button"
-                  onClick={() => fillDemo(account.email, account.password)}
-                  className="flex w-full items-start justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-white"
-                >
-                  <span>
-                    <span className="font-medium text-navy">{account.role}</span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">
-                      {account.email}
-                    </span>
-                  </span>
-                  <span className="shrink-0 font-mono text-xs text-orange">
-                    {account.password}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          New here?{" "}
+          New student?{" "}
           <Link
             href="/register"
             className="font-medium text-orange underline-offset-4 hover:underline"

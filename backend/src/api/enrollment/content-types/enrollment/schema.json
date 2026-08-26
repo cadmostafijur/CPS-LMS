@@ -28,6 +28,25 @@
     },
     "completedAt": {
       "type": "datetime"
+    },
+    "isFreeEnrollment": {
+      "type": "boolean",
+      "default": true
+    },
+    "originalPrice": {
+      "type": "decimal",
+      "default": 0
+    },
+    "amountPaid": {
+      "type": "decimal",
+      "default": 0
+    },
+    "couponCode": {
+      "type": "string"
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
     }
   }
 }

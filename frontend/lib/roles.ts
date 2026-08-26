@@ -80,6 +80,7 @@ export function rolesAllowedForPath(pathname: string): RoleName[] | null {
   if (
     pathname.startsWith("/learn") ||
     pathname.startsWith("/quizzes") ||
+    pathname.startsWith("/certificates") ||
     pathname === "/dashboard"
   ) {
     return [
