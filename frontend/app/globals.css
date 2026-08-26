@@ -151,3 +151,20 @@ summary::-webkit-details-marker {
 summary::marker {
   content: none;
 }
+
+/* SweetAlert2 — CPS brand */
+.cps-swal {
+  border-radius: 1rem !important;
+  font-family: var(--font-dm-sans), system-ui, sans-serif !important;
+}
+.cps-swal .swal2-title {
+  font-family: var(--font-space-grotesk), system-ui, sans-serif !important;
+  color: #0b1220 !important;
+  font-size: 1.35rem !important;
+}
+.cps-swal-confirm,
+.cps-swal-cancel {
+  border-radius: 0.65rem !important;
+  font-weight: 600 !important;
+  padding: 0.55rem 1.15rem !important;
+}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GraduationCap, LineChart, Users } from "lucide-react";
 import { RegisterForm } from "@/features/auth/register-form";
 import { BrandLogo } from "@/components/shared/brand-logo";
 
@@ -10,25 +11,49 @@ export const metadata = {
 export default function RegisterPage() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="relative hidden overflow-hidden border-r border-border bg-surface lg:flex lg:flex-col lg:justify-between lg:p-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(249,115,22,0.12),transparent_45%),radial-gradient(circle_at_70%_80%,rgba(11,18,32,0.05),transparent_40%)]" />
-        <Link href="/" className="relative z-10 flex items-center gap-3 text-navy">
-          <BrandLogo size={44} priority />
+      <aside className="relative hidden overflow-hidden bg-navy text-white lg:flex lg:flex-col lg:justify-between lg:p-12">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-16 top-20 h-72 w-72 rounded-full bg-orange/25 blur-3xl" />
+          <div className="absolute bottom-0 right-10 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
+        </div>
+        <Link href="/" className="relative z-10 flex items-center gap-3">
+          <BrandLogo size={48} priority className="rounded-xl ring-1 ring-white/20" />
           <span className="font-display text-xl font-bold">CPS Academy</span>
         </Link>
-        <div className="relative z-10 max-w-md">
-          <p className="font-display text-3xl font-semibold text-navy">
-            Start learning with CPS Academy
+        <div className="relative z-10 max-w-md space-y-6">
+          <p className="font-display text-4xl font-bold leading-tight">
+            Start your student journey
           </p>
-          <p className="mt-3 text-muted-foreground">
-            Create your account and enroll in courses built for real skills.
+          <p className="text-base text-white/70">
+            Enroll in courses, track lessons, take quizzes, and earn certificates.
           </p>
+          <ul className="space-y-3 text-sm text-white/80">
+            {[
+              { icon: GraduationCap, text: "Student dashboard on day one" },
+              { icon: LineChart, text: "Live progress across courses" },
+              { icon: Users, text: "Learn with CPS Academy instructors" },
+            ].map((item) => (
+              <li key={item.text} className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange/20 text-orange">
+                  <item.icon className="h-4 w-4" />
+                </span>
+                {item.text}
+              </li>
+            ))}
+          </ul>
         </div>
-        <p className="relative z-10 text-sm text-muted-foreground">
-          Structured software engineering education.
+        <p className="relative z-10 text-sm text-white/50">
+          Already learning with us?{" "}
+          <Link href="/login" className="text-orange hover:underline">
+            Sign in
+          </Link>
         </p>
-      </div>
-      <div className="flex items-center justify-center bg-white px-4 py-12">
+      </aside>
+      <div className="flex flex-col justify-center bg-gradient-to-b from-surface to-white px-4 py-12 sm:px-8">
+        <div className="mb-8 flex items-center gap-2.5 lg:hidden">
+          <BrandLogo size={40} priority className="rounded-lg" />
+          <span className="font-display text-lg font-bold text-navy">CPS Academy</span>
+        </div>
         <RegisterForm />
       </div>
     </div>

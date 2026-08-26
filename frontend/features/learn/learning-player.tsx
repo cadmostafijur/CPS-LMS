@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { CheckCircle2, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -127,13 +127,8 @@ export function LearningPlayer({
         });
         const cert = result?.data?.certificate;
         if (cert) {
-          toast.success("Course complete — certificate issued!", {
-            action: {
-              label: "View",
-              onClick: () =>
-                router.push(`/certificates/${cert.documentId || cert.id}`),
-            },
-          });
+          toast.success("Course complete — certificate issued!");
+          router.push(`/certificates/${cert.documentId || cert.id}`);
         } else {
           toast.success("Lesson marked complete");
         }

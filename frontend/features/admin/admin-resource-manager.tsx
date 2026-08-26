@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition, type ReactNode } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { PageHeader } from "@/components/shared/page-header";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { SearchInput } from "@/components/shared/search-input";

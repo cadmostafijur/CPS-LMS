@@ -4,17 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { z } from "zod";
-import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
+import { toast } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { register } from "@/services/auth.service";
 import { dashboardPathForRole, getRoleName } from "@/lib/roles";
 import { ApiError } from "@/lib/api";
@@ -29,6 +23,7 @@ const schema = z.object({
 export function RegisterForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -54,7 +49,7 @@ export function RegisterForm() {
     setLoading(true);
     try {
       const result = await register(parsed.data);
-      toast.success("Account created");
+      toast.success("Your student account is ready");
       router.push(dashboardPathForRole(getRoleName(result.user)));
       router.refresh();
     } catch (err) {
@@ -65,59 +60,82 @@ export function RegisterForm() {
   }
 
   return (
-    <Card className="w-full max-w-md rounded-2xl border-border/80 bg-white shadow-md">
-      <CardHeader>
-        <CardTitle className="font-display text-2xl text-navy">Create account</CardTitle>
-        <CardDescription>
-          Join CPS Academy and start learning today.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-4" onSubmit={onSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="name">Full name</Label>
-            <Input id="name" name="name" autoComplete="name" />
-            {errors.name ? (
-              <p className="text-xs text-destructive">{errors.name}</p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input id="username" name="username" autoComplete="username" />
-            {errors.username ? (
-              <p className="text-xs text-destructive">{errors.username}</p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" autoComplete="email" />
-            {errors.email ? (
-              <p className="text-xs text-destructive">{errors.email}</p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+    <div className="w-full max-w-md">
+      <div className="mb-8 lg:hidden">
+        <p className="font-display text-2xl font-bold text-navy">Create account</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Join CPS Academy as a student
+        </p>
+      </div>
+      <div className="hidden lg:block">
+        <p className="font-display text-3xl font-bold tracking-tight text-navy">
+          Create your account
+        </p>
+        <p className="mt-2 text-muted-foreground">
+          Public signup creates a Student account. Staff roles are invited by an
+          admin.
+        </p>
+      </div>
+
+      <form className="mt-8 space-y-4" onSubmit={onSubmit}>
+        <div className="space-y-2">
+          <Label htmlFor="name">Full name</Label>
+          <Input id="name" name="name" autoComplete="name" className="h-11" />
+          {errors.name ? (
+            <p className="text-xs text-destructive">{errors.name}</p>
+          ) : null}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="username">Username</Label>
+          <Input id="username" name="username" autoComplete="username" className="h-11" />
+          {errors.username ? (
+            <p className="text-xs text-destructive">{errors.username}</p>
+          ) : null}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" name="email" type="email" autoComplete="email" className="h-11" />
+          {errors.email ? (
+            <p className="text-xs text-destructive">{errors.email}</p>
+          ) : null}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <div className="relative">
             <Input
               id="password"
               name="password"
-              type="password"
+              type={showPass ? "text" : "password"}
               autoComplete="new-password"
+              className="h-11 pr-10"
             />
-            {errors.password ? (
-              <p className="text-xs text-destructive">{errors.password}</p>
-            ) : null}
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-navy"
+              onClick={() => setShowPass((v) => !v)}
+              aria-label={showPass ? "Hide password" : "Show password"}
+            >
+              {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating…" : "Create account"}
-          </Button>
-        </form>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link href="/login" className="font-medium text-orange underline-offset-4 hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </CardContent>
-    </Card>
+          {errors.password ? (
+            <p className="text-xs text-destructive">{errors.password}</p>
+          ) : null}
+        </div>
+        <Button type="submit" className="mt-2 h-11 w-full text-base" disabled={loading}>
+          {loading ? "Creating…" : "Create account"}
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link
+          href="/login"
+          className="font-semibold text-orange underline-offset-4 hover:underline"
+        >
+          Sign in
+        </Link>
+      </p>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatsCard } from "@/components/shared/stats-card";
 import { bffFetch, ApiError } from "@/lib/api";

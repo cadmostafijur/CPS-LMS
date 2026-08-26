@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { useDebounce } from "@/hooks/use-debounce";

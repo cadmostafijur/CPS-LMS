@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, X } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,6 +20,7 @@ import { logout } from "@/services/auth.service";
 import { dashboardPathForRole, getRoleName } from "@/lib/roles";
 import type { AuthUser } from "@/types";
 import { cn } from "@/lib/utils";
+import { notify } from "@/lib/notify";
 
 const links = [
   { href: "/courses", label: "Courses" },
@@ -38,15 +39,28 @@ export function Navbar({
   const [open, setOpen] = useState(false);
   const role = getRoleName(user);
   const dash = dashboardPathForRole(role);
+  const isDashboard =
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/student") ||
+    pathname.startsWith("/instructor") ||
+    pathname.startsWith("/content-manager");
 
   async function handleLogout() {
+    const ok = await notify.confirm({
+      title: "Sign out?",
+      text: "You will need to sign in again to access your dashboard.",
+      confirmLabel: "Sign out",
+      cancelLabel: "Stay signed in",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await logout();
-      toast.success("Signed out");
+      toast.success("You have signed out");
       router.push("/");
       router.refresh();
     } catch {
-      toast.error("Could not sign out");
+      toast.error("Could not sign out. Please try again.");
     }
   }
 
@@ -60,81 +74,96 @@ export function Navbar({
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-white/95 backdrop-blur-md">
-      <div className="mx-auto flex h-[4.25rem] max-w-6xl items-center justify-between gap-4 px-4">
+      <div
+        className={cn(
+          "mx-auto flex h-[4.25rem] items-center justify-between gap-3 px-4",
+          isDashboard ? "max-w-[1400px]" : "max-w-6xl"
+        )}
+      >
         <Link
           href="/"
-          className="group flex shrink-0 items-center gap-3 rounded-xl py-1 pr-2 transition-opacity hover:opacity-90"
+          className="flex shrink-0 items-center gap-2.5 rounded-xl py-1 pr-1 transition-opacity hover:opacity-90"
         >
-          <BrandLogo size={44} priority className="rounded-lg shadow-sm ring-1 ring-navy/10" />
-          <span className="flex flex-col leading-none">
-            <span className="font-display text-lg font-bold tracking-tight text-navy sm:text-xl">
-              CPS Academy
-            </span>
-            <span className="mt-0.5 hidden text-[10px] font-medium uppercase tracking-[0.14em] text-orange sm:block">
-              Learn · Build · Compete
-            </span>
+          <BrandLogo size={42} priority className="rounded-lg shadow-sm ring-1 ring-navy/10" />
+          <span className="font-display text-lg font-bold tracking-tight text-navy sm:text-xl">
+            CPS Academy
           </span>
         </Link>
 
-        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 md:flex">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                pathname.startsWith(link.href)
-                  ? "bg-orange/10 text-navy"
-                  : "text-muted-foreground hover:bg-navy/5 hover:text-navy"
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        {!isDashboard ? (
+          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 md:flex">
+            {links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  pathname.startsWith(link.href)
+                    ? "bg-orange/10 text-navy"
+                    : "text-muted-foreground hover:bg-navy/5 hover:text-navy"
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
 
         <div className="hidden items-center gap-2 md:flex">
           {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2 px-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-orange/15 text-xs text-orange">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="max-w-[120px] truncate text-sm text-navy">
-                    {user.name || user.email}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col">
-                    <span>{user.name || "Account"}</span>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {role}
-                    </span>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push(dash)}>
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
+            <>
+              <Button variant="outline" size="sm" asChild className="gap-1.5">
+                <Link href={dash}>
+                  <LayoutDashboard className="h-3.5 w-3.5" />
                   Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => void handleLogout()}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </Link>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 px-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-orange/15 text-xs text-orange">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden max-w-[100px] truncate text-sm text-navy lg:inline">
+                      {user.name || user.email}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col">
+                      <span>{user.name || "Account"}</span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {role} · {user.email}
+                      </span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push(dash)}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Go to dashboard
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => void handleLogout()}
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </Button>
+            </>
           ) : (
             <>
               <Button variant="ghost" asChild>
                 <Link href="/login">Sign in</Link>
               </Button>
               <Button asChild>
-                <Link href="/register">Join now</Link>
+                <Link href="/register">Create account</Link>
               </Button>
             </>
           )}
@@ -145,35 +174,45 @@ export function Navbar({
           size="icon"
           className="md:hidden"
           onClick={() => setOpen((v) => !v)}
-          aria-label="Toggle menu"
+          aria-label={open ? "Close menu" : "Open menu"}
         >
-          <Menu className="h-5 w-5" />
+          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
       </div>
 
       {open ? (
         <div className="border-t border-border px-4 py-4 md:hidden">
           <div className="flex flex-col gap-3">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-navy"
-                onClick={() => setOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {!isDashboard
+              ? links.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="text-sm font-medium text-navy"
+                    onClick={() => setOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))
+              : null}
             {user ? (
               <>
-                <Link href={dash} onClick={() => setOpen(false)}>
+                <Link
+                  href={dash}
+                  className="text-sm font-medium text-navy"
+                  onClick={() => setOpen(false)}
+                >
                   Dashboard
                 </Link>
                 <button
                   type="button"
-                  className="text-left text-sm font-medium text-destructive"
-                  onClick={() => void handleLogout()}
+                  className="flex items-center gap-2 text-left text-sm font-semibold text-destructive"
+                  onClick={() => {
+                    setOpen(false);
+                    void handleLogout();
+                  }}
                 >
+                  <LogOut className="h-4 w-4" />
                   Sign out
                 </button>
               </>
@@ -187,7 +226,7 @@ export function Navbar({
                   className="font-semibold text-orange"
                   onClick={() => setOpen(false)}
                 >
-                  Join now
+                  Create account
                 </Link>
               </>
             )}

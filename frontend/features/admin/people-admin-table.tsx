@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -54,18 +55,26 @@ export function PeopleAdminTable({
 
   return (
     <div className="space-y-6">
-      <PageHeader title={title} description={description} />
-      <SearchInput
-        value={search}
-        onChange={setSearch}
-        placeholder="Search name or email…"
-        className="sm:max-w-sm"
-      />
-      <div className="rounded-xl border border-border bg-card">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <PageHeader title={title} description={description} />
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search name or email…"
+            className="sm:max-w-sm"
+          />
+          <p className="text-sm text-muted-foreground">
+            {pending ? "Loading…" : `${items.length} ${role.toLowerCase()}${items.length === 1 ? "" : "s"}`}
+          </p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
+            <TableRow className="bg-surface/80 hover:bg-surface/80">
+              <TableHead>Person</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>{role === "Student" ? "Enrollments" : "Courses"}</TableHead>
               <TableHead>Status</TableHead>
@@ -74,27 +83,48 @@ export function PeopleAdminTable({
           <TableBody>
             {items.length === 0 && !pending ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-muted-foreground">
+                <TableCell colSpan={4} className="py-12 text-center text-muted-foreground">
                   No {role.toLowerCase()}s found.
                 </TableCell>
               </TableRow>
             ) : null}
-            {items.map((u) => (
-              <TableRow key={String(u.id)}>
-                <TableCell className="font-medium">
-                  {u.name || u.username || "—"}
-                </TableCell>
-                <TableCell>{u.email}</TableCell>
-                <TableCell>
-                  {role === "Student" ? u.enrollmentCount ?? 0 : u.courseCount ?? 0}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={u.blocked ? "danger" : "success"}>
-                    {u.blocked ? "Banned" : "Active"}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-            ))}
+            {items.map((u) => {
+              const name = u.name || u.username || "—";
+              const initials = name
+                .split(" ")
+                .map((p) => p[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase();
+              return (
+                <TableRow key={String(u.id)}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback className="bg-orange/15 text-xs font-semibold text-orange">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-navy">{name}</p>
+                        {u.username ? (
+                          <p className="text-xs text-muted-foreground">@{u.username}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm">{u.email}</TableCell>
+                  <TableCell className="font-display text-base font-semibold">
+                    {role === "Student" ? u.enrollmentCount ?? 0 : u.courseCount ?? 0}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={u.blocked ? "danger" : "success"}>
+                      {u.blocked ? "Banned" : "Active"}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { toast } from "sonner";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { ImagePlus, Trash2 } from "lucide-react";
+import { toast } from "@/lib/notify";
 import { PageHeader } from "@/components/shared/page-header";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,8 @@ const emptyForm = {
   sortOrder: 0,
 };
 
+const MAX_IMAGE_BYTES = 1.5 * 1024 * 1024;
+
 export function BannersAdminManager() {
   const [items, setItems] = useState<Banner[]>([]);
   const [pending, startTransition] = useTransition();
@@ -51,6 +54,8 @@ export function BannersAdminManager() {
   const [editing, setEditing] = useState<Banner | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<Banner | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   function load() {
     startTransition(async () => {
@@ -88,7 +93,39 @@ export function BannersAdminManager() {
     setOpen(true);
   }
 
+  async function onPickImage(file: File | null) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file (PNG, JPG, WebP).");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error("Image must be under 1.5 MB. Compress it or use a URL instead.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Could not read file"));
+        reader.readAsDataURL(file);
+      });
+      setForm((f) => ({ ...f, imageUrl: dataUrl }));
+      toast.success("Image attached — save the banner to publish it.");
+    } catch {
+      toast.error("Could not read that image.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
   async function save() {
+    if (!form.title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
     try {
       if (editing) {
         await bffFetch(`/api/lms/admin/banners/${editing.documentId || editing.id}`, {
@@ -127,15 +164,19 @@ export function BannersAdminManager() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Banners"
-        description="Promotional banners for the homepage and course catalog."
-        actions={<Button onClick={openCreate}>Add banner</Button>}
-      />
-      <div className="rounded-xl border border-border bg-card">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <PageHeader
+          title="Banners"
+          description="Promotional banners for the homepage and course catalog."
+          actions={<Button onClick={openCreate}>Add banner</Button>}
+        />
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-surface/80 hover:bg-surface/80">
+              <TableHead>Preview</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Placement</TableHead>
               <TableHead>Status</TableHead>
@@ -146,14 +187,28 @@ export function BannersAdminManager() {
           <TableBody>
             {items.length === 0 && !pending ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground">
-                  No banners yet.
+                <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
+                  No banners yet. Add one with an uploaded image or image URL.
                 </TableCell>
               </TableRow>
             ) : null}
             {items.map((banner) => (
               <TableRow key={String(banner.id)}>
-                <TableCell className="font-medium">{banner.title}</TableCell>
+                <TableCell>
+                  {banner.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={banner.imageUrl}
+                      alt=""
+                      className="h-12 w-20 rounded-md object-cover ring-1 ring-border"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-20 items-center justify-center rounded-md bg-surface text-[10px] text-muted-foreground ring-1 ring-border">
+                      No image
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="font-medium text-navy">{banner.title}</TableCell>
                 <TableCell>{banner.placement}</TableCell>
                 <TableCell>
                   <Badge variant={banner.isActive !== false ? "success" : "secondary"}>
@@ -180,7 +235,7 @@ export function BannersAdminManager() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit banner" : "New banner"}</DialogTitle>
           </DialogHeader>
@@ -215,13 +270,61 @@ export function BannersAdminManager() {
                 />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Image URL</Label>
-              <Input
-                value={form.imageUrl}
-                onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-              />
+
+            <div className="space-y-2 rounded-xl border border-dashed border-border bg-surface/60 p-4">
+              <Label>Banner image</Label>
+              <p className="text-xs text-muted-foreground">
+                Upload a file or paste an image URL. Max upload size 1.5 MB.
+              </p>
+              {form.imageUrl ? (
+                <div className="relative overflow-hidden rounded-lg ring-1 ring-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={form.imageUrl}
+                    alt="Banner preview"
+                    className="h-36 w-full object-cover"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="absolute right-2 top-2 gap-1"
+                    onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Remove
+                  </Button>
+                </div>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => void onPickImage(e.target.files?.[0] || null)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2"
+                  disabled={uploading}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <ImagePlus className="h-4 w-4" />
+                  {uploading ? "Reading…" : "Upload image"}
+                </Button>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Or image URL</Label>
+                <Input
+                  placeholder="https://…"
+                  value={form.imageUrl.startsWith("data:") ? "" : form.imageUrl}
+                  onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
+                />
+              </div>
             </div>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Placement</Label>
@@ -272,7 +375,7 @@ export function BannersAdminManager() {
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => void save()}>Save</Button>
+            <Button onClick={() => void save()}>Save banner</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

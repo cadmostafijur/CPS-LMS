@@ -4,17 +4,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { z } from "zod";
-import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
+import { toast } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { login } from "@/services/auth.service";
 import { dashboardPathForRole, getRoleName } from "@/lib/roles";
 import { ApiError } from "@/lib/api";
@@ -29,6 +23,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
   const [loading, setLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -51,7 +46,7 @@ export function LoginForm() {
     setLoading(true);
     try {
       const result = await login(parsed.data.identifier, parsed.data.password);
-      toast.success("Welcome back");
+      toast.success("Welcome back to CPS Academy");
       const role = getRoleName(result.user);
       router.push(next || dashboardPathForRole(role));
       router.refresh();
@@ -63,57 +58,78 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md rounded-2xl border-border/80 bg-white shadow-md">
-      <CardHeader>
-        <CardTitle className="font-display text-2xl text-navy">Sign in</CardTitle>
-        <CardDescription>
-          Use your real CPS Academy account. Admins can create accounts for any role.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-4" onSubmit={onSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="identifier">Email or username</Label>
-            <Input
-              id="identifier"
-              name="identifier"
-              autoComplete="username"
-              placeholder="you@example.com"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-            />
-            {errors.identifier ? (
-              <p className="text-xs text-destructive">{errors.identifier}</p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+    <div className="w-full max-w-md">
+      <div className="mb-8 lg:hidden">
+        <p className="font-display text-2xl font-bold text-navy">Sign in</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Access your CPS Academy workspace
+        </p>
+      </div>
+      <div className="hidden lg:block">
+        <p className="font-display text-3xl font-bold tracking-tight text-navy">
+          Welcome back
+        </p>
+        <p className="mt-2 text-muted-foreground">
+          Sign in with your CPS Academy account to continue learning or managing
+          the platform.
+        </p>
+      </div>
+
+      <form className="mt-8 space-y-5" onSubmit={onSubmit}>
+        <div className="space-y-2">
+          <Label htmlFor="identifier">Email or username</Label>
+          <Input
+            id="identifier"
+            name="identifier"
+            autoComplete="username"
+            placeholder="you@example.com"
+            className="h-11"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+          />
+          {errors.identifier ? (
+            <p className="text-xs text-destructive">{errors.identifier}</p>
+          ) : null}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <div className="relative">
             <Input
               id="password"
               name="password"
-              type="password"
+              type={showPass ? "text" : "password"}
               autoComplete="current-password"
+              className="h-11 pr-10"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            {errors.password ? (
-              <p className="text-xs text-destructive">{errors.password}</p>
-            ) : null}
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-navy"
+              onClick={() => setShowPass((v) => !v)}
+              aria-label={showPass ? "Hide password" : "Show password"}
+            >
+              {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Signing in…" : "Sign in"}
-          </Button>
-        </form>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          New student?{" "}
-          <Link
-            href="/register"
-            className="font-medium text-orange underline-offset-4 hover:underline"
-          >
-            Create an account
-          </Link>
-        </p>
-      </CardContent>
-    </Card>
+          {errors.password ? (
+            <p className="text-xs text-destructive">{errors.password}</p>
+          ) : null}
+        </div>
+        <Button type="submit" className="h-11 w-full text-base" disabled={loading}>
+          {loading ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        New student?{" "}
+        <Link
+          href="/register"
+          className="font-semibold text-orange underline-offset-4 hover:underline"
+        >
+          Create an account
+        </Link>
+      </p>
+    </div>
   );
 }
