@@ -309,6 +309,13 @@ function assertNotStudent(user: any) {
   }
 }
 
+/** Spec matrix: enroll / take quizzes / complete lessons = Student only */
+function assertStudentOnly(user: any) {
+  if (!isStudent(user)) {
+    throw new ForbiddenError('Only students can perform this action');
+  }
+}
+
 export default ({ strapi }: { strapi: Core.Strapi }) => ({
   async me(ctx: Ctx) {
     const authHeader = String(ctx.request?.header?.authorization || '');
@@ -407,6 +414,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   async enroll(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
+    assertStudentOnly(user);
     const { courseId } = ctx.params;
     const body = ctx.request.body || {};
     const couponCode = body.couponCode || body.coupon || null;
@@ -486,6 +494,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   async myCourses(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
+    assertStudentOnly(user);
 
     const enrollments = await strapi.db.query('api::enrollment.enrollment').findMany({
       where: { student: user.id },
@@ -536,6 +545,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   async completeLesson(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
+    assertStudentOnly(user);
     const { lessonId } = ctx.params;
 
     const lesson = await findLesson(strapi, lessonId, { course: true });
@@ -659,6 +669,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   async takeQuiz(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
+    assertStudentOnly(user);
     const { quizId } = ctx.params;
 
     const quiz = await findQuiz(strapi, quizId, {
@@ -674,7 +685,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       const enrollment = await strapi.db.query('api::enrollment.enrollment').findOne({
         where: { student: user.id, course: quiz.course.id },
       });
-      if (!enrollment && !canManageCourse(user, quiz.course)) {
+      if (!enrollment) {
         throw new ForbiddenError('You must be enrolled to take this quiz');
       }
     }
@@ -689,6 +700,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   async submitQuiz(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
+    assertStudentOnly(user);
     const { quizId } = ctx.params;
     const submissions = ctx.request.body?.answers;
 
@@ -803,6 +815,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   async studentDashboard(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
+    assertStudentOnly(user);
 
     const enrollments = await strapi.db.query('api::enrollment.enrollment').findMany({
       where: { student: user.id },
@@ -935,7 +948,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
     const where: any = {};
     if (isInstructor(user) && !isAdmin(user) && !isContentManager(user)) {
-      where.instructor = user.id;
+      where.$or = [{ instructor: user.id }, { createdByUser: user.id }];
     }
 
     const courses = await strapi.db.query('api::course.course').findMany({
@@ -964,6 +977,77 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         updatedAt: c.updatedAt,
       })),
     };
+  },
+
+  /** Instructor / CM / Admin: view enrollments + progress for courses they manage */
+  async staffListProgress(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user) && !isContentManager(user) && !isInstructor(user)) {
+      throw new ForbiddenError('Staff required');
+    }
+
+    const courseFilter: any =
+      isInstructor(user) && !isAdmin(user) && !isContentManager(user)
+        ? { $or: [{ instructor: user.id }, { createdByUser: user.id }] }
+        : {};
+
+    const courses = await strapi.db.query('api::course.course').findMany({
+      where: courseFilter,
+      limit: 500,
+    });
+    const courseIds = courses.map((c: any) => c.id);
+    if (courseIds.length === 0) {
+      return { data: [] };
+    }
+
+    const courseIdFilter = ctx.query.courseId ? String(ctx.query.courseId) : null;
+    let scopedIds = courseIds;
+    if (courseIdFilter) {
+      const match = courses.find(
+        (c: any) =>
+          String(c.documentId) === courseIdFilter || String(c.id) === courseIdFilter
+      );
+      if (!match) throw new ForbiddenError('Course not in your scope');
+      scopedIds = [match.id];
+    }
+
+    const enrollments = await strapi.db.query('api::enrollment.enrollment').findMany({
+      where: { course: { id: { $in: scopedIds } } },
+      populate: { student: true, course: true },
+      orderBy: { enrolledAt: 'desc' },
+      limit: 500,
+    });
+
+    const data = await Promise.all(
+      enrollments.map(async (enrollment: any) => {
+        const progress =
+          enrollment.student && enrollment.course
+            ? await getCourseProgressForStudent(
+                strapi,
+                enrollment.student.id,
+                enrollment.course.id
+              )
+            : { totalLessons: 0, completedCount: 0, percentage: 0 };
+        return {
+          id: enrollment.id,
+          documentId: enrollment.documentId,
+          enrolledAt: enrollment.enrolledAt,
+          completedAt: enrollment.completedAt,
+          progress,
+          student: sanitizeUser(enrollment.student),
+          course: enrollment.course
+            ? {
+                id: enrollment.course.id,
+                documentId: enrollment.course.documentId,
+                title: enrollment.course.title,
+                slug: enrollment.course.slug,
+              }
+            : null,
+        };
+      })
+    );
+
+    return { data };
   },
 
   async adminDashboard(ctx: Ctx) {
@@ -2309,7 +2393,12 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     });
 
     const canManage = canManageCourse(user, course);
-    const fullAccess = Boolean(enrollment) || canManage || isAdmin(user) || isContentManager(user);
+    // Students need enrollment; staff managers can open for authoring.
+    if (!enrollment && !canManage) {
+      throw new ForbiddenError('You must be enrolled to access this course player');
+    }
+
+    const fullAccess = Boolean(enrollment) || canManage;
 
     const lessons = await strapi.db.query('api::lesson.lesson').findMany({
       where: { course: course.id },
@@ -2324,6 +2413,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
     const quizzes = await strapi.db.query('api::quiz.quiz').findMany({
       where: { course: course.id },
+      populate: canManage
+        ? { questions: { populate: { options: true } } }
+        : undefined,
     });
 
     return {
@@ -2335,6 +2427,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         description: course.description,
         shortDescription: course.shortDescription,
         thumbnailUrl: course.thumbnailUrl,
+        coverImageUrl: course.coverImageUrl,
         status: course.status,
         ...pricingFields(course),
         ...courseBuilderFields(course),
@@ -2343,12 +2436,37 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         lessons: lessons.map((lesson: any) =>
           lessonPublicFields(lesson, fullAccess || Boolean(lesson.isPreview))
         ),
-        quizzes: quizzes.map((q: any) => ({
-          id: q.id,
-          documentId: q.documentId,
-          title: q.title,
-          description: q.description,
-        })),
+        quizzes: quizzes.map((q: any) => {
+          if (!canManage) {
+            return {
+              id: q.id,
+              documentId: q.documentId,
+              title: q.title,
+              description: q.description,
+            };
+          }
+          const questions = [...(q.questions || [])].sort(
+            (a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)
+          );
+          return {
+            id: q.id,
+            documentId: q.documentId,
+            title: q.title,
+            description: q.description,
+            questions: questions.map((qq: any) => ({
+              id: qq.id,
+              documentId: qq.documentId,
+              question: qq.question,
+              order: qq.order,
+              options: (qq.options || []).map((o: any) => ({
+                id: o.id,
+                documentId: o.documentId,
+                text: o.text,
+                isCorrect: Boolean(o.isCorrect),
+              })),
+            })),
+          };
+        }),
         enrolled: Boolean(enrollment),
       },
     };

@@ -58,6 +58,12 @@ export default async function ContentManagerDashboardPage() {
       icon: BookOpen,
     },
     {
+      href: "/content-manager/progress",
+      label: "Progress",
+      desc: "Student progress by course",
+      icon: ClipboardList,
+    },
+    {
       href: "/content-manager/categories",
       label: "Categories",
       desc: "Organize catalog",

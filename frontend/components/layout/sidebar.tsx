@@ -133,6 +133,7 @@ function flatNavForRole(role: string | null | undefined): NavItem[] {
       return [
         { href: "/content-manager/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/content-manager/courses", label: "Courses", icon: BookOpen },
+        { href: "/content-manager/progress", label: "Progress", icon: BarChart3 },
         { href: "/content-manager/categories", label: "Categories", icon: FolderKanban },
         { href: "/content-manager/blog", label: "Blog", icon: FileText },
         { href: "/content-manager/banners", label: "Banners", icon: ImageIcon },
@@ -142,6 +143,7 @@ function flatNavForRole(role: string | null | undefined): NavItem[] {
       return [
         { href: "/instructor/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/instructor/courses", label: "My courses", icon: BookOpen },
+        { href: "/instructor/progress", label: "Progress", icon: BarChart3 },
         { href: "/profile", label: "Profile", icon: UserCheck },
       ];
     default:
@@ -161,6 +163,7 @@ function contentManagerSections(): NavSection[] {
       label: "Overview",
       items: [
         { href: "/content-manager/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { href: "/content-manager/progress", label: "Progress", icon: BarChart3 },
       ],
     },
     {

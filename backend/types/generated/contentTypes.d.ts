@@ -667,7 +667,7 @@ export interface ApiBlogPostBlogPost extends Struct.CollectionTypeSchema {
       'plugin::users-permissions.user'
     >;
     body: Schema.Attribute.Text;
-    coverImageUrl: Schema.Attribute.String;
+    coverImageUrl: Schema.Attribute.Text;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;

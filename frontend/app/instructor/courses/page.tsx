@@ -63,7 +63,7 @@ export default async function InstructorCoursesPage() {
                   </TableCell>
                   <TableCell>{course.lessonCount}</TableCell>
                   <TableCell>{course.quizCount}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="space-x-2 text-right">
                     <Button asChild size="sm" variant="outline">
                       <Link
                         href={`/instructor/courses/${course.documentId || course.id}/edit`}

@@ -92,6 +92,12 @@ export default {
     },
     {
       method: 'GET',
+      path: '/lms/staff/progress',
+      handler: 'lms.staffListProgress',
+      config: { policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'GET',
       path: '/lms/dashboard/admin',
       handler: 'lms.adminDashboard',
       config: { policies: ['global::is-admin'] },

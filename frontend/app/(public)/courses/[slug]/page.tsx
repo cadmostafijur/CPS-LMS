@@ -14,6 +14,7 @@ import {
 import { getCurrentUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/config";
+import { isStudent } from "@/lib/roles";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -39,8 +40,9 @@ export default async function CourseDetailPage({ params }: Props) {
 
   const user = await getCurrentUser();
   const token = await getTokenFromCookies();
+  const student = isStudent(user);
   let enrolled = false;
-  if (user && token) {
+  if (user && token && student) {
     const mine = await getMyCourses(token).catch(() => null);
     enrolled = Boolean(
       mine?.data?.some(
@@ -169,6 +171,7 @@ export default async function CourseDetailPage({ params }: Props) {
                 isFree={course.isFree !== false && !(Number(course.price) > 0)}
                 price={Number(course.discountPrice ?? course.price ?? 0)}
                 currency={course.currency || "USD"}
+                canEnroll={student}
               />
             </CardContent>
           </Card>

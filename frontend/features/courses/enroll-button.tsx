@@ -28,6 +28,7 @@ export function EnrollButton({
   isFree = true,
   price = 0,
   currency = "USD",
+  canEnroll = true,
 }: {
   courseId: string | number;
   enrolled: boolean;
@@ -35,6 +36,8 @@ export function EnrollButton({
   isFree?: boolean;
   price?: number;
   currency?: string;
+  /** Permission matrix: only Student may enroll */
+  canEnroll?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -48,6 +51,14 @@ export function EnrollButton({
     ? `/learn/${courseId}/${firstLessonId}`
     : `/student/my-courses`;
   const free = isFree || !(price > 0);
+
+  if (!canEnroll) {
+    return (
+      <div className="rounded-lg border border-border bg-surface px-3 py-3 text-sm text-muted-foreground">
+        Enrollment is available to Student accounts only. Staff manage courses from their dashboard.
+      </div>
+    );
+  }
 
   if (isEnrolled) {
     return (

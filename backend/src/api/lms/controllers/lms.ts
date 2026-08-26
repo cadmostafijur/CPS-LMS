@@ -44,6 +44,9 @@ export default ({ strapi }: { strapi: any }) => ({
   async staffListCourses(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').staffListCourses(ctx);
   },
+  async staffListProgress(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').staffListProgress(ctx);
+  },
   async adminDashboard(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').adminDashboard(ctx);
   },

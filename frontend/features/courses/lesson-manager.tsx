@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "@/lib/notify";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,44 +32,89 @@ export function LessonManager({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState<Lesson | null>(null);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [documentUrl, setDocumentUrl] = useState("");
+  const [externalUrl, setExternalUrl] = useState("");
+  const [order, setOrder] = useState(0);
+  const [durationMinutes, setDurationMinutes] = useState(10);
   const [lessonType, setLessonType] = useState<LessonType>("TEXT");
   const [moduleId, setModuleId] = useState<string>("none");
   const [isPreview, setIsPreview] = useState(false);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
 
-  async function createLesson(e: React.FormEvent<HTMLFormElement>) {
+  function resetForm(nextOrder = lessons.length) {
+    setEditing(null);
+    setTitle("");
+    setContent("");
+    setVideoUrl("");
+    setDocumentUrl("");
+    setExternalUrl("");
+    setOrder(nextOrder);
+    setDurationMinutes(10);
+    setLessonType("TEXT");
+    setModuleId("none");
+    setIsPreview(false);
+  }
+
+  function startEdit(lesson: Lesson) {
+    setEditing(lesson);
+    setTitle(lesson.title || "");
+    setContent(lesson.content || "");
+    setVideoUrl(lesson.videoUrl || "");
+    setDocumentUrl(lesson.documentUrl || "");
+    setExternalUrl(lesson.externalUrl || "");
+    setOrder(lesson.order ?? 0);
+    setDurationMinutes(lesson.durationMinutes ?? 10);
+    setLessonType((lesson.lessonType as LessonType) || "TEXT");
+    setModuleId(
+      lesson.module
+        ? String(lesson.module.documentId || lesson.module.id)
+        : "none"
+    );
+    setIsPreview(Boolean(lesson.isPreview));
+  }
+
+  async function saveLesson(e: React.FormEvent) {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const payload = {
-      title: String(form.get("title") || ""),
-      content: String(form.get("content") || ""),
-      videoUrl: String(form.get("videoUrl") || ""),
-      documentUrl: String(form.get("documentUrl") || ""),
-      externalUrl: String(form.get("externalUrl") || ""),
-      durationMinutes: Number(form.get("durationMinutes") || 0),
-      lessonType,
-      order: Number(form.get("order") || 0),
-      isPreview,
-      moduleId: moduleId === "none" ? null : moduleId,
-    };
-    if (!payload.title.trim()) {
+    if (!title.trim()) {
       toast.error("Lesson title is required");
       return;
     }
+    const payload = {
+      title,
+      content,
+      videoUrl,
+      documentUrl,
+      externalUrl,
+      durationMinutes,
+      lessonType,
+      order,
+      isPreview,
+      moduleId: moduleId === "none" ? null : moduleId,
+    };
     setLoading(true);
     try {
-      await bffFetch(`/api/lms/courses/${courseId}/lessons`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      toast.success("Lesson added");
-      e.currentTarget.reset();
-      setIsPreview(false);
-      setLessonType("TEXT");
-      setModuleId("none");
+      if (editing) {
+        const id = editing.documentId || editing.id;
+        await bffFetch(`/api/lms/lessons/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
+        toast.success("Lesson updated");
+      } else {
+        await bffFetch(`/api/lms/courses/${courseId}/lessons`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        toast.success("Lesson added");
+      }
+      resetForm(editing ? lessons.length : lessons.length + 1);
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Failed to add lesson");
+      toast.error(err instanceof ApiError ? err.message : "Failed to save lesson");
     } finally {
       setLoading(false);
     }
@@ -81,6 +126,9 @@ export function LessonManager({
       await bffFetch(`/api/lms/lessons/${deleteId}`, { method: "DELETE" });
       toast.success("Lesson deleted");
       setDeleteId(null);
+      if (editing && String(editing.documentId || editing.id) === String(deleteId)) {
+        resetForm();
+      }
       router.refresh();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Delete failed");
@@ -115,29 +163,46 @@ export function LessonManager({
                   </p>
                 ) : null}
               </div>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                aria-label="Delete lesson"
-                onClick={() => setDeleteId(lesson.documentId || lesson.id)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <div className="flex shrink-0 gap-1">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label="Edit lesson"
+                  onClick={() => startEdit(lesson)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label="Delete lesson"
+                  onClick={() => setDeleteId(lesson.documentId || lesson.id)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
 
         <form
           className="space-y-3 rounded-lg border border-dashed border-border p-4"
-          onSubmit={createLesson}
+          onSubmit={saveLesson}
         >
           <p className="flex items-center gap-2 text-sm font-medium">
-            <Plus className="h-4 w-4" /> Add lesson
+            <Plus className="h-4 w-4" />
+            {editing ? "Edit lesson" : "Add lesson"}
           </p>
           <div className="space-y-2">
             <Label htmlFor="lesson-title">Title</Label>
-            <Input id="lesson-title" name="title" required />
+            <Input
+              id="lesson-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
@@ -181,11 +246,21 @@ export function LessonManager({
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="order">Order</Label>
-              <Input id="order" name="order" type="number" defaultValue={sorted.length} />
+              <Input
+                id="order"
+                type="number"
+                value={order}
+                onChange={(e) => setOrder(Number(e.target.value) || 0)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="durationMinutes">Duration (min)</Label>
-              <Input id="durationMinutes" name="durationMinutes" type="number" defaultValue={10} />
+              <Input
+                id="durationMinutes"
+                type="number"
+                value={durationMinutes}
+                onChange={(e) => setDurationMinutes(Number(e.target.value) || 0)}
+              />
             </div>
             <div className="space-y-2">
               <Label>Free preview</Label>
@@ -206,28 +281,55 @@ export function LessonManager({
           {(lessonType === "VIDEO" || lessonType === "AUDIO") && (
             <div className="space-y-2">
               <Label htmlFor="videoUrl">Media URL</Label>
-              <Input id="videoUrl" name="videoUrl" placeholder="https://…" />
+              <Input
+                id="videoUrl"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="https://…"
+              />
             </div>
           )}
           {lessonType === "PDF" && (
             <div className="space-y-2">
               <Label htmlFor="documentUrl">Document URL</Label>
-              <Input id="documentUrl" name="documentUrl" placeholder="https://…/file.pdf" />
+              <Input
+                id="documentUrl"
+                value={documentUrl}
+                onChange={(e) => setDocumentUrl(e.target.value)}
+                placeholder="https://…/file.pdf"
+              />
             </div>
           )}
           {lessonType === "URL" && (
             <div className="space-y-2">
               <Label htmlFor="externalUrl">External URL</Label>
-              <Input id="externalUrl" name="externalUrl" placeholder="https://…" />
+              <Input
+                id="externalUrl"
+                value={externalUrl}
+                onChange={(e) => setExternalUrl(e.target.value)}
+                placeholder="https://…"
+              />
             </div>
           )}
           <div className="space-y-2">
             <Label htmlFor="content">Content</Label>
-            <Textarea id="content" name="content" rows={4} />
+            <Textarea
+              id="content"
+              rows={4}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+            />
           </div>
-          <Button type="submit" disabled={loading} size="sm">
-            {loading ? "Adding…" : "Add lesson"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={loading} size="sm">
+              {loading ? "Saving…" : editing ? "Update lesson" : "Add lesson"}
+            </Button>
+            {editing ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => resetForm()}>
+                Cancel
+              </Button>
+            ) : null}
+          </div>
         </form>
       </CardContent>
 

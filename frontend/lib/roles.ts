@@ -69,21 +69,18 @@ export function rolesAllowedForPath(pathname: string): RoleName[] | null {
   if (pathname.startsWith("/instructor")) {
     return [ROLE_NAMES.ADMIN, ROLE_NAMES.CONTENT_MANAGER, ROLE_NAMES.INSTRUCTOR];
   }
-  if (pathname.startsWith("/student")) {
-    return [
-      ROLE_NAMES.ADMIN,
-      ROLE_NAMES.CONTENT_MANAGER,
-      ROLE_NAMES.INSTRUCTOR,
-      ROLE_NAMES.STUDENT,
-    ];
-  }
+  // Student learning surfaces — matrix: Student only
   if (
+    pathname.startsWith("/student") ||
     pathname.startsWith("/learn") ||
-    pathname.startsWith("/quizzes") ||
-    pathname.startsWith("/certificates") ||
-    pathname.startsWith("/profile") ||
-    pathname === "/dashboard"
+    pathname.startsWith("/quizzes")
   ) {
+    return [ROLE_NAMES.STUDENT];
+  }
+  if (pathname.startsWith("/certificates")) {
+    return [ROLE_NAMES.STUDENT, ROLE_NAMES.ADMIN];
+  }
+  if (pathname.startsWith("/profile") || pathname === "/dashboard") {
     return [
       ROLE_NAMES.ADMIN,
       ROLE_NAMES.CONTENT_MANAGER,

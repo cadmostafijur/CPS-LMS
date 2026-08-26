@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, Users } from "lucide-react";
+import { BarChart3, BookOpen, Plus, Users } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatsCard } from "@/components/shared/stats-card";
@@ -27,16 +27,24 @@ export default async function InstructorDashboardPage() {
     <DashboardShell user={user}>
       <PageHeader
         title="Instructor dashboard"
-        description="Manage your courses and track enrollments."
+        description="Manage your own courses, lessons, quizzes, and student progress."
         actions={
-          <Button asChild>
-            <Link href="/instructor/courses/new">New course</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href="/instructor/progress">View progress</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/instructor/courses/new">
+                <Plus className="mr-1.5 h-4 w-4" />
+                New course
+              </Link>
+            </Button>
+          </div>
         }
       />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <StatsCard
-          title="Courses"
+          title="My courses"
           value={data.courseCount}
           icon={<BookOpen className="h-4 w-4 text-muted-foreground" />}
         />
@@ -45,6 +53,40 @@ export default async function InstructorDashboardPage() {
           value={data.enrollmentCount}
           icon={<Users className="h-4 w-4 text-muted-foreground" />}
         />
+        <StatsCard
+          title="Published"
+          value={data.courses.filter((c) => c.status === "PUBLISHED").length}
+          icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
+        />
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        {[
+          {
+            href: "/instructor/courses",
+            label: "My courses",
+            desc: "Create, edit, publish (own only)",
+          },
+          {
+            href: "/instructor/progress",
+            label: "Student progress",
+            desc: "Enrollees in your courses",
+          },
+          {
+            href: "/instructor/courses/new",
+            label: "New course",
+            desc: "Start a draft course",
+          },
+        ].map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="rounded-xl border border-border bg-card p-4 transition hover:border-orange/40 hover:bg-orange/5"
+          >
+            <p className="font-medium text-navy">{item.label}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{item.desc}</p>
+          </Link>
+        ))}
       </div>
 
       <div className="mt-8 rounded-xl border border-border bg-card">
@@ -52,7 +94,7 @@ export default async function InstructorDashboardPage() {
           <EmptyState
             className="border-0"
             title="No courses yet"
-            description="Create your first course to start teaching."
+            description="Create your first course, then add lessons and quizzes."
             action={
               <Button asChild>
                 <Link href="/instructor/courses/new">Create course</Link>
@@ -91,7 +133,10 @@ export default async function InstructorDashboardPage() {
                   <TableCell>{course.lessonCount}</TableCell>
                   <TableCell>{course.quizCount}</TableCell>
                   <TableCell>{course.enrollmentCount}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="space-x-2 text-right">
+                    <Button asChild size="sm" variant="ghost">
+                      <Link href="/instructor/progress">Progress</Link>
+                    </Button>
                     <Button asChild size="sm" variant="outline">
                       <Link
                         href={`/instructor/courses/${course.documentId || course.id}/edit`}

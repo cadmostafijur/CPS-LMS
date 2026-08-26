@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "@/lib/notify";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +25,30 @@ const emptyQuestion = (): DraftQuestion => ({
   ],
 });
 
+function quizToDraft(quiz: Quiz): {
+  title: string;
+  description: string;
+  questions: DraftQuestion[];
+} {
+  return {
+    title: quiz.title || "",
+    description: quiz.description || "",
+    questions:
+      quiz.questions?.length
+        ? quiz.questions.map((q) => ({
+            question: q.question || "",
+            options:
+              q.options?.length
+                ? q.options.map((o) => ({
+                    text: o.text || "",
+                    isCorrect: Boolean(o.isCorrect),
+                  }))
+                : emptyQuestion().options,
+          }))
+        : [emptyQuestion()],
+  };
+}
+
 export function QuizManager({
   courseId,
   quizzes,
@@ -34,12 +58,28 @@ export function QuizManager({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState<Quiz | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [questions, setQuestions] = useState<DraftQuestion[]>([emptyQuestion()]);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
 
-  async function createQuiz(e: React.FormEvent) {
+  function resetForm() {
+    setEditing(null);
+    setTitle("");
+    setDescription("");
+    setQuestions([emptyQuestion()]);
+  }
+
+  function startEdit(quiz: Quiz) {
+    const draft = quizToDraft(quiz);
+    setEditing(quiz);
+    setTitle(draft.title);
+    setDescription(draft.description);
+    setQuestions(draft.questions);
+  }
+
+  async function saveQuiz(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) {
       toast.error("Quiz title is required");
@@ -47,17 +87,24 @@ export function QuizManager({
     }
     setLoading(true);
     try {
-      await bffFetch(`/api/lms/courses/${courseId}/quizzes`, {
-        method: "POST",
-        body: JSON.stringify({ title, description, questions }),
-      });
-      toast.success("Quiz created");
-      setTitle("");
-      setDescription("");
-      setQuestions([emptyQuestion()]);
+      if (editing) {
+        const id = editing.documentId || editing.id;
+        await bffFetch(`/api/lms/quizzes/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({ title, description, questions }),
+        });
+        toast.success("Quiz updated");
+      } else {
+        await bffFetch(`/api/lms/courses/${courseId}/quizzes`, {
+          method: "POST",
+          body: JSON.stringify({ title, description, questions }),
+        });
+        toast.success("Quiz created");
+      }
+      resetForm();
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Failed to create quiz");
+      toast.error(err instanceof ApiError ? err.message : "Failed to save quiz");
     } finally {
       setLoading(false);
     }
@@ -69,6 +116,9 @@ export function QuizManager({
       await bffFetch(`/api/lms/quizzes/${deleteId}`, { method: "DELETE" });
       toast.success("Quiz deleted");
       setDeleteId(null);
+      if (editing && String(editing.documentId || editing.id) === String(deleteId)) {
+        resetForm();
+      }
       router.refresh();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Delete failed");
@@ -93,22 +143,37 @@ export function QuizManager({
                   ({quiz.questions?.length ?? 0} questions)
                 </span>
               </span>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                aria-label="Delete quiz"
-                onClick={() => setDeleteId(quiz.documentId || quiz.id)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label="Edit quiz"
+                  onClick={() => startEdit(quiz)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label="Delete quiz"
+                  onClick={() => setDeleteId(quiz.documentId || quiz.id)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
 
-        <form className="space-y-4 rounded-lg border border-dashed border-border p-4" onSubmit={createQuiz}>
+        <form
+          className="space-y-4 rounded-lg border border-dashed border-border p-4"
+          onSubmit={saveQuiz}
+        >
           <p className="flex items-center gap-2 text-sm font-medium">
-            <Plus className="h-4 w-4" /> Add quiz
+            <Plus className="h-4 w-4" />
+            {editing ? "Edit quiz" : "Add quiz"}
           </p>
           <div className="space-y-2">
             <Label htmlFor="quiz-title">Title</Label>
@@ -198,8 +263,13 @@ export function QuizManager({
               Add question
             </Button>
             <Button type="submit" size="sm" disabled={loading}>
-              {loading ? "Creating…" : "Create quiz"}
+              {loading ? "Saving…" : editing ? "Update quiz" : "Create quiz"}
             </Button>
+            {editing ? (
+              <Button type="button" variant="outline" size="sm" onClick={resetForm}>
+                Cancel
+              </Button>
+            ) : null}
           </div>
         </form>
       </CardContent>

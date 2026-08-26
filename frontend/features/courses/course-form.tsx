@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageUrlField } from "@/components/shared/image-url-field";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { bffFetch, ApiError } from "@/lib/api";
 import type {
   Course,
@@ -33,6 +34,8 @@ export function CourseForm({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [categories, setCategories] = useState<CourseCategory[]>([]);
   const [status, setStatus] = useState<CourseStatus>(course?.status || "DRAFT");
   const [isFree, setIsFree] = useState(
@@ -118,6 +121,23 @@ export function CourseForm({
       toast.error(err instanceof ApiError ? err.message : "Save failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function removeCourse() {
+    if (!course) return;
+    const id = course.documentId || course.id;
+    setDeleting(true);
+    try {
+      await bffFetch(`/api/lms/courses/${id}`, { method: "DELETE" });
+      toast.success("Course deleted");
+      setConfirmDelete(false);
+      router.push(redirectBase);
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Delete failed");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -307,11 +327,32 @@ export function CourseForm({
               </div>
             </div>
           ) : null}
-          <Button type="submit" disabled={loading}>
-            {loading ? "Saving…" : course ? "Save changes" : "Create course"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={loading || deleting}>
+              {loading ? "Saving…" : course ? "Save changes" : "Create course"}
+            </Button>
+            {course ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={loading || deleting}
+                onClick={() => setConfirmDelete(true)}
+              >
+                Delete course
+              </Button>
+            ) : null}
+          </div>
         </form>
       </CardContent>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Delete this course?"
+        description="Lessons, quizzes, and related data for this course will be removed. This cannot be undone."
+        confirmLabel={deleting ? "Deleting…" : "Delete"}
+        destructive
+        onConfirm={removeCourse}
+      />
     </Card>
   );
 }
