@@ -140,3 +140,14 @@ body {
   margin: 0.5rem 0 0.75rem 1.1rem;
   list-style: disc;
 }
+
+/* Hide native <details> disclosure markers (avoids stray bars next to custom icons) */
+summary {
+  list-style: none;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+summary::marker {
+  content: none;
+}

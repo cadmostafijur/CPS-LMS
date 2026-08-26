@@ -59,25 +59,33 @@ export function Navbar({
       .toUpperCase() || "U";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-white/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5">
-          <BrandLogo size={36} priority />
-          <span className="font-display text-lg font-bold tracking-tight text-navy">
-            CPS Academy
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-white/95 backdrop-blur-md">
+      <div className="mx-auto flex h-[4.25rem] max-w-6xl items-center justify-between gap-4 px-4">
+        <Link
+          href="/"
+          className="group flex shrink-0 items-center gap-3 rounded-xl py-1 pr-2 transition-opacity hover:opacity-90"
+        >
+          <BrandLogo size={44} priority className="rounded-lg shadow-sm ring-1 ring-navy/10" />
+          <span className="flex flex-col leading-none">
+            <span className="font-display text-lg font-bold tracking-tight text-navy sm:text-xl">
+              CPS Academy
+            </span>
+            <span className="mt-0.5 hidden text-[10px] font-medium uppercase tracking-[0.14em] text-orange sm:block">
+              Learn · Build · Compete
+            </span>
           </span>
         </Link>
 
-        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 md:flex">
+        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 md:flex">
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className={cn(
-                "text-sm font-medium transition-colors",
+                "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 pathname.startsWith(link.href)
-                  ? "text-navy"
-                  : "text-muted-foreground hover:text-navy"
+                  ? "bg-orange/10 text-navy"
+                  : "text-muted-foreground hover:bg-navy/5 hover:text-navy"
               )}
             >
               {link.label}
@@ -91,7 +99,7 @@ export function Navbar({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2 px-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-orange/15 text-orange text-xs">
+                    <AvatarFallback className="bg-orange/15 text-xs text-orange">
                       {initials}
                     </AvatarFallback>
                   </Avatar>

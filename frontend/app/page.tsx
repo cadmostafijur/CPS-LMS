@@ -5,6 +5,8 @@ import {
   ClipboardCheck,
   FileText,
   LineChart,
+  Minus,
+  Plus,
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -72,13 +74,22 @@ async function listHomeBanners() {
 }
 
 export default async function HomePage() {
-  const [user, courses, banners] = await Promise.all([
-    getCurrentUser(),
-    listPublishedCourses().catch(() => []),
-    listHomeBanners(),
-  ]);
+  const user = await getCurrentUser();
+  const banners = await listHomeBanners();
+
+  let courses: Awaited<ReturnType<typeof listPublishedCourses>> = [];
+  let catalogError: string | null = null;
+  try {
+    courses = await listPublishedCourses();
+  } catch (err) {
+    catalogError =
+      err instanceof Error
+        ? err.message
+        : "Could not load courses. Is the API running on port 1337?";
+  }
+
   const featured = courses.slice(0, 3);
-  const courseCount = courses.length || 4;
+  const courseCount = courses.length || 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -91,7 +102,7 @@ export default async function HomePage() {
         </div>
 
         <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-20 pt-16 text-center sm:pt-24">
-          <BrandLogo size={96} priority className="animate-fade-up rounded-2xl shadow-md" />
+          <BrandLogo size={112} priority className="animate-fade-up rounded-2xl shadow-md ring-1 ring-navy/10" />
           <p className="animate-fade-up mt-6 font-display text-5xl font-bold tracking-tight text-navy sm:text-6xl">
             CPS Academy
           </p>
@@ -148,9 +159,15 @@ export default async function HomePage() {
             <Link href="/courses">View all</Link>
           </Button>
         </div>
-        {featured.length === 0 ? (
+        {catalogError ? (
+          <p className="rounded-2xl border border-dashed border-destructive/30 bg-card px-6 py-12 text-center text-muted-foreground shadow-sm">
+            <span className="font-medium text-navy">Courses unavailable.</span>{" "}
+            {catalogError}
+          </p>
+        ) : featured.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center text-muted-foreground shadow-sm">
-            Courses will appear here after the backend finishes seeding.
+            No published courses yet. Publish a course in Admin, or restart Strapi
+            with <code className="text-xs">SEED_ON_BOOTSTRAP=true</code>.
           </p>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -229,12 +246,11 @@ export default async function HomePage() {
               key={item.q}
               className="group rounded-2xl border border-border bg-card px-5 py-4 shadow-sm open:shadow-md"
             >
-              <summary className="cursor-pointer list-none font-display text-base font-semibold text-navy marker:content-none [&::-webkit-details-marker]:hidden">
-                <span className="flex items-center justify-between gap-4">
-                  {item.q}
-                  <span className="text-orange transition group-open:rotate-45">
-                    +
-                  </span>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-semibold text-navy outline-none [&::-webkit-details-marker]:hidden [&::marker]:content-none">
+                <span>{item.q}</span>
+                <span className="relative flex h-6 w-6 shrink-0 items-center justify-center text-orange">
+                  <Plus className="h-4 w-4 group-open:hidden" strokeWidth={2.5} />
+                  <Minus className="hidden h-4 w-4 group-open:block" strokeWidth={2.5} />
                 </span>
               </summary>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
