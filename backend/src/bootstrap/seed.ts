@@ -647,6 +647,41 @@ export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
 
   const instructors = [instructor1, instructor2, instructor3];
 
+  const CATEGORY_DEFS = [
+    { name: 'Frontend', description: 'UI frameworks and client apps' },
+    { name: 'Backend', description: 'APIs, servers, and databases' },
+    { name: 'Computer Science', description: 'DSA and fundamentals' },
+    { name: 'Competitive Programming', description: 'Contest problem solving' },
+  ];
+  const categoryByName: Record<string, any> = {};
+  for (const def of CATEGORY_DEFS) {
+    const slug = slugify(def.name);
+    let cat = await strapi.db.query('api::course-category.course-category').findOne({
+      where: { slug },
+    });
+    if (!cat) {
+      cat = await strapi.db.query('api::course-category.course-category').create({
+        data: {
+          name: def.name,
+          slug,
+          description: def.description,
+          isActive: true,
+        },
+      });
+      strapi.log.info(`[LMS] Created category: ${def.name}`);
+    }
+    categoryByName[def.name] = cat;
+  }
+
+  const courseCategoryMap: Record<string, string> = {
+    'Next.js Fundamentals': 'Frontend',
+    'React Mastery': 'Frontend',
+    'Node.js Backend Development': 'Backend',
+    'TypeScript Essentials': 'Frontend',
+    'Data Structures & Algorithms': 'Computer Science',
+    'Competitive Programming Basics': 'Competitive Programming',
+  };
+
   const student1 = await createUser(strapi, {
     username: 'student',
     email: 'student@lms-demo.com',
@@ -688,11 +723,57 @@ export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
           shortDescription: def.shortDescription,
           thumbnailUrl: def.thumbnailUrl,
           status: 'PUBLISHED',
+          publishedAt: new Date().toISOString(),
+          difficulty: 'BEGINNER',
+          language: 'English',
+          isFree: true,
+          price: 0,
+          category: categoryByName[courseCategoryMap[def.title] || 'Frontend']?.id || null,
           instructor: instructor.id,
           createdByUser: instructor.id,
         },
       });
       strapi.log.info(`[LMS] Created course: ${def.title}`);
+    } else {
+      const catId = categoryByName[courseCategoryMap[def.title] || 'Frontend']?.id;
+      if (catId && !course.category) {
+        course = await strapi.db.query('api::course.course').update({
+          where: { id: course.id },
+          data: {
+            category: catId,
+            publishedAt: course.publishedAt || new Date().toISOString(),
+            difficulty: course.difficulty || 'BEGINNER',
+            language: course.language || 'English',
+          },
+        });
+      }
+    }
+
+    let introModule = await strapi.db.query('api::course-module.course-module').findOne({
+      where: { course: course.id, title: 'Getting started' },
+    });
+    if (!introModule) {
+      introModule = await strapi.db.query('api::course-module.course-module').create({
+        data: {
+          title: 'Getting started',
+          description: 'Foundational lessons',
+          order: 0,
+          course: course.id,
+        },
+      });
+    }
+    let coreModule = await strapi.db.query('api::course-module.course-module').findOne({
+      where: { course: course.id, title: 'Core skills' },
+    });
+    if (!coreModule) {
+      coreModule = await strapi.db.query('api::course-module.course-module').create({
+        data: {
+          title: 'Core skills',
+          description: 'Main curriculum',
+          order: 1,
+          course: course.id,
+        },
+      });
     }
 
     const lessons: any[] = [];
@@ -702,6 +783,7 @@ export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
       let lesson = await strapi.db.query('api::lesson.lesson').findOne({
         where: { slug: lessonSlug },
       });
+      const moduleRef = li < 2 ? introModule.id : coreModule.id;
       if (!lesson) {
         lesson = await strapi.db.query('api::lesson.lesson').create({
           data: {
@@ -711,7 +793,18 @@ export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
             videoUrl: lessonDef.videoUrl || null,
             lessonType: lessonDef.lessonType,
             order: li,
+            isPreview: li === 0,
+            durationMinutes: 15,
             course: course.id,
+            module: moduleRef,
+          },
+        });
+      } else if (!lesson.module) {
+        lesson = await strapi.db.query('api::lesson.lesson').update({
+          where: { id: lesson.id },
+          data: {
+            module: moduleRef,
+            isPreview: li === 0 || lesson.isPreview,
           },
         });
       }

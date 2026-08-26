@@ -16,20 +16,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { bffFetch, ApiError } from "@/lib/api";
-import type { Lesson, LessonType } from "@/types";
+import type { CourseModule, Lesson, LessonType } from "@/types";
 
 export function LessonManager({
   courseId,
   lessons,
+  modules = [],
 }: {
   courseId: string | number;
   lessons: Lesson[];
+  modules?: CourseModule[];
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [lessonType, setLessonType] = useState<LessonType>("TEXT");
+  const [moduleId, setModuleId] = useState<string>("none");
+  const [isPreview, setIsPreview] = useState(false);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
 
   async function createLesson(e: React.FormEvent<HTMLFormElement>) {
@@ -39,8 +44,13 @@ export function LessonManager({
       title: String(form.get("title") || ""),
       content: String(form.get("content") || ""),
       videoUrl: String(form.get("videoUrl") || ""),
+      documentUrl: String(form.get("documentUrl") || ""),
+      externalUrl: String(form.get("externalUrl") || ""),
+      durationMinutes: Number(form.get("durationMinutes") || 0),
       lessonType,
       order: Number(form.get("order") || 0),
+      isPreview,
+      moduleId: moduleId === "none" ? null : moduleId,
     };
     if (!payload.title.trim()) {
       toast.error("Lesson title is required");
@@ -54,6 +64,9 @@ export function LessonManager({
       });
       toast.success("Lesson added");
       e.currentTarget.reset();
+      setIsPreview(false);
+      setLessonType("TEXT");
+      setModuleId("none");
       router.refresh();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to add lesson");
@@ -75,6 +88,7 @@ export function LessonManager({
   }
 
   const sorted = [...lessons].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const sortedModules = [...modules].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   return (
     <Card>
@@ -86,14 +100,21 @@ export function LessonManager({
           {sorted.map((lesson) => (
             <li
               key={String(lesson.documentId || lesson.id)}
-              className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
+              className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
             >
-              <span>
-                <span className="mr-2 text-muted-foreground">
-                  #{lesson.order ?? 0}
-                </span>
-                {lesson.title}
-              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-muted-foreground">#{lesson.order ?? 0}</span>
+                  <span className="truncate font-medium">{lesson.title}</span>
+                  <Badge variant="secondary">{lesson.lessonType || "TEXT"}</Badge>
+                  {lesson.isPreview ? <Badge variant="gold">Preview</Badge> : null}
+                </div>
+                {lesson.module?.title ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {lesson.module.title}
+                  </p>
+                ) : null}
+              </div>
               <Button
                 type="button"
                 size="icon"
@@ -107,7 +128,10 @@ export function LessonManager({
           ))}
         </ul>
 
-        <form className="space-y-3 rounded-lg border border-dashed border-border p-4" onSubmit={createLesson}>
+        <form
+          className="space-y-3 rounded-lg border border-dashed border-border p-4"
+          onSubmit={createLesson}
+        >
           <p className="flex items-center gap-2 text-sm font-medium">
             <Plus className="h-4 w-4" /> Add lesson
           </p>
@@ -128,18 +152,75 @@ export function LessonManager({
                 <SelectContent>
                   <SelectItem value="TEXT">Text</SelectItem>
                   <SelectItem value="VIDEO">Video</SelectItem>
+                  <SelectItem value="PDF">PDF / document</SelectItem>
+                  <SelectItem value="URL">External URL</SelectItem>
+                  <SelectItem value="AUDIO">Audio</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
+              <Label>Module</Label>
+              <Select value={moduleId} onValueChange={setModuleId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Optional" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No module</SelectItem>
+                  {sortedModules.map((mod) => (
+                    <SelectItem
+                      key={String(mod.documentId || mod.id)}
+                      value={String(mod.documentId || mod.id)}
+                    >
+                      {mod.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-2">
               <Label htmlFor="order">Order</Label>
               <Input id="order" name="order" type="number" defaultValue={sorted.length} />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="durationMinutes">Duration (min)</Label>
+              <Input id="durationMinutes" name="durationMinutes" type="number" defaultValue={10} />
+            </div>
+            <div className="space-y-2">
+              <Label>Free preview</Label>
+              <Select
+                value={isPreview ? "yes" : "no"}
+                onValueChange={(v) => setIsPreview(v === "yes")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no">No</SelectItem>
+                  <SelectItem value="yes">Yes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="videoUrl">Video URL</Label>
-            <Input id="videoUrl" name="videoUrl" />
-          </div>
+          {(lessonType === "VIDEO" || lessonType === "AUDIO") && (
+            <div className="space-y-2">
+              <Label htmlFor="videoUrl">Media URL</Label>
+              <Input id="videoUrl" name="videoUrl" placeholder="https://…" />
+            </div>
+          )}
+          {lessonType === "PDF" && (
+            <div className="space-y-2">
+              <Label htmlFor="documentUrl">Document URL</Label>
+              <Input id="documentUrl" name="documentUrl" placeholder="https://…/file.pdf" />
+            </div>
+          )}
+          {lessonType === "URL" && (
+            <div className="space-y-2">
+              <Label htmlFor="externalUrl">External URL</Label>
+              <Input id="externalUrl" name="externalUrl" placeholder="https://…" />
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="content">Content</Label>
             <Textarea id="content" name="content" rows={4} />

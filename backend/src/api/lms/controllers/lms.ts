@@ -104,6 +104,33 @@ export default ({ strapi }: { strapi: any }) => ({
   async getCatalogCourse(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').getCatalogCourse(ctx);
   },
+  async listCategories(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listCategories(ctx);
+  },
+  async adminListCategories(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminListCategories(ctx);
+  },
+  async adminCreateCategory(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminCreateCategory(ctx);
+  },
+  async adminUpdateCategory(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminUpdateCategory(ctx);
+  },
+  async adminDeleteCategory(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminDeleteCategory(ctx);
+  },
+  async listCourseModules(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listCourseModules(ctx);
+  },
+  async createCourseModule(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').createCourseModule(ctx);
+  },
+  async updateCourseModule(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').updateCourseModule(ctx);
+  },
+  async deleteCourseModule(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').deleteCourseModule(ctx);
+  },
   async createCourse(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').createCourse(ctx);
   },

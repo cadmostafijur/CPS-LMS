@@ -164,6 +164,64 @@ function sanitizeBanner(banner: any) {
   };
 }
 
+function sanitizeCategory(cat: any) {
+  if (!cat) return null;
+  return {
+    id: cat.id,
+    documentId: cat.documentId,
+    name: cat.name,
+    slug: cat.slug,
+    description: cat.description || null,
+    isActive: cat.isActive !== false,
+  };
+}
+
+function sanitizeModule(mod: any) {
+  if (!mod) return null;
+  return {
+    id: mod.id,
+    documentId: mod.documentId,
+    title: mod.title,
+    description: mod.description || null,
+    order: mod.order ?? 0,
+  };
+}
+
+function courseBuilderFields(course: any) {
+  return {
+    coverImageUrl: course.coverImageUrl || null,
+    difficulty: course.difficulty || 'BEGINNER',
+    language: course.language || 'English',
+    discountPrice: course.discountPrice != null ? Number(course.discountPrice) : null,
+    requirements: course.requirements || null,
+    outcomes: course.outcomes || null,
+    publishedAt: course.publishedAt || null,
+    category: sanitizeCategory(course.category),
+  };
+}
+
+function lessonPublicFields(lesson: any, includeContent: boolean) {
+  const base = {
+    id: lesson.id,
+    documentId: lesson.documentId,
+    title: lesson.title,
+    slug: lesson.slug,
+    lessonType: lesson.lessonType,
+    order: lesson.order,
+    isPreview: Boolean(lesson.isPreview),
+    durationMinutes: lesson.durationMinutes ?? 0,
+    module: lesson.module ? sanitizeModule(lesson.module) : null,
+  };
+  if (!includeContent) return base;
+  return {
+    ...base,
+    content: lesson.content,
+    videoUrl: lesson.videoUrl,
+    documentUrl: lesson.documentUrl,
+    externalUrl: lesson.externalUrl,
+  };
+}
+
 async function applyCouponToPrice(
   strapi: Core.Strapi,
   originalPrice: number,
@@ -1450,11 +1508,19 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       description,
       shortDescription,
       thumbnailUrl,
+      coverImageUrl,
       status,
       instructorId,
       isFree,
       price,
       currency,
+      discountPrice,
+      difficulty,
+      language,
+      requirements,
+      outcomes,
+      publishedAt,
+      categoryId,
     } = body;
 
     if (!title) throw new ValidationError('title is required');
@@ -1477,6 +1543,15 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     const free =
       typeof isFree === 'boolean' ? isFree : !(Number(price || 0) > 0);
 
+    let category = null;
+    if (categoryId) {
+      category = await resolveByIdOrDocumentId(
+        strapi,
+        'api::course-category.course-category',
+        String(categoryId)
+      );
+    }
+
     const course = await strapi.db.query('api::course.course').create({
       data: {
         title,
@@ -1484,14 +1559,22 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         description,
         shortDescription,
         thumbnailUrl,
+        coverImageUrl: coverImageUrl || thumbnailUrl || null,
         status: status || 'DRAFT',
         isFree: free,
         price: free ? 0 : Math.max(0, Number(price || 0)),
         currency: currency || 'USD',
+        discountPrice: discountPrice != null ? Number(discountPrice) : null,
+        difficulty: difficulty || 'BEGINNER',
+        language: language || 'English',
+        requirements: requirements || null,
+        outcomes: outcomes || null,
+        publishedAt: publishedAt || (status === 'PUBLISHED' ? new Date().toISOString() : null),
+        category: category?.id || null,
         instructor: instructorUserId,
         createdByUser: user.id,
       },
-      populate: { instructor: true, createdByUser: true },
+      populate: { instructor: true, createdByUser: true, category: true },
     });
 
     return { data: course };
@@ -1516,10 +1599,34 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       'description',
       'shortDescription',
       'thumbnailUrl',
+      'coverImageUrl',
       'status',
       'currency',
+      'difficulty',
+      'language',
+      'requirements',
+      'outcomes',
+      'publishedAt',
     ]) {
       if (body[key] !== undefined) data[key] = body[key];
+    }
+
+    if (body.discountPrice !== undefined) {
+      data.discountPrice = body.discountPrice == null ? null : Number(body.discountPrice);
+    }
+
+    if (body.categoryId !== undefined) {
+      if (!body.categoryId) {
+        data.category = null;
+      } else {
+        const category = await resolveByIdOrDocumentId(
+          strapi,
+          'api::course-category.course-category',
+          String(body.categoryId)
+        );
+        if (!category) throw new NotFoundError('Category not found');
+        data.category = category.id;
+      }
     }
 
     if (body.isFree !== undefined || body.price !== undefined) {
@@ -1553,7 +1660,13 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     const updated = await strapi.db.query('api::course.course').update({
       where: { id: course.id },
       data,
-      populate: { instructor: true, createdByUser: true, lessons: true },
+      populate: {
+        instructor: true,
+        createdByUser: true,
+        lessons: true,
+        category: true,
+        modules: true,
+      },
     });
 
     return { data: updated };
@@ -1590,17 +1703,40 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
     const slug = await ensureUniqueSlug(strapi, 'api::lesson.lesson', body.title);
 
+    let moduleId = null;
+    if (body.moduleId) {
+      const fullMod = await resolveByIdOrDocumentId(
+        strapi,
+        'api::course-module.course-module',
+        String(body.moduleId)
+      );
+      if (!fullMod) throw new NotFoundError('Module not found');
+      const withCourse = await strapi.db.query('api::course-module.course-module').findOne({
+        where: { id: fullMod.id },
+        populate: { course: true },
+      });
+      if (Number(withCourse?.course?.id) !== Number(course.id)) {
+        throw new ValidationError('Module does not belong to this course');
+      }
+      moduleId = fullMod.id;
+    }
+
     const lesson = await strapi.db.query('api::lesson.lesson').create({
       data: {
         title: body.title,
         slug,
         content: body.content,
         videoUrl: body.videoUrl,
+        documentUrl: body.documentUrl || null,
+        externalUrl: body.externalUrl || null,
         lessonType: body.lessonType || 'TEXT',
         order: body.order ?? 0,
+        isPreview: Boolean(body.isPreview),
+        durationMinutes: Number(body.durationMinutes || 0),
         course: course.id,
+        module: moduleId,
       },
-      populate: { course: true },
+      populate: { course: true, module: true },
     });
 
     return { data: lesson };
@@ -1618,17 +1754,40 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
     const body = ctx.request.body?.data || ctx.request.body || {};
     const data: any = {};
-    for (const key of ['title', 'content', 'videoUrl', 'lessonType', 'order']) {
+    for (const key of [
+      'title',
+      'content',
+      'videoUrl',
+      'documentUrl',
+      'externalUrl',
+      'lessonType',
+      'order',
+      'isPreview',
+      'durationMinutes',
+    ]) {
       if (body[key] !== undefined) data[key] = body[key];
     }
     if (body.title) {
       data.slug = await ensureUniqueSlug(strapi, 'api::lesson.lesson', body.title, lesson.id);
     }
+    if (body.moduleId !== undefined) {
+      if (!body.moduleId) {
+        data.module = null;
+      } else {
+        const fullMod = await resolveByIdOrDocumentId(
+          strapi,
+          'api::course-module.course-module',
+          String(body.moduleId)
+        );
+        if (!fullMod) throw new NotFoundError('Module not found');
+        data.module = fullMod.id;
+      }
+    }
 
     const updated = await strapi.db.query('api::lesson.lesson').update({
       where: { id: lesson.id },
       data,
-      populate: { course: true },
+      populate: { course: true, module: true },
     });
 
     return { data: updated };
@@ -1646,6 +1805,195 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
     await strapi.db.query('api::lesson.lesson').delete({ where: { id: lesson.id } });
     return { data: { id: lesson.id, documentId: lesson.documentId } };
+  },
+
+  async listCategories(_ctx: Ctx) {
+    const categories = await strapi.db.query('api::course-category.course-category').findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+    });
+    return { data: categories.map(sanitizeCategory) };
+  },
+
+  async adminListCategories(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user) && !isContentManager(user)) {
+      throw new ForbiddenError('Content Manager or Admin required');
+    }
+    const categories = await strapi.db.query('api::course-category.course-category').findMany({
+      orderBy: { name: 'asc' },
+    });
+    const withCounts = await Promise.all(
+      categories.map(async (cat: any) => ({
+        ...sanitizeCategory(cat),
+        courseCount: await strapi.db.query('api::course.course').count({
+          where: { category: cat.id },
+        }),
+      }))
+    );
+    return { data: withCounts };
+  },
+
+  async adminCreateCategory(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user) && !isContentManager(user)) {
+      throw new ForbiddenError('Content Manager or Admin required');
+    }
+    const body = ctx.request.body || {};
+    if (!body.name) throw new ValidationError('name is required');
+    const slug = await ensureUniqueSlug(
+      strapi,
+      'api::course-category.course-category',
+      body.name
+    );
+    const created = await strapi.db.query('api::course-category.course-category').create({
+      data: {
+        name: String(body.name).trim(),
+        slug,
+        description: body.description || null,
+        isActive: body.isActive !== false,
+      },
+    });
+    return { data: sanitizeCategory(created) };
+  },
+
+  async adminUpdateCategory(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user) && !isContentManager(user)) {
+      throw new ForbiddenError('Content Manager or Admin required');
+    }
+    const target = await resolveByIdOrDocumentId(
+      strapi,
+      'api::course-category.course-category',
+      ctx.params.id
+    );
+    if (!target) throw new NotFoundError('Category not found');
+    const body = ctx.request.body || {};
+    const data: any = {};
+    if (body.name !== undefined) {
+      data.name = body.name;
+      data.slug = await ensureUniqueSlug(
+        strapi,
+        'api::course-category.course-category',
+        body.name,
+        target.id
+      );
+    }
+    if (body.description !== undefined) data.description = body.description;
+    if (body.isActive !== undefined) data.isActive = body.isActive;
+    const updated = await strapi.db.query('api::course-category.course-category').update({
+      where: { id: target.id },
+      data,
+    });
+    return { data: sanitizeCategory(updated) };
+  },
+
+  async adminDeleteCategory(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user) && !isContentManager(user)) {
+      throw new ForbiddenError('Content Manager or Admin required');
+    }
+    const target = await resolveByIdOrDocumentId(
+      strapi,
+      'api::course-category.course-category',
+      ctx.params.id
+    );
+    if (!target) throw new NotFoundError('Category not found');
+    await strapi.db.query('api::course.course').updateMany({
+      where: { category: target.id },
+      data: { category: null },
+    });
+    await strapi.db.query('api::course-category.course-category').delete({
+      where: { id: target.id },
+    });
+    return { data: { id: target.id, deleted: true } };
+  },
+
+  async listCourseModules(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    const course = await findCourse(strapi, ctx.params.courseId, {
+      instructor: true,
+      createdByUser: true,
+    });
+    if (!course) throw new NotFoundError('Course not found');
+    assertCourseOwnerOrManager(user, course);
+    const modules = await strapi.db.query('api::course-module.course-module').findMany({
+      where: { course: course.id },
+      orderBy: { order: 'asc' },
+    });
+    return { data: modules.map(sanitizeModule) };
+  },
+
+  async createCourseModule(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    assertNotStudent(user);
+    const course = await findCourse(strapi, ctx.params.courseId, {
+      instructor: true,
+      createdByUser: true,
+    });
+    if (!course) throw new NotFoundError('Course not found');
+    assertCourseOwnerOrManager(user, course);
+    const body = ctx.request.body || {};
+    if (!body.title) throw new ValidationError('title is required');
+    const created = await strapi.db.query('api::course-module.course-module').create({
+      data: {
+        title: String(body.title).trim(),
+        description: body.description || null,
+        order: Number(body.order || 0),
+        course: course.id,
+      },
+    });
+    return { data: sanitizeModule(created) };
+  },
+
+  async updateCourseModule(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    assertNotStudent(user);
+    const target = await resolveByIdOrDocumentId(
+      strapi,
+      'api::course-module.course-module',
+      ctx.params.id
+    );
+    if (!target) throw new NotFoundError('Module not found');
+    const withCourse = await strapi.db.query('api::course-module.course-module').findOne({
+      where: { id: target.id },
+      populate: { course: { populate: { instructor: true, createdByUser: true } } },
+    });
+    assertCourseOwnerOrManager(user, withCourse.course);
+    const body = ctx.request.body || {};
+    const data: any = {};
+    for (const key of ['title', 'description', 'order']) {
+      if (body[key] !== undefined) data[key] = body[key];
+    }
+    const updated = await strapi.db.query('api::course-module.course-module').update({
+      where: { id: target.id },
+      data,
+    });
+    return { data: sanitizeModule(updated) };
+  },
+
+  async deleteCourseModule(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    assertNotStudent(user);
+    const target = await resolveByIdOrDocumentId(
+      strapi,
+      'api::course-module.course-module',
+      ctx.params.id
+    );
+    if (!target) throw new NotFoundError('Module not found');
+    const withCourse = await strapi.db.query('api::course-module.course-module').findOne({
+      where: { id: target.id },
+      populate: { course: { populate: { instructor: true, createdByUser: true } } },
+    });
+    assertCourseOwnerOrManager(user, withCourse.course);
+    await strapi.db.query('api::lesson.lesson').updateMany({
+      where: { module: target.id },
+      data: { module: null },
+    });
+    await strapi.db.query('api::course-module.course-module').delete({
+      where: { id: target.id },
+    });
+    return { data: { id: target.id, deleted: true } };
   },
 
   async createQuiz(ctx: Ctx) {
@@ -1801,8 +2149,11 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     const user = await getAuthUser(ctx, strapi);
     const course = await findCourse(strapi, ctx.params.courseId, {
       instructor: true,
+      createdByUser: true,
+      category: true,
       lessons: true,
       quizzes: true,
+      modules: true,
     });
     if (!course) throw new NotFoundError('Course not found');
 
@@ -1811,11 +2162,15 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     });
 
     const canManage = canManageCourse(user, course);
-    if (!enrollment && !canManage && !isAdmin(user) && !isContentManager(user)) {
-      throw new ForbiddenError('You are not enrolled in this course');
-    }
+    const fullAccess = Boolean(enrollment) || canManage || isAdmin(user) || isContentManager(user);
 
     const lessons = await strapi.db.query('api::lesson.lesson').findMany({
+      where: { course: course.id },
+      populate: { module: true },
+      orderBy: { order: 'asc' },
+    });
+
+    const modules = await strapi.db.query('api::course-module.course-module').findMany({
       where: { course: course.id },
       orderBy: { order: 'asc' },
     });
@@ -1834,20 +2189,27 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         shortDescription: course.shortDescription,
         thumbnailUrl: course.thumbnailUrl,
         status: course.status,
+        ...pricingFields(course),
+        ...courseBuilderFields(course),
         instructor: sanitizeUser(course.instructor),
-        lessons,
+        modules: modules.map(sanitizeModule),
+        lessons: lessons.map((lesson: any) =>
+          lessonPublicFields(lesson, fullAccess || Boolean(lesson.isPreview))
+        ),
         quizzes: quizzes.map((q: any) => ({
           id: q.id,
           documentId: q.documentId,
           title: q.title,
           description: q.description,
         })),
+        enrolled: Boolean(enrollment),
       },
     };
   },
 
   async listCatalog(ctx: Ctx) {
     const search = String(ctx.query?.search || '').trim();
+    const categorySlug = String(ctx.query?.category || '').trim();
     const where: Record<string, unknown> = { status: 'PUBLISHED' };
     if (search) {
       where.$or = [
@@ -1856,6 +2218,12 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         { description: { $containsi: search } },
       ];
     }
+    if (categorySlug) {
+      const cat = await strapi.db.query('api::course-category.course-category').findOne({
+        where: { slug: categorySlug },
+      });
+      if (cat) where.category = cat.id;
+    }
 
     const courses = await strapi.db.query('api::course.course').findMany({
       where,
@@ -1863,12 +2231,19 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         instructor: true,
         lessons: true,
         quizzes: true,
+        category: true,
       },
       orderBy: { updatedAt: 'desc' },
     });
 
+    const now = Date.now();
+    const visible = courses.filter((course: any) => {
+      if (!course.publishedAt) return true;
+      return new Date(course.publishedAt).getTime() <= now;
+    });
+
     return {
-      data: courses.map((course: any) => ({
+      data: visible.map((course: any) => ({
         id: course.id,
         documentId: course.documentId,
         title: course.title,
@@ -1878,6 +2253,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         thumbnailUrl: course.thumbnailUrl,
         status: course.status,
         ...pricingFields(course),
+        ...courseBuilderFields(course),
         instructor: sanitizeUser(course.instructor),
         lessonCount: course.lessons?.length ?? 0,
         quizCount: course.quizzes?.length ?? 0,
@@ -1893,12 +2269,19 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       where: { slug, status: 'PUBLISHED' },
       populate: {
         instructor: true,
-        lessons: { orderBy: { order: 'asc' } },
+        lessons: { populate: { module: true }, orderBy: { order: 'asc' } },
         quizzes: true,
+        category: true,
+        modules: true,
       },
     });
 
     if (!course) throw new NotFoundError('Course not found');
+
+    const modules = await strapi.db.query('api::course-module.course-module').findMany({
+      where: { course: course.id },
+      orderBy: { order: 'asc' },
+    });
 
     return {
       data: {
@@ -1911,16 +2294,12 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         thumbnailUrl: course.thumbnailUrl,
         status: course.status,
         ...pricingFields(course),
+        ...courseBuilderFields(course),
         instructor: sanitizeUser(course.instructor),
-        lessons: (course.lessons || []).map((lesson: any) => ({
-          id: lesson.id,
-          documentId: lesson.documentId,
-          title: lesson.title,
-          slug: lesson.slug,
-          lessonType: lesson.lessonType,
-          order: lesson.order,
-          // Content/video withheld until enrollment (learning player fetches securely)
-        })),
+        modules: modules.map(sanitizeModule),
+        lessons: (course.lessons || []).map((lesson: any) =>
+          lessonPublicFields(lesson, Boolean(lesson.isPreview))
+        ),
         quizzes: (course.quizzes || []).map((quiz: any) => ({
           id: quiz.id,
           documentId: quiz.documentId,

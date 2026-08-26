@@ -28,8 +28,22 @@
     },
     "lessonType": {
       "type": "enumeration",
-      "enum": ["TEXT", "VIDEO"],
+      "enum": ["TEXT", "VIDEO", "PDF", "URL", "AUDIO"],
       "default": "TEXT"
+    },
+    "documentUrl": {
+      "type": "string"
+    },
+    "externalUrl": {
+      "type": "string"
+    },
+    "isPreview": {
+      "type": "boolean",
+      "default": false
+    },
+    "durationMinutes": {
+      "type": "integer",
+      "default": 0
     },
     "order": {
       "type": "integer",
@@ -39,6 +53,12 @@
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::course.course",
+      "inversedBy": "lessons"
+    },
+    "module": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course-module.course-module",
       "inversedBy": "lessons"
     }
   }

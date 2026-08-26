@@ -54,6 +54,12 @@ export function CourseCard({ course }: { course: Course }) {
           <Clapperboard className="h-3.5 w-3.5" />
           {quizCount} quiz{quizCount === 1 ? "" : "zes"}
         </span>
+        {course.category?.name ? (
+          <span className="truncate">{course.category.name}</span>
+        ) : null}
+        {course.difficulty ? (
+          <span className="capitalize">{course.difficulty.toLowerCase()}</span>
+        ) : null}
         {course.instructor?.name ? (
           <span className="truncate">by {course.instructor.name}</span>
         ) : null}

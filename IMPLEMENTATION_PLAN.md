@@ -236,9 +236,20 @@ Granular actions: `entity.view|create|update|delete|publish|approve|export` regi
 - [ ] Student vs instructor dedicated list pages (Phase 3)
 
 
-### Phase 2 — Course builder depth
+### Phase 2 — Course builder depth *(shipped 2026-08-26)*
 
-Categories, modules, lesson content types (PDF/URL/preview), media picker (URL + Strapi upload), schedule publish fields.
+Categories, modules, lesson content types (PDF/URL/preview), media URLs, schedule publish fields.
+
+**Status**
+
+- [x] `course-category` CT + admin/CM CRUD (`/admin/categories`, `/content-manager/categories`)
+- [x] `course-module` CT + module manager in course editor
+- [x] Course fields: category, difficulty, language, cover, discount, requirements, outcomes, publishedAt
+- [x] Lesson types: TEXT / VIDEO / PDF / URL / AUDIO + document/external URLs + free preview
+- [x] Catalog category filters + course meta badges
+- [x] Learning player: modules sidebar, PDF/audio/URL, preview unlock without full enroll
+- [x] Seed attaches categories + modules + first-lesson preview
+- [x] Frontend `tsc` clean
 
 ### Phase 3 — Students, instructors, batches, attendance
 

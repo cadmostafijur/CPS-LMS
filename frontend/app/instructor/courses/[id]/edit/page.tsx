@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { CourseForm } from "@/features/courses/course-form";
 import { LessonManager } from "@/features/courses/lesson-manager";
+import { ModuleManager } from "@/features/courses/module-manager";
 import { QuizManager } from "@/features/courses/quiz-manager";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
@@ -30,12 +31,17 @@ export default async function EditCoursePage({ params }: Props) {
       />
       <PageHeader
         title="Edit course"
-        description="Update details, lessons, and quizzes."
+        description="Update details, modules, lessons, and quizzes."
       />
       <div className="grid gap-6 xl:grid-cols-2">
         <CourseForm course={course} />
         <div className="space-y-6">
-          <LessonManager courseId={courseKey} lessons={course.lessons || []} />
+          <ModuleManager courseId={courseKey} modules={course.modules || []} />
+          <LessonManager
+            courseId={courseKey}
+            lessons={course.lessons || []}
+            modules={course.modules || []}
+          />
           <QuizManager courseId={courseKey} quizzes={course.quizzes || []} />
         </div>
       </div>

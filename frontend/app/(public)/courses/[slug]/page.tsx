@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EnrollButton } from "@/features/courses/enroll-button";
 import {
@@ -52,7 +54,12 @@ export default async function CourseDetailPage({ params }: Props) {
   const lessons = [...(course.lessons || [])].sort(
     (a, b) => (a.order ?? 0) - (b.order ?? 0)
   );
-  const firstLessonId = lessons[0]?.documentId || lessons[0]?.id;
+  const firstPreview = lessons.find((l) => l.isPreview);
+  const firstLessonId =
+    firstPreview?.documentId ||
+    firstPreview?.id ||
+    lessons[0]?.documentId ||
+    lessons[0]?.id;
   const courseKey = course.documentId || course.id;
 
   return (
@@ -79,23 +86,56 @@ export default async function CourseDetailPage({ params }: Props) {
               <h2 className="font-display text-xl font-semibold text-navy">
                 Curriculum
               </h2>
+              {course.requirements ? (
+                <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Requirements: </span>
+                  {course.requirements}
+                </p>
+              ) : null}
+              {course.outcomes ? (
+                <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Outcomes: </span>
+                  {course.outcomes}
+                </p>
+              ) : null}
               <ul className="mt-4 space-y-2">
                 {lessons.length === 0 ? (
                   <li className="text-sm text-muted-foreground">
                     Lessons coming soon.
                   </li>
                 ) : (
-                  lessons.map((lesson, index) => (
-                    <li
-                      key={String(lesson.documentId || lesson.id)}
-                      className="rounded-xl border border-border bg-white px-4 py-3 text-sm shadow-sm"
-                    >
-                      <span className="mr-2 text-muted-foreground">
-                        {index + 1}.
-                      </span>
-                      {lesson.title}
-                    </li>
-                  ))
+                  lessons.map((lesson, index) => {
+                    const preview = lesson.isPreview;
+                    const lessonKey = lesson.documentId || lesson.id;
+                    return (
+                      <li
+                        key={String(lessonKey)}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm shadow-sm"
+                      >
+                        <div>
+                          <span className="mr-2 text-muted-foreground">
+                            {index + 1}.
+                          </span>
+                          {lesson.title}
+                          {lesson.module?.title ? (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              · {lesson.module.title}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {preview ? <Badge variant="gold">Preview</Badge> : null}
+                          {preview && user ? (
+                            <Button asChild size="sm" variant="outline">
+                              <Link href={`/learn/${courseKey}/${lessonKey}`}>
+                                Preview
+                              </Link>
+                            </Button>
+                          ) : null}
+                        </div>
+                      </li>
+                    );
+                  })
                 )}
               </ul>
             </div>
@@ -105,6 +145,17 @@ export default async function CourseDetailPage({ params }: Props) {
               <CardTitle className="font-display text-navy">Get started</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {course.category?.name ? (
+                  <Badge variant="secondary">{course.category.name}</Badge>
+                ) : null}
+                {course.difficulty ? (
+                  <Badge variant="outline">{course.difficulty}</Badge>
+                ) : null}
+                {course.language ? (
+                  <Badge variant="outline">{course.language}</Badge>
+                ) : null}
+              </div>
               <p className="text-sm text-muted-foreground">
                 {lessons.length} lessons
                 {course.instructor?.name
@@ -116,7 +167,7 @@ export default async function CourseDetailPage({ params }: Props) {
                 enrolled={enrolled}
                 firstLessonId={firstLessonId}
                 isFree={course.isFree !== false && !(Number(course.price) > 0)}
-                price={Number(course.price || 0)}
+                price={Number(course.discountPrice ?? course.price ?? 0)}
                 currency={course.currency || "USD"}
               />
             </CardContent>

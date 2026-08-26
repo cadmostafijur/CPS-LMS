@@ -13,6 +13,7 @@ import {
   PanelLeft,
   Tag,
   Image as ImageIcon,
+  FolderKanban,
 } from "lucide-react";
 import { useState, type ComponentType } from "react";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ function navForRole(role: string | null | undefined): NavItem[] {
         { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/admin/users", label: "Users", icon: Users },
         { href: "/admin/courses", label: "Courses", icon: BookOpen },
+        { href: "/admin/categories", label: "Categories", icon: FolderKanban },
         { href: "/admin/enrollments", label: "Enrollments", icon: GraduationCap },
         { href: "/admin/certificates", label: "Certificates", icon: Award },
         { href: "/admin/coupons", label: "Coupons", icon: Tag },
@@ -47,6 +49,7 @@ function navForRole(role: string | null | undefined): NavItem[] {
           icon: LayoutDashboard,
         },
         { href: "/content-manager/courses", label: "Courses", icon: BookOpen },
+        { href: "/content-manager/categories", label: "Categories", icon: FolderKanban },
         { href: "/content-manager/blog", label: "Blog", icon: FileText },
       ];
     case ROLE_NAMES.INSTRUCTOR:

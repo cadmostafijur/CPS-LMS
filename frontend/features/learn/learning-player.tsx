@@ -95,12 +95,26 @@ export function LearningPlayer({
     (id) => String(id) === String(currentId)
   );
   const embedUrl = lesson.videoUrl ? toYouTubeEmbed(lesson.videoUrl) : null;
+  const contentLocked =
+    !lesson.content &&
+    !lesson.videoUrl &&
+    !lesson.documentUrl &&
+    !lesson.externalUrl &&
+    !course.enrolled;
+
+  const modules = [...(course.modules || [])].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0)
+  );
 
   function go(target: Lesson) {
     router.push(`/learn/${courseId}/${target.documentId || target.id}`);
   }
 
   function markComplete() {
+    if (!course.enrolled) {
+      toast.error("Enroll in this course to track progress");
+      return;
+    }
     startTransition(async () => {
       try {
         const result = await bffFetch<{
@@ -151,33 +165,81 @@ export function LearningPlayer({
             </div>
             <Progress value={progressPercent} />
           </div>
-          <nav className="space-y-1">
-            {lessons.map((item, i) => {
-              const id = item.documentId || item.id;
-              const active = String(id) === String(currentId);
-              const done = completedLessonIds.some((x) => String(x) === String(id));
-              return (
-                <Link
-                  key={String(id)}
-                  href={`/learn/${courseId}/${id}`}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
-                    active
-                      ? "bg-orange/10 text-orange"
-                      : "text-foreground hover:bg-muted"
-                  )}
-                >
-                  {done ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-                  ) : (
-                    <span className="w-4 text-center text-xs text-muted-foreground">
-                      {i + 1}
-                    </span>
-                  )}
-                  <span className="line-clamp-2">{item.title}</span>
-                </Link>
-              );
-            })}
+          <nav className="space-y-3">
+            {modules.length > 0
+              ? modules.map((mod) => {
+                  const modLessons = lessons.filter(
+                    (l) =>
+                      String(l.module?.id) === String(mod.id) ||
+                      String(l.module?.documentId) === String(mod.documentId)
+                  );
+                  if (modLessons.length === 0) return null;
+                  return (
+                    <div key={String(mod.documentId || mod.id)}>
+                      <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {mod.title}
+                      </p>
+                      <div className="space-y-1">
+                        {modLessons.map((item) => {
+                          const id = item.documentId || item.id;
+                          const active = String(id) === String(currentId);
+                          const done = completedLessonIds.some(
+                            (x) => String(x) === String(id)
+                          );
+                          return (
+                            <Link
+                              key={String(id)}
+                              href={`/learn/${courseId}/${id}`}
+                              className={cn(
+                                "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                                active
+                                  ? "bg-orange/10 text-orange"
+                                  : "text-foreground hover:bg-muted"
+                              )}
+                            >
+                              {done ? (
+                                <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+                              ) : (
+                                <span className="w-4 text-center text-xs text-muted-foreground">
+                                  ·
+                                </span>
+                              )}
+                              <span className="line-clamp-2">{item.title}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })
+              : lessons.map((item, i) => {
+                  const id = item.documentId || item.id;
+                  const active = String(id) === String(currentId);
+                  const done = completedLessonIds.some(
+                    (x) => String(x) === String(id)
+                  );
+                  return (
+                    <Link
+                      key={String(id)}
+                      href={`/learn/${courseId}/${id}`}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                        active
+                          ? "bg-orange/10 text-orange"
+                          : "text-foreground hover:bg-muted"
+                      )}
+                    >
+                      {done ? (
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+                      ) : (
+                        <span className="w-4 text-center text-xs text-muted-foreground">
+                          {i + 1}
+                        </span>
+                      )}
+                      <span className="line-clamp-2">{item.title}</span>
+                    </Link>
+                  );
+                })}
           </nav>
           {quizzes.length > 0 ? (
             <div className="pt-2">
@@ -203,44 +265,86 @@ export function LearningPlayer({
       <main className="min-w-0 flex-1 px-4 py-6 md:px-8">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Badge variant="secondary">{lesson.lessonType || "TEXT"}</Badge>
+          {lesson.isPreview ? <Badge variant="gold">Preview</Badge> : null}
           {completed ? <Badge variant="success">Completed</Badge> : null}
         </div>
         <h2 className="font-display text-2xl font-bold text-navy md:text-3xl">
           {lesson.title}
         </h2>
 
-        {embedUrl ? (
-          <div className="mt-6 aspect-video overflow-hidden rounded-xl border border-border bg-navy">
-            <iframe
-              src={embedUrl}
-              title={lesson.title}
-              className="h-full w-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        ) : lesson.videoUrl ? (
-          <div className="mt-6 rounded-xl border border-border bg-surface p-4">
+        {contentLocked ? (
+          <div className="mt-6 rounded-xl border border-border bg-surface p-6">
             <p className="text-sm text-muted-foreground">
-              This lesson includes an external video resource.
+              Enroll to unlock this lesson.
             </p>
-            <Button asChild variant="outline" className="mt-3">
-              <a href={lesson.videoUrl} target="_blank" rel="noreferrer">
-                Open video
-                <ExternalLink className="h-4 w-4" />
-              </a>
+            <Button asChild className="mt-4">
+              <Link href={`/courses/${course.slug}`}>View course</Link>
             </Button>
           </div>
-        ) : null}
+        ) : (
+          <>
+            {embedUrl ? (
+              <div className="mt-6 aspect-video overflow-hidden rounded-xl border border-border bg-navy">
+                <iframe
+                  src={embedUrl}
+                  title={lesson.title}
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            ) : lesson.lessonType === "AUDIO" && lesson.videoUrl ? (
+              <audio className="mt-6 w-full" controls src={lesson.videoUrl} />
+            ) : lesson.videoUrl ? (
+              <div className="mt-6 rounded-xl border border-border bg-surface p-4">
+                <Button asChild variant="outline">
+                  <a href={lesson.videoUrl} target="_blank" rel="noreferrer">
+                    Open media
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            ) : null}
 
-        <div
-          className="prose-lms mt-6 max-w-none"
-          dangerouslySetInnerHTML={{
-            __html: renderLessonHtml(
-              lesson.content || "No content for this lesson yet."
-            ),
-          }}
-        />
+            {lesson.documentUrl ? (
+              <div className="mt-6 overflow-hidden rounded-xl border border-border">
+                <iframe
+                  title={lesson.title}
+                  src={lesson.documentUrl}
+                  className="h-[70vh] w-full bg-white"
+                />
+                <div className="border-t border-border bg-surface px-4 py-2">
+                  <Button asChild size="sm" variant="outline">
+                    <a href={lesson.documentUrl} target="_blank" rel="noreferrer">
+                      Open document
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            {lesson.externalUrl ? (
+              <div className="mt-6 rounded-xl border border-border bg-surface p-4">
+                <Button asChild>
+                  <a href={lesson.externalUrl} target="_blank" rel="noreferrer">
+                    Open resource
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            ) : null}
+
+            <div
+              className="prose-lms mt-6 max-w-none"
+              dangerouslySetInnerHTML={{
+                __html: renderLessonHtml(
+                  lesson.content || "No content for this lesson yet."
+                ),
+              }}
+            />
+          </>
+        )}
 
         <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
           <Button
@@ -251,8 +355,17 @@ export function LearningPlayer({
             <ChevronLeft className="h-4 w-4" />
             Previous
           </Button>
-          <Button disabled={pending || completed} onClick={markComplete}>
-            {completed ? "Completed" : pending ? "Saving…" : "Mark complete"}
+          <Button
+            disabled={pending || completed || !course.enrolled}
+            onClick={markComplete}
+          >
+            {completed
+              ? "Completed"
+              : pending
+                ? "Saving…"
+                : course.enrolled
+                  ? "Mark complete"
+                  : "Enroll to complete"}
           </Button>
           <Button
             variant="outline"

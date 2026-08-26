@@ -2,7 +2,26 @@ import type { RoleLike, RoleName } from "@/lib/roles";
 
 export type CourseStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 export type BlogStatus = "DRAFT" | "PUBLISHED";
-export type LessonType = "TEXT" | "VIDEO";
+export type LessonType = "TEXT" | "VIDEO" | "PDF" | "URL" | "AUDIO";
+export type CourseDifficulty = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+
+export interface CourseCategory {
+  id: number | string;
+  documentId?: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  isActive?: boolean;
+  courseCount?: number;
+}
+
+export interface CourseModule {
+  id: number | string;
+  documentId?: string;
+  title: string;
+  description?: string | null;
+  order?: number;
+}
 
 export interface User {
   id: number | string;
@@ -24,10 +43,19 @@ export interface Course {
   description?: string | null;
   shortDescription?: string | null;
   thumbnailUrl?: string | null;
+  coverImageUrl?: string | null;
   status: CourseStatus;
   isFree?: boolean;
   price?: number | null;
+  discountPrice?: number | null;
   currency?: string | null;
+  difficulty?: CourseDifficulty | null;
+  language?: string | null;
+  requirements?: string | null;
+  outcomes?: string | null;
+  publishedAt?: string | null;
+  category?: CourseCategory | null;
+  modules?: CourseModule[];
   instructor?: User | null;
   createdByUser?: User | null;
   lessons?: Lesson[];
@@ -35,6 +63,7 @@ export interface Course {
   enrollments?: Enrollment[];
   lessonCount?: number;
   quizCount?: number;
+  enrolled?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -46,8 +75,13 @@ export interface Lesson {
   slug: string;
   content?: string | null;
   videoUrl?: string | null;
+  documentUrl?: string | null;
+  externalUrl?: string | null;
   lessonType?: LessonType;
   order?: number;
+  isPreview?: boolean;
+  durationMinutes?: number;
+  module?: CourseModule | null;
   course?: Course | number | string | null;
 }
 

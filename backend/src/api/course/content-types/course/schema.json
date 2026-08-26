@@ -46,6 +46,42 @@
       "type": "string",
       "default": "USD"
     },
+    "discountPrice": {
+      "type": "decimal"
+    },
+    "coverImageUrl": {
+      "type": "string"
+    },
+    "difficulty": {
+      "type": "enumeration",
+      "enum": ["BEGINNER", "INTERMEDIATE", "ADVANCED"],
+      "default": "BEGINNER"
+    },
+    "language": {
+      "type": "string",
+      "default": "English"
+    },
+    "requirements": {
+      "type": "text"
+    },
+    "outcomes": {
+      "type": "text"
+    },
+    "publishedAt": {
+      "type": "datetime"
+    },
+    "category": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course-category.course-category",
+      "inversedBy": "courses"
+    },
+    "modules": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::course-module.course-module",
+      "mappedBy": "course"
+    },
     "instructor": {
       "type": "relation",
       "relation": "manyToOne",
