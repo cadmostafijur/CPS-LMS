@@ -72,7 +72,7 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
     <>
       <aside
         className={cn(
-          "sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 border-r border-border bg-card transition-all md:block",
+          "sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 border-r border-border bg-surface transition-all md:block",
           collapsed ? "w-[72px]" : "w-60"
         )}
       >
@@ -101,10 +101,10 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
                   href={item.href}
                   title={item.label}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                     active
-                      ? "bg-navy text-gold"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-orange/10 text-orange"
+                      : "text-muted-foreground hover:bg-white hover:text-navy"
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
@@ -116,7 +116,7 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
         </div>
       </aside>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-background md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-white md:hidden">
         {items.slice(0, 4).map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -127,7 +127,7 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
               href={item.href}
               className={cn(
                 "flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium",
-                active ? "text-primary" : "text-muted-foreground"
+                active ? "text-orange" : "text-muted-foreground"
               )}
             >
               <Icon className="h-4 w-4" />

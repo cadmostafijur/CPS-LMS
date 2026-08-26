@@ -13,7 +13,7 @@ export function DashboardShell({
   const role = getRoleName(user);
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-background">
       <Navbar user={user} />
       <div className="mx-auto flex max-w-[1400px]">
         <Sidebar role={role} />

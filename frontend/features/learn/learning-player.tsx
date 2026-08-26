@@ -91,7 +91,7 @@ export function LearningPlayer({
                   className={cn(
                     "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
                     active
-                      ? "bg-navy text-gold"
+                      ? "bg-orange/10 text-orange"
                       : "hover:bg-muted text-foreground"
                   )}
                 >

@@ -17,8 +17,8 @@ export function CourseCard({ course }: { course: Course }) {
   const quizCount = course.quizCount ?? course.quizzes?.length ?? 0;
 
   return (
-    <Card className="group flex h-full flex-col overflow-hidden border-border/80 bg-card shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-lg">
-      <div className="relative h-44 overflow-hidden bg-navy">
+    <Card className="group flex h-full flex-col overflow-hidden rounded-2xl border-border/80 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
+      <div className="relative h-44 overflow-hidden bg-surface">
         {course.thumbnailUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -27,17 +27,16 @@ export function CourseCard({ course }: { course: Course }) {
             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
           />
         ) : (
-          <div className="flex h-full items-center justify-center">
-            <BookOpen className="h-10 w-10 text-gold" />
+          <div className="flex h-full items-center justify-center bg-gradient-to-br from-orange/10 to-navy/5">
+            <BookOpen className="h-10 w-10 text-orange" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-navy/80 via-transparent to-transparent" />
         <Badge className="absolute left-3 top-3" variant="gold">
           {course.status}
         </Badge>
       </div>
       <CardHeader className="space-y-2">
-        <CardTitle className="line-clamp-2 font-display text-lg leading-snug">
+        <CardTitle className="line-clamp-2 font-display text-lg leading-snug text-navy">
           {course.title}
         </CardTitle>
         <CardDescription className="line-clamp-2 text-sm">

@@ -37,6 +37,7 @@ export async function POST(request: Request) {
           username: body.username.trim(),
           email: body.email.trim().toLowerCase(),
           password: body.password,
+          name: (body.name || body.username).trim(),
         }),
       });
     } catch {
@@ -54,7 +55,6 @@ export async function POST(request: Request) {
       const message =
         payload?.error?.message ||
         payload?.message?.[0]?.messages?.[0]?.message ||
-        payload?.error?.details?.errors?.[0]?.message ||
         "Registration failed";
       return NextResponse.json({ error: message }, { status: res.status });
     }

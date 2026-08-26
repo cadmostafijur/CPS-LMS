@@ -56,15 +56,15 @@ export default async function CourseDetailPage({ params }: Props) {
   const courseKey = course.documentId || course.id;
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-background">
       <Navbar user={user} />
-      <main className="mx-auto max-w-6xl px-4 py-10">
+      <main className="mx-auto max-w-6xl px-4 py-12">
         <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
           <div>
             <Badge variant="gold" className="mb-3">
               {course.status}
             </Badge>
-            <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">
+            <h1 className="font-display text-3xl font-bold tracking-tight text-navy md:text-4xl">
               {course.title}
             </h1>
             <p className="mt-3 text-muted-foreground">
@@ -76,7 +76,9 @@ export default async function CourseDetailPage({ params }: Props) {
               </p>
             ) : null}
             <div className="mt-8">
-              <h2 className="font-display text-xl font-semibold">Curriculum</h2>
+              <h2 className="font-display text-xl font-semibold text-navy">
+                Curriculum
+              </h2>
               <ul className="mt-4 space-y-2">
                 {lessons.length === 0 ? (
                   <li className="text-sm text-muted-foreground">
@@ -86,7 +88,7 @@ export default async function CourseDetailPage({ params }: Props) {
                   lessons.map((lesson, index) => (
                     <li
                       key={String(lesson.documentId || lesson.id)}
-                      className="rounded-lg border border-border bg-card px-4 py-3 text-sm"
+                      className="rounded-xl border border-border bg-white px-4 py-3 text-sm shadow-sm"
                     >
                       <span className="mr-2 text-muted-foreground">
                         {index + 1}.
@@ -98,9 +100,9 @@ export default async function CourseDetailPage({ params }: Props) {
               </ul>
             </div>
           </div>
-          <Card className="h-fit">
+          <Card className="h-fit rounded-2xl border-border/80 bg-white shadow-sm">
             <CardHeader>
-              <CardTitle>Get started</CardTitle>
+              <CardTitle className="font-display text-navy">Get started</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">

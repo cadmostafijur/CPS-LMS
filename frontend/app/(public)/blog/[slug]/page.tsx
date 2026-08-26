@@ -34,20 +34,20 @@ export default async function BlogPostPage({ params }: Props) {
   const user = await getCurrentUser();
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-background">
       <Navbar user={user} />
-      <article className="mx-auto max-w-3xl px-4 py-10">
-        <p className="text-sm text-muted-foreground">
+      <article className="mx-auto max-w-3xl px-4 py-12">
+        <p className="text-sm font-medium text-orange">
           {formatDate(post.publishedAt)}
           {post.author?.name ? ` · ${post.author.name}` : ""}
         </p>
-        <h1 className="mt-2 font-display text-3xl font-bold tracking-tight md:text-4xl">
+        <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-navy md:text-4xl">
           {post.title}
         </h1>
         {post.excerpt ? (
           <p className="mt-4 text-lg text-muted-foreground">{post.excerpt}</p>
         ) : null}
-        <div className="prose prose-neutral mt-8 max-w-none whitespace-pre-wrap text-sm leading-7">
+        <div className="prose-lms mt-8 max-w-none whitespace-pre-wrap text-sm leading-7">
           {post.body}
         </div>
       </article>

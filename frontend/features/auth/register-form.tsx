@@ -65,9 +65,9 @@ export function RegisterForm() {
   }
 
   return (
-    <Card className="w-full max-w-md border-border/80 shadow-lg">
+    <Card className="w-full max-w-md rounded-2xl border-border/80 bg-white shadow-md">
       <CardHeader>
-        <CardTitle className="font-display text-2xl">Create account</CardTitle>
+        <CardTitle className="font-display text-2xl text-navy">Create account</CardTitle>
         <CardDescription>
           Join CPS Academy and start learning today.
         </CardDescription>
@@ -113,7 +113,7 @@ export function RegisterForm() {
         </form>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
+          <Link href="/login" className="font-medium text-orange underline-offset-4 hover:underline">
             Sign in
           </Link>
         </p>

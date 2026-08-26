@@ -28,9 +28,9 @@ const links = [
 
 export function Navbar({
   user,
-  variant = "light",
 }: {
   user?: AuthUser | null;
+  /** @deprecated Light header is always used */
   variant?: "light" | "dark";
 }) {
   const pathname = usePathname();
@@ -38,7 +38,6 @@ export function Navbar({
   const [open, setOpen] = useState(false);
   const role = getRoleName(user);
   const dash = dashboardPathForRole(role);
-  const dark = variant === "dark";
 
   async function handleLogout() {
     try {
@@ -60,38 +59,25 @@ export function Navbar({
       .toUpperCase() || "U";
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-40 border-b backdrop-blur",
-        dark
-          ? "border-white/10 bg-navy/80 text-white"
-          : "border-border/60 bg-background/90"
-      )}
-    >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2.5">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-white/90 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5">
           <Image src="/logo.png" alt="CPS Academy" width={36} height={36} priority />
-          <span
-            className={cn(
-              "font-display text-lg font-bold tracking-tight",
-              dark && "text-white"
-            )}
-          >
+          <span className="font-display text-lg font-bold tracking-tight text-navy">
             CPS Academy
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-6 md:flex">
+        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 md:flex">
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className={cn(
                 "text-sm font-medium transition-colors",
-                dark
-                  ? "text-white/70 hover:text-white"
-                  : "text-muted-foreground hover:text-foreground",
-                pathname.startsWith(link.href) && (dark ? "text-gold" : "text-foreground")
+                pathname.startsWith(link.href)
+                  ? "text-navy"
+                  : "text-muted-foreground hover:text-navy"
               )}
             >
               {link.label}
@@ -103,16 +89,13 @@ export function Navbar({
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={cn("gap-2 px-2", dark && "text-white hover:bg-white/10")}
-                >
+                <Button variant="ghost" className="gap-2 px-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-gold text-navy text-xs">
+                    <AvatarFallback className="bg-orange/15 text-orange text-xs">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="max-w-[120px] truncate text-sm">
+                  <span className="max-w-[120px] truncate text-sm text-navy">
                     {user.name || user.email}
                   </span>
                 </Button>
@@ -139,15 +122,11 @@ export function Navbar({
             </DropdownMenu>
           ) : (
             <>
-              <Button
-                variant="ghost"
-                className={cn(dark && "text-white hover:bg-white/10")}
-                asChild
-              >
+              <Button variant="ghost" asChild>
                 <Link href="/login">Sign in</Link>
               </Button>
-              <Button variant={dark ? "gold" : "default"} asChild>
-                <Link href="/register">Get started</Link>
+              <Button asChild>
+                <Link href="/register">Join now</Link>
               </Button>
             </>
           )}
@@ -156,7 +135,7 @@ export function Navbar({
         <Button
           variant="ghost"
           size="icon"
-          className={cn("md:hidden", dark && "text-white hover:bg-white/10")}
+          className="md:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label="Toggle menu"
         >
@@ -165,18 +144,13 @@ export function Navbar({
       </div>
 
       {open ? (
-        <div
-          className={cn(
-            "border-t px-4 py-4 md:hidden",
-            dark ? "border-white/10" : "border-border"
-          )}
-        >
+        <div className="border-t border-border px-4 py-4 md:hidden">
           <div className="flex flex-col gap-3">
             {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={cn("text-sm font-medium", dark && "text-white")}
+                className="text-sm font-medium text-navy"
                 onClick={() => setOpen(false)}
               >
                 {link.label}
@@ -184,11 +158,7 @@ export function Navbar({
             ))}
             {user ? (
               <>
-                <Link
-                  href={dash}
-                  className={cn(dark && "text-white")}
-                  onClick={() => setOpen(false)}
-                >
+                <Link href={dash} onClick={() => setOpen(false)}>
                   Dashboard
                 </Link>
                 <button
@@ -201,19 +171,15 @@ export function Navbar({
               </>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className={cn(dark && "text-white")}
-                  onClick={() => setOpen(false)}
-                >
+                <Link href="/login" onClick={() => setOpen(false)}>
                   Sign in
                 </Link>
                 <Link
                   href="/register"
-                  className={cn(dark && "text-gold")}
+                  className="font-semibold text-orange"
                   onClick={() => setOpen(false)}
                 >
-                  Get started
+                  Join now
                 </Link>
               </>
             )}

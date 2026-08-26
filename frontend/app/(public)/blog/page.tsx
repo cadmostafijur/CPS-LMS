@@ -27,9 +27,9 @@ export default async function BlogPage() {
   const posts = result.data || [];
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-background">
       <Navbar user={user} />
-      <main className="mx-auto max-w-6xl px-4 py-10">
+      <main className="mx-auto max-w-6xl px-4 py-12">
         <PageHeader
           title="Blog"
           description="Updates, guides, and stories from CPS Academy."
@@ -42,14 +42,19 @@ export default async function BlogPage() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
             {posts.map((post) => (
-              <Link key={String(post.documentId || post.id)} href={`/blog/${post.slug}`}>
-                <Card className="h-full transition-shadow hover:shadow-md">
+              <Link
+                key={String(post.documentId || post.id)}
+                href={`/blog/${post.slug}`}
+              >
+                <Card className="h-full rounded-2xl border-border/80 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
                   <CardHeader>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs font-medium text-orange">
                       {formatDate(post.publishedAt)}
                       {post.author?.name ? ` · ${post.author.name}` : ""}
                     </p>
-                    <CardTitle className="line-clamp-2">{post.title}</CardTitle>
+                    <CardTitle className="line-clamp-2 font-display text-navy">
+                      {post.title}
+                    </CardTitle>
                     <CardDescription className="line-clamp-3">
                       {post.excerpt || "Read more…"}
                     </CardDescription>

@@ -18,9 +18,9 @@ export default async function CoursesPage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-background">
       <Navbar user={user} />
-      <main className="mx-auto max-w-6xl px-4 py-10">
+      <main className="mx-auto max-w-6xl px-4 py-12">
         <PageHeader
           title="Course catalog"
           description="Explore published courses and enroll to start learning."

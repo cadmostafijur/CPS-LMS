@@ -65,9 +65,9 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md border-border/80 shadow-lg">
+    <Card className="w-full max-w-md rounded-2xl border-border/80 bg-white shadow-md">
       <CardHeader>
-        <CardTitle className="font-display text-2xl">Sign in</CardTitle>
+        <CardTitle className="font-display text-2xl text-navy">Sign in</CardTitle>
         <CardDescription>
           Access your CPS Academy learning workspace.
         </CardDescription>
@@ -104,7 +104,7 @@ export function LoginForm() {
         </form>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           New here?{" "}
-          <Link href="/register" className="font-medium text-primary underline-offset-4 hover:underline">
+          <Link href="/register" className="font-medium text-orange underline-offset-4 hover:underline">
             Create an account
           </Link>
         </p>

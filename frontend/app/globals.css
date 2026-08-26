@@ -1,32 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  --navy: #07111f;
-  --navy-2: #0d1a2f;
-  --gold: #f0b429;
-  --orange: #ea7a2f;
-  --background: #f4f6f9;
-  --foreground: #101828;
+  --navy: #0b1220;
+  --navy-2: #151d2e;
+  --gold: #f97316;
+  --orange: #f97316;
+  --orange-hover: #ea580c;
+  --background: #ffffff;
+  --foreground: #0b1220;
   --card: #ffffff;
-  --card-foreground: #101828;
+  --card-foreground: #0b1220;
   --popover: #ffffff;
-  --popover-foreground: #101828;
-  --primary: #0d1a2f;
-  --primary-foreground: #f0b429;
-  --secondary: #e8edf5;
-  --secondary-foreground: #101828;
-  --muted: #e8edf5;
-  --muted-foreground: #667085;
-  --accent: #fff6de;
-  --accent-foreground: #101828;
+  --popover-foreground: #0b1220;
+  --primary: #f97316;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0b1220;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #fff7ed;
+  --accent-foreground: #0b1220;
   --destructive: #d92d20;
   --destructive-foreground: #ffffff;
   --success: #079455;
   --warning: #dc6803;
-  --border: #d0d5dd;
-  --input: #d0d5dd;
-  --ring: #f0b429;
-  --surface: #eef2f7;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #f97316;
+  --surface: #f8fafc;
   --radius: 0.875rem;
 }
 
@@ -72,8 +73,8 @@ html {
 
 body {
   background:
-    radial-gradient(1200px 500px at 10% -10%, rgba(240, 180, 41, 0.08), transparent 55%),
-    radial-gradient(900px 420px at 100% 0%, rgba(234, 122, 47, 0.06), transparent 50%),
+    radial-gradient(1100px 480px at 8% -8%, rgba(249, 115, 22, 0.07), transparent 55%),
+    radial-gradient(900px 400px at 100% 0%, rgba(11, 18, 32, 0.04), transparent 50%),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-dm-sans), system-ui, sans-serif;
@@ -119,7 +120,7 @@ body {
 
 .prose-lms {
   line-height: 1.7;
-  color: #344054;
+  color: #475569;
 }
 
 .prose-lms h2 {
@@ -128,7 +129,7 @@ body {
   font-family: var(--font-space-grotesk), system-ui, sans-serif;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #101828;
+  color: #0b1220;
 }
 
 .prose-lms p {

@@ -10,7 +10,8 @@ async function proxy(request: NextRequest, pathParts: string[]) {
   }
 
   const targetPath = pathParts.join("/");
-  const url = new URL(`${getApiBaseUrl()}/${targetPath}`);
+  // Client calls /api/lms/<rest> → Strapi /api/lms/<rest>
+  const url = new URL(`${getApiBaseUrl()}/lms/${targetPath}`);
   request.nextUrl.searchParams.forEach((value, key) => {
     url.searchParams.set(key, value);
   });
