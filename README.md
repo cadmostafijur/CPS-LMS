@@ -230,13 +230,33 @@ npm run dev:frontend
 
 ---
 
-## Seed Data & First Admin
+## Seed Data & Demo Accounts
 
-On first boot, seed may create a bootstrap admin (override with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). Prefer creating real accounts from **Admin → Users → Create user** for Admin, Content Manager, Instructor, and Student roles.
+With `SEED_ON_BOOTSTRAP=true`, the first Strapi boot creates roles, sample courses, and these **real login accounts** (use them on [http://localhost:3000/login](http://localhost:3000/login)):
 
-Public registration always creates a **Student**. Admins assign other roles or create staff accounts directly.
+| Role | Email | Password | Username |
+|------|-------|----------|----------|
+| **Admin** | `admin@lms-demo.com` | `DemoAdmin123!` | `admin` |
+| Content Manager | `content@lms-demo.com` | `DemoContent123!` | `content` |
+| Content Manager | `content2@lms-demo.com` | `DemoContent123!` | `content2` |
+| Instructor | `instructor@lms-demo.com` | `DemoInstructor123!` | `instructor` |
+| Instructor | `instructor2@lms-demo.com` | `DemoInstructor123!` | `instructor2` |
+| Instructor | `instructor3@lms-demo.com` | `DemoInstructor123!` | `instructor3` |
+| Student | `student@lms-demo.com` | `DemoStudent123!` | `student` |
+| Student | `student2@lms-demo.com` … `student8@lms-demo.com` | `DemoStudent123!` | `student2` … `student8` |
 
-Seeded sample courses and blog posts may still appear for catalog demos. Set `SEED_ON_BOOTSTRAP=false` after initial setup if desired.
+**Admin override (optional):** set in `backend/.env`:
+
+```env
+SEED_ADMIN_EMAIL=admin@lms-demo.com
+SEED_ADMIN_PASSWORD=DemoAdmin123!
+```
+
+- Dashboards: Admin → `/admin`, Content Manager → `/content-manager`, Instructor → `/instructor`, Student → `/student`
+- Public registration always creates a **Student**. Admins can create other roles under **Admin → Users → Create user**.
+- Seeded sample courses and blog posts appear for catalog demos. Set `SEED_ON_BOOTSTRAP=false` after initial setup if you want to stop re-seeding on boot.
+
+> These are **demo credentials only** — change them before any shared or production deploy.
 
 ---
 
