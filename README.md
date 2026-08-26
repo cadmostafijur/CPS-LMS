@@ -129,6 +129,14 @@ Backend policies + LMS controllers verify authentication, role, and ownership on
 
 ---
 
+## Database Schema
+
+- **Prisma (visible model):** [`prisma/schema.prisma`](./prisma/schema.prisma)
+- **Strapi content-types:** `backend/src/api/*/content-types/*/schema.json`
+- Full map: [`docs/DATABASE_SCHEMA.md`](./docs/DATABASE_SCHEMA.md)
+
+---
+
 ## Environment Variables
 
 ### Backend (`backend/.env`)
@@ -142,11 +150,10 @@ ADMIN_JWT_SECRET=...
 TRANSFER_TOKEN_SALT=...
 JWT_SECRET=...
 CORS_ORIGIN=http://localhost:3000
-DATABASE_CLIENT=sqlite
-DATABASE_FILENAME=.tmp/data.db
-# Production:
-# DATABASE_CLIENT=postgres
-# DATABASE_URL=postgres://...
+DATABASE_CLIENT=postgres
+DATABASE_URL=postgresql://USER:PASSWORD@ep-XXXX.REGION.aws.neon.tech/neondb?sslmode=require
+DATABASE_SSL=true
+DATABASE_SSL_REJECT_UNAUTHORIZED=false
 SEED_ON_BOOTSTRAP=true
 SEED_ADMIN_EMAIL=admin@lms-demo.com
 SEED_ADMIN_PASSWORD=DemoAdmin123!
@@ -185,14 +192,22 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
 ```
 
-### 3. Database
+### 3. Database (Neon PostgreSQL)
 
-Local default uses SQLite (`.tmp/data.db`). For Postgres:
+1. Create a project at [https://console.neon.tech](https://console.neon.tech)
+2. Copy the **pooled** connection string (ends with `?sslmode=require`)
+3. Put it in `backend/.env`:
 
 ```env
 DATABASE_CLIENT=postgres
-DATABASE_URL=postgres://user:pass@host:5432/cps_lms
+DATABASE_URL=postgresql://USER:PASSWORD@ep-XXXX.REGION.aws.neon.tech/neondb?sslmode=require
+DATABASE_SSL=true
+DATABASE_SSL_REJECT_UNAUTHORIZED=false
 ```
+
+4. Restart Strapi — tables are created automatically; seed runs when `SEED_ON_BOOTSTRAP=true`
+
+(SQLite remains available only as a local fallback via `DATABASE_CLIENT=sqlite`.)
 
 ### 4. Run everything (one command)
 
@@ -263,8 +278,12 @@ As Student, direct API calls to create courses, manage users, or read another st
 ### Database (Neon)
 
 1. Create a Neon Postgres project
-2. Copy the connection string to Railway Strapi as `DATABASE_URL`
-3. Set `DATABASE_CLIENT=postgres`
+2. Copy the **pooled** connection string
+3. On Railway Strapi set:
+   - `DATABASE_CLIENT=postgres`
+   - `DATABASE_URL=<neon pooled url>`
+   - `DATABASE_SSL=true`
+   - `DATABASE_SSL_REJECT_UNAUTHORIZED=false`
 
 ### Backend (Railway)
 

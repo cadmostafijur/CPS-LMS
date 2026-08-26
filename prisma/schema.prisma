@@ -1,0 +1,251 @@
+// CPS Academy LMS — application data model (Neon PostgreSQL)
+//
+// Source of truth at runtime: Strapi content-types under backend/src/api/*/content-types/*/schema.json
+// This Prisma schema documents the same entities for Neon / evaluators.
+// Do NOT run prisma migrate against Strapi tables in production (would fight Strapi).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon pooled connection string recommended for Railway
+  // directUrl = env("DIRECT_URL")
+}
+
+enum AppRole {
+  ADMIN
+  CONTENT_MANAGER
+  INSTRUCTOR
+  STUDENT
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum LessonType {
+  TEXT
+  VIDEO
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+}
+
+/// Maps to Strapi users-permissions user (up_users) + LMS fields
+model User {
+  id           Int       @id @default(autoincrement())
+  documentId   String?   @unique
+  name         String
+  email        String    @unique
+  username     String    @unique
+  passwordHash String    @map("password")
+  role         AppRole
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  createdCourses    Course[]         @relation("CourseCreator")
+  instructedCourses Course[]         @relation("CourseInstructor")
+  enrollments       Enrollment[]
+  lessonProgress    LessonProgress[]
+  quizAttempts      QuizAttempt[]
+  blogPosts         BlogPost[]
+
+  @@index([email])
+  @@map("up_users")
+}
+
+model Course {
+  id               Int          @id @default(autoincrement())
+  documentId       String?      @unique
+  title            String
+  slug             String       @unique
+  description      String?
+  shortDescription String?
+  thumbnailUrl     String?
+  status           CourseStatus @default(DRAFT)
+  instructorId     Int
+  createdById      Int
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  instructor  User             @relation("CourseInstructor", fields: [instructorId], references: [id])
+  createdBy   User             @relation("CourseCreator", fields: [createdById], references: [id])
+  lessons     Lesson[]
+  enrollments Enrollment[]
+  progress    LessonProgress[]
+  quizzes     Quiz[]
+
+  @@index([slug])
+  @@index([instructorId])
+  @@map("courses")
+}
+
+model Lesson {
+  id         Int        @id @default(autoincrement())
+  documentId String?    @unique
+  courseId   Int
+  title      String
+  slug       String
+  content    String?
+  videoUrl   String?
+  lessonType LessonType @default(TEXT)
+  order      Int        @default(0)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@index([courseId])
+  @@map("lessons")
+}
+
+model Enrollment {
+  id          Int       @id @default(autoincrement())
+  documentId  String?   @unique
+  studentId   Int
+  courseId    Int
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId])
+  @@index([studentId])
+  @@index([courseId])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  id          Int       @id @default(autoincrement())
+  documentId  String?   @unique
+  studentId   Int
+  courseId    Int
+  lessonId    Int
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson  Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
+  @@index([studentId])
+  @@index([courseId])
+  @@map("lesson_progresses")
+}
+
+model Quiz {
+  id           Int      @id @default(autoincrement())
+  documentId   String?  @unique
+  courseId     Int
+  title        String
+  description  String?
+  createdById  Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  course     Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions  QuizQuestion[]
+  attempts   QuizAttempt[]
+
+  @@index([courseId])
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id         Int      @id @default(autoincrement())
+  documentId String?  @unique
+  quizId     Int
+  question   String
+  order      Int      @default(0)
+
+  quiz    Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options QuizOption[]
+  answers QuizAnswer[]
+
+  @@index([quizId])
+  @@map("quiz_questions")
+}
+
+model QuizOption {
+  id         Int     @id @default(autoincrement())
+  documentId String? @unique
+  questionId Int
+  text       String
+  /// Never expose to students before quiz submit
+  isCorrect  Boolean @default(false)
+
+  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  QuizAnswer[]
+
+  @@index([questionId])
+  @@map("quiz_options")
+}
+
+model QuizAttempt {
+  id             Int      @id @default(autoincrement())
+  documentId     String?  @unique
+  quizId         Int
+  studentId      Int
+  score          Int
+  totalQuestions Int
+  percentage     Decimal  @db.Decimal(5, 2)
+  submittedAt    DateTime @default(now())
+
+  quiz     Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  student  User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answers  QuizAnswer[]
+
+  @@index([studentId])
+  @@index([quizId])
+  @@map("quiz_attempts")
+}
+
+model QuizAnswer {
+  id               Int     @id @default(autoincrement())
+  documentId       String? @unique
+  attemptId        Int
+  questionId       Int
+  selectedOptionId Int
+  isCorrect        Boolean
+
+  attempt        QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question       QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption QuizOption   @relation(fields: [selectedOptionId], references: [id])
+
+  @@index([attemptId])
+  @@map("quiz_answers")
+}
+
+model BlogPost {
+  id            Int        @id @default(autoincrement())
+  documentId    String?    @unique
+  title         String
+  slug          String     @unique
+  body          String?
+  excerpt       String?
+  coverImageUrl String?
+  status        BlogStatus @default(DRAFT)
+  authorId      Int
+  publishedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([slug])
+  @@index([status])
+  @@map("blog_posts")
+}
