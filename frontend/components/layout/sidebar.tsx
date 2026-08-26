@@ -30,8 +30,9 @@ import {
   UserCheck,
   CalendarCheck,
   Library,
+  ChevronDown,
 } from "lucide-react";
-import { useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { RoleName } from "@/lib/roles";
@@ -43,94 +44,161 @@ type NavItem = {
   icon: ComponentType<{ className?: string }>;
 };
 
-function navForRole(role: string | null | undefined): NavItem[] {
-  switch (role) {
-    case ROLE_NAMES.ADMIN:
-      return [
+type NavSection = {
+  id: string;
+  label: string;
+  items: NavItem[];
+};
+
+function adminSections(): NavSection[] {
+  return [
+    {
+      id: "overview",
+      label: "Overview",
+      items: [
         { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/admin/search", label: "Search", icon: Search },
+        { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+      ],
+    },
+    {
+      id: "people",
+      label: "People",
+      items: [
         { href: "/admin/users", label: "Users", icon: Users },
         { href: "/admin/students", label: "Students", icon: GraduationCap },
         { href: "/admin/instructors", label: "Instructors", icon: UserCheck },
+      ],
+    },
+    {
+      id: "learning",
+      label: "Learning",
+      items: [
         { href: "/admin/courses", label: "Courses", icon: BookOpen },
         { href: "/admin/categories", label: "Categories", icon: FolderKanban },
         { href: "/admin/batches", label: "Batches", icon: Layers },
         { href: "/admin/attendance", label: "Attendance", icon: CalendarCheck },
         { href: "/admin/enrollments", label: "Enrollments", icon: ClipboardList },
+      ],
+    },
+    {
+      id: "assessment",
+      label: "Assessment",
+      items: [
         { href: "/admin/assignments", label: "Assignments", icon: FileText },
         { href: "/admin/question-bank", label: "Question bank", icon: Library },
         { href: "/admin/certificates", label: "Certificates", icon: Award },
+      ],
+    },
+    {
+      id: "commerce",
+      label: "Commerce",
+      items: [
         { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
         { href: "/admin/payments", label: "Payments", icon: CreditCard },
         { href: "/admin/coupons", label: "Coupons", icon: Tag },
         { href: "/admin/plans", label: "Plans", icon: Layers },
         { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
         { href: "/admin/inventory", label: "Inventory", icon: Package },
+      ],
+    },
+    {
+      id: "content",
+      label: "Content & comms",
+      items: [
         { href: "/admin/banners", label: "Banners", icon: ImageIcon },
         { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
-        { href: "/admin/tickets", label: "Tickets", icon: Ticket },
-        { href: "/admin/reviews", label: "Reviews", icon: Star },
-        { href: "/admin/notifications", label: "Notifications", icon: Bell },
         { href: "/admin/blog", label: "Blog", icon: FileText },
-        { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+        { href: "/admin/notifications", label: "Notifications", icon: Bell },
+        { href: "/admin/reviews", label: "Reviews", icon: Star },
+        { href: "/admin/tickets", label: "Tickets", icon: Ticket },
+      ],
+    },
+    {
+      id: "system",
+      label: "System",
+      items: [
         { href: "/admin/audit-logs", label: "Audit logs", icon: ScrollText },
         { href: "/admin/settings", label: "Settings", icon: Settings },
-      ];
+      ],
+    },
+  ];
+}
+
+function flatNavForRole(role: string | null | undefined): NavItem[] {
+  switch (role) {
+    case ROLE_NAMES.ADMIN:
+      return adminSections().flatMap((s) => s.items);
     case ROLE_NAMES.CONTENT_MANAGER:
       return [
-        {
-          href: "/content-manager/dashboard",
-          label: "Dashboard",
-          icon: LayoutDashboard,
-        },
+        { href: "/content-manager/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/content-manager/courses", label: "Courses", icon: BookOpen },
         { href: "/content-manager/categories", label: "Categories", icon: FolderKanban },
         { href: "/content-manager/blog", label: "Blog", icon: FileText },
       ];
     case ROLE_NAMES.INSTRUCTOR:
       return [
-        {
-          href: "/instructor/dashboard",
-          label: "Dashboard",
-          icon: LayoutDashboard,
-        },
+        { href: "/instructor/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/instructor/courses", label: "My courses", icon: BookOpen },
       ];
     default:
       return [
         { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        {
-          href: "/student/my-courses",
-          label: "My courses",
-          icon: GraduationCap,
-        },
-        {
-          href: "/student/certificates",
-          label: "Certificates",
-          icon: Award,
-        },
+        { href: "/student/my-courses", label: "My courses", icon: GraduationCap },
+        { href: "/student/certificates", label: "Certificates", icon: Award },
       ];
   }
+}
+
+function isActivePath(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function sectionContainsPath(section: NavSection, pathname: string) {
+  return section.items.some((item) => isActivePath(pathname, item.href));
 }
 
 export function Sidebar({ role }: { role?: RoleName | string | null }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const items = navForRole(role);
+  const isAdmin = role === ROLE_NAMES.ADMIN;
+  const sections = useMemo(() => (isAdmin ? adminSections() : []), [isAdmin]);
+  const flatItems = useMemo(() => flatNavForRole(role), [role]);
+
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    setOpenSections((prev) => {
+      const next = { ...prev };
+      for (const section of adminSections()) {
+        if (sectionContainsPath(section, pathname)) {
+          next[section.id] = true;
+        }
+      }
+      if (Object.keys(next).length === 0) next.overview = true;
+      return next;
+    });
+  }, [pathname, isAdmin]);
+
+  function toggleSection(id: string) {
+    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
 
   return (
     <>
       <aside
         className={cn(
-          "sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 overflow-y-auto border-r border-border bg-surface transition-all md:block",
-          collapsed ? "w-[72px]" : "w-60"
+          "sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 border-r border-border bg-surface transition-all md:block",
+          "overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+          collapsed ? "w-[72px]" : "w-64"
         )}
       >
-        <div className="flex h-full flex-col p-3">
+        <div className="flex flex-col p-2.5 pb-6">
           <Button
             variant="ghost"
             size="icon"
-            className="mb-2 self-end"
+            className="mb-1 h-8 w-8 self-end"
             onClick={() => setCollapsed((v) => !v)}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -140,36 +208,85 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
               <PanelLeftClose className="h-4 w-4" />
             )}
           </Button>
-          <nav className="flex flex-col gap-1 pb-8">
-            {items.map((item) => {
-              const active =
-                pathname === item.href || pathname.startsWith(`${item.href}/`);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={item.label}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-orange/10 text-orange"
-                      : "text-muted-foreground hover:bg-white hover:text-navy"
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {!collapsed ? <span>{item.label}</span> : null}
-                </Link>
-              );
-            })}
-          </nav>
+
+          {isAdmin && !collapsed ? (
+            <nav className="flex flex-col gap-3">
+              {sections.map((section) => {
+                const open = openSections[section.id] ?? false;
+                return (
+                  <div key={section.id}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(section.id)}
+                      className="mb-1 flex w-full items-center justify-between rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-navy"
+                    >
+                      <span>{section.label}</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-3.5 w-3.5 transition-transform",
+                          open ? "rotate-0" : "-rotate-90"
+                        )}
+                      />
+                    </button>
+                    {open ? (
+                      <div className="flex flex-col gap-0.5">
+                        {section.items.map((item) => {
+                          const active = isActivePath(pathname, item.href);
+                          const Icon = item.icon;
+                          return (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              title={item.label}
+                              className={cn(
+                                "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors",
+                                active
+                                  ? "bg-orange/10 text-orange"
+                                  : "text-muted-foreground hover:bg-white hover:text-navy"
+                              )}
+                            >
+                              <Icon className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{item.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </nav>
+          ) : (
+            <nav className="flex flex-col gap-0.5">
+              {(isAdmin ? flatItems : flatItems).map((item) => {
+                const active = isActivePath(pathname, item.href);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    title={item.label}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors",
+                      active
+                        ? "bg-orange/10 text-orange"
+                        : "text-muted-foreground hover:bg-white hover:text-navy",
+                      collapsed && "justify-center px-0"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {!collapsed ? <span className="truncate">{item.label}</span> : null}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
         </div>
       </aside>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-white md:hidden">
-        {items.slice(0, 4).map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
+        {flatItems.slice(0, 4).map((item) => {
+          const active = isActivePath(pathname, item.href);
           const Icon = item.icon;
           return (
             <Link
