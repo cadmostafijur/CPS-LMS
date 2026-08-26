@@ -30,6 +30,8 @@ export interface Course {
   lessons?: Lesson[];
   quizzes?: Quiz[];
   enrollments?: Enrollment[];
+  lessonCount?: number;
+  quizCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }

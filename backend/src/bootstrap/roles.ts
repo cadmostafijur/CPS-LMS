@@ -17,6 +17,7 @@ const LMS_ROLES: RoleDef[] = [
 /** Actions enabled per role for custom LMS API + auth */
 const ROLE_ACTIONS: Record<string, string[]> = {
   [ROLE_NAMES.ADMIN]: [
+    'api::lms.lms.me',
     'api::lms.lms.enroll',
     'api::lms.lms.myCourses',
     'api::lms.lms.completeLesson',
@@ -58,6 +59,7 @@ const ROLE_ACTIONS: Record<string, string[]> = {
     'plugin::users-permissions.user.me',
   ],
   [ROLE_NAMES.CONTENT_MANAGER]: [
+    'api::lms.lms.me',
     'api::lms.lms.enroll',
     'api::lms.lms.myCourses',
     'api::lms.lms.completeLesson',
@@ -90,6 +92,7 @@ const ROLE_ACTIONS: Record<string, string[]> = {
     'plugin::users-permissions.user.me',
   ],
   [ROLE_NAMES.INSTRUCTOR]: [
+    'api::lms.lms.me',
     'api::lms.lms.enroll',
     'api::lms.lms.myCourses',
     'api::lms.lms.completeLesson',
@@ -117,6 +120,7 @@ const ROLE_ACTIONS: Record<string, string[]> = {
     'plugin::users-permissions.user.me',
   ],
   [ROLE_NAMES.STUDENT]: [
+    'api::lms.lms.me',
     'api::lms.lms.enroll',
     'api::lms.lms.myCourses',
     'api::lms.lms.completeLesson',

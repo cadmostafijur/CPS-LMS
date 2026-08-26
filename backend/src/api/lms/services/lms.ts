@@ -18,7 +18,8 @@ import {
 import { sanitizeUser } from '../../../utils/sanitize';
 import { ensureUniqueSlug } from '../../../utils/slug';
 
-const { ApplicationError, ForbiddenError, NotFoundError, ValidationError } = errors;
+const { ApplicationError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } =
+  errors;
 
 type Ctx = any;
 
@@ -91,6 +92,39 @@ function assertNotStudent(user: any) {
 }
 
 export default ({ strapi }: { strapi: Core.Strapi }) => ({
+  async me(ctx: Ctx) {
+    const authHeader = String(ctx.request?.header?.authorization || '');
+    const token = authHeader.toLowerCase().startsWith('bearer ')
+      ? authHeader.slice(7).trim()
+      : null;
+
+    if (!token) {
+      throw new UnauthorizedError('Authentication required');
+    }
+
+    let payload: { id?: number };
+    try {
+      payload = await strapi.plugin('users-permissions').service('jwt').verify(token);
+    } catch {
+      throw new UnauthorizedError('Invalid token');
+    }
+
+    if (!payload?.id) {
+      throw new UnauthorizedError('Invalid token payload');
+    }
+
+    const user = await strapi.db.query('plugin::users-permissions.user').findOne({
+      where: { id: payload.id },
+      populate: { role: true },
+    });
+
+    if (!user || user.blocked || user.isActive === false) {
+      throw new UnauthorizedError('User not available');
+    }
+
+    return { data: sanitizeUser(user) };
+  },
+
   async enroll(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
     const { courseId } = ctx.params;

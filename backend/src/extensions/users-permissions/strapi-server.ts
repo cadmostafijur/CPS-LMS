@@ -1,18 +1,22 @@
 /**
- * Force public registration to Student role; never accept role from body.
+ * Public registration always creates a Student. Role from the client is ignored.
  */
 export default (plugin: any) => {
-  const originalRegister = plugin.controllers.auth.register;
-
   plugin.controllers.auth.register = async (ctx: any) => {
     const body = ctx.request.body || {};
+    const username = String(body.username || body.data?.username || '').trim();
+    const email = String(body.email || body.data?.email || '')
+      .trim()
+      .toLowerCase();
+    const password = String(body.password || body.data?.password || '');
+    const name = String(body.name || body.data?.name || username || email).trim();
 
-    // Strip any role / elevated fields from the request
-    delete body.role;
-    delete body.roles;
-    if (body.data) {
-      delete body.data.role;
-      delete body.data.roles;
+    if (!username || !email || !password) {
+      return ctx.badRequest('Username, email, and password are required');
+    }
+
+    if (password.length < 6) {
+      return ctx.badRequest('Password must be at least 6 characters');
     }
 
     const studentRole = await strapi.db.query('plugin::users-permissions.role').findOne({
@@ -23,48 +27,56 @@ export default (plugin: any) => {
       return ctx.badRequest('Student role is not configured');
     }
 
-    // Normalize payload for users-permissions register
-    const payload = body.data ? { ...body, data: { ...body.data } } : { ...body };
+    const existing = await strapi.db.query('plugin::users-permissions.user').findOne({
+      where: {
+        $or: [{ email }, { username }],
+      },
+    });
 
-    if (payload.data) {
-      payload.data.role = studentRole.id;
-      payload.data.isActive = true;
-      if (!payload.data.name && payload.data.username) {
-        payload.data.name = payload.data.username;
-      }
-    } else {
-      payload.role = studentRole.id;
-      payload.isActive = true;
-      if (!payload.name && payload.username) {
-        payload.name = payload.username;
-      }
+    if (existing) {
+      return ctx.badRequest('Email or username is already taken');
     }
 
-    ctx.request.body = payload;
+    const user = await strapi.plugin('users-permissions').service('user').add({
+      username,
+      email,
+      password,
+      name,
+      confirmed: true,
+      blocked: false,
+      isActive: true,
+      provider: 'local',
+      role: studentRole.id,
+    });
 
-    // Prefer calling original after sanitizing; then enforce role/isActive post-create
-    await originalRegister(ctx);
+    const jwt = strapi.plugin('users-permissions').service('jwt').issue({ id: user.id });
 
-    // Harden: if a user was created, ensure Student + isActive
-    try {
-      const email = payload.email || payload.data?.email;
-      if (email) {
-        const created = await strapi.db.query('plugin::users-permissions.user').findOne({
-          where: { email: String(email).toLowerCase() },
-        });
-        if (created) {
-          await strapi.db.query('plugin::users-permissions.user').update({
-            where: { id: created.id },
-            data: {
-              role: studentRole.id,
-              isActive: true,
-            },
-          });
+    const full = await strapi.db.query('plugin::users-permissions.user').findOne({
+      where: { id: user.id },
+      populate: { role: true },
+    });
+
+    const role = full?.role
+      ? {
+          id: full.role.id,
+          documentId: full.role.documentId,
+          name: full.role.name,
+          type: full.role.type,
         }
-      }
-    } catch {
-      // non-fatal — registration response already sent
-    }
+      : null;
+
+    ctx.send({
+      jwt,
+      user: {
+        id: full.id,
+        documentId: full.documentId,
+        name: full.name,
+        email: full.email,
+        role,
+        avatarUrl: full.avatarUrl,
+        isActive: full.isActive,
+      },
+    });
   };
 
   return plugin;

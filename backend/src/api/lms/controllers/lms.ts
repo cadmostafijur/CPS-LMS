@@ -2,6 +2,9 @@
  * Thin controller layer — business logic lives in api::lms.lms service.
  */
 export default ({ strapi }: { strapi: any }) => ({
+  async me(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').me(ctx);
+  },
   async enroll(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').enroll(ctx);
   },

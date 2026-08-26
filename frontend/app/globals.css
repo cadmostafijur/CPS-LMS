@@ -1,33 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  --navy: #0b1220;
-  --navy-2: #0f1b2d;
-  --gold: #f5c518;
-  --orange: #f97316;
-  --background: #f7f8fa;
-  --foreground: #0b1220;
+  --navy: #07111f;
+  --navy-2: #0d1a2f;
+  --gold: #f0b429;
+  --orange: #ea7a2f;
+  --background: #f4f6f9;
+  --foreground: #101828;
   --card: #ffffff;
-  --card-foreground: #0b1220;
+  --card-foreground: #101828;
   --popover: #ffffff;
-  --popover-foreground: #0b1220;
-  --primary: #0f1b2d;
-  --primary-foreground: #f5c518;
-  --secondary: #eef1f6;
-  --secondary-foreground: #0b1220;
-  --muted: #eef1f6;
-  --muted-foreground: #5b667a;
-  --accent: #fff7e0;
-  --accent-foreground: #0b1220;
-  --destructive: #dc2626;
+  --popover-foreground: #101828;
+  --primary: #0d1a2f;
+  --primary-foreground: #f0b429;
+  --secondary: #e8edf5;
+  --secondary-foreground: #101828;
+  --muted: #e8edf5;
+  --muted-foreground: #667085;
+  --accent: #fff6de;
+  --accent-foreground: #101828;
+  --destructive: #d92d20;
   --destructive-foreground: #ffffff;
-  --success: #16a34a;
-  --warning: #d97706;
-  --border: #e2e8f0;
-  --input: #d8dee8;
-  --ring: #f5c518;
-  --surface: #f3f5f8;
-  --radius: 0.75rem;
+  --success: #079455;
+  --warning: #dc6803;
+  --border: #d0d5dd;
+  --input: #d0d5dd;
+  --ring: #f0b429;
+  --surface: #eef2f7;
+  --radius: 0.875rem;
 }
 
 @theme inline {
@@ -71,9 +71,13 @@ html {
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(240, 180, 41, 0.08), transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, rgba(234, 122, 47, 0.06), transparent 50%),
+    var(--background);
   color: var(--foreground);
   font-family: var(--font-dm-sans), system-ui, sans-serif;
+  min-height: 100vh;
 }
 
 .font-display {
@@ -83,7 +87,7 @@ body {
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;
@@ -94,10 +98,10 @@ body {
 @keyframes soft-pulse {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.45;
   }
   50% {
-    opacity: 0.9;
+    opacity: 0.85;
   }
 }
 
@@ -106,9 +110,32 @@ body {
 }
 
 .animate-fade-up-delay {
-  animation: fade-up 0.8s ease-out 0.12s both;
+  animation: fade-up 0.85s ease-out 0.1s both;
 }
 
 .animate-soft-pulse {
-  animation: soft-pulse 4s ease-in-out infinite;
+  animation: soft-pulse 5s ease-in-out infinite;
+}
+
+.prose-lms {
+  line-height: 1.7;
+  color: #344054;
+}
+
+.prose-lms h2 {
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #101828;
+}
+
+.prose-lms p {
+  margin-bottom: 0.75rem;
+}
+
+.prose-lms ul {
+  margin: 0.5rem 0 0.75rem 1.1rem;
+  list-style: disc;
 }

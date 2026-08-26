@@ -6,6 +6,13 @@ export default {
   type: 'content-api' as const,
   routes: [
     {
+      method: 'GET',
+      path: '/lms/me',
+      handler: 'lms.me',
+      // JWT verified in service — bypasses users-permissions action matrix
+      config: { auth: false },
+    },
+    {
       method: 'POST',
       path: '/lms/enroll/:courseId',
       handler: 'lms.enroll',

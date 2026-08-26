@@ -21,28 +21,42 @@ export async function POST(request: Request) {
       );
     }
 
-    const res = await fetch(`${getApiBaseUrl()}/auth/local/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: body.username,
-        email: body.email,
-        password: body.password,
-        name: body.name || body.username,
-      }),
-    });
+    if (body.password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters" },
+        { status: 400 }
+      );
+    }
 
-    const payload = await res.json();
-    if (!res.ok) {
+    let res: Response;
+    try {
+      res = await fetch(`${getApiBaseUrl()}/auth/local/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: body.username.trim(),
+          email: body.email.trim().toLowerCase(),
+          password: body.password,
+        }),
+      });
+    } catch {
       return NextResponse.json(
         {
           error:
-            payload?.error?.message ||
-            payload?.message?.[0]?.messages?.[0]?.message ||
-            "Registration failed",
+            "Cannot reach the API. Wait until Strapi finishes starting, then try again.",
         },
-        { status: res.status }
+        { status: 503 }
       );
+    }
+
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const message =
+        payload?.error?.message ||
+        payload?.message?.[0]?.messages?.[0]?.message ||
+        payload?.error?.details?.errors?.[0]?.message ||
+        "Registration failed";
+      return NextResponse.json({ error: message }, { status: res.status });
     }
 
     const jwt = payload.jwt as string;
