@@ -410,19 +410,189 @@ const COURSE_DEFS: CourseDef[] = [
       },
     ],
   },
+  {
+    title: 'Data Structures & Algorithms',
+    shortDescription: 'Arrays, trees, graphs, and complexity for interviews.',
+    description:
+      'Build a strong DSA foundation: Big-O, arrays, stacks, queues, trees, graphs, and classic problem patterns used in technical interviews.',
+    thumbnailUrl:
+      'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=800&h=450&fit=crop',
+    lessons: [
+      {
+        title: 'Big-O and Complexity',
+        lessonType: 'TEXT',
+        content:
+          '## Complexity\n\nMeasure time and space with Big-O. Prefer clearer algorithms before micro-optimizing.',
+      },
+      {
+        title: 'Arrays and Hashing',
+        lessonType: 'VIDEO',
+        videoUrl: 'https://www.youtube.com/embed/8hly31xKli0',
+        content:
+          '## Arrays & Hash maps\n\nTwo-sum, frequency maps, and sliding windows are core interview patterns.',
+      },
+      {
+        title: 'Stacks and Queues',
+        lessonType: 'TEXT',
+        content:
+          '## Linear structures\n\nUse stacks for nesting/parentheses and queues for BFS orderings.',
+      },
+      {
+        title: 'Trees and Binary Search',
+        lessonType: 'TEXT',
+        content:
+          '## Trees\n\nDFS/BFS traversals, BST search, and recursion on tree nodes.',
+      },
+      {
+        title: 'Graphs Intro',
+        lessonType: 'VIDEO',
+        videoUrl: 'https://www.youtube.com/embed/tWVWeAqZ0WU',
+        content:
+          '## Graphs\n\nAdjacency lists, visited sets, and shortest paths on unweighted graphs with BFS.',
+      },
+    ],
+    quizTitle: 'DSA Fundamentals Quiz',
+    questions: [
+      {
+        question: 'Big-O describes…',
+        options: [
+          { text: 'How runtime/space grow as input grows', isCorrect: true },
+          { text: 'Only memory of the CPU cache', isCorrect: false },
+          { text: 'CSS selector speed', isCorrect: false },
+          { text: 'Git commit size', isCorrect: false },
+        ],
+      },
+      {
+        question: 'A hash map is best for…',
+        options: [
+          { text: 'Fast average lookups by key', isCorrect: true },
+          { text: 'Sorting floating point numbers only', isCorrect: false },
+          { text: 'Drawing UI layouts', isCorrect: false },
+          { text: 'Replacing HTTPS', isCorrect: false },
+        ],
+      },
+      {
+        question: 'BFS on an unweighted graph finds…',
+        options: [
+          { text: 'Shortest path in number of edges', isCorrect: true },
+          { text: 'Maximum spanning tree only', isCorrect: false },
+          { text: 'SQL indexes', isCorrect: false },
+          { text: 'CSS specificity', isCorrect: false },
+        ],
+      },
+      {
+        question: 'A stack is LIFO, meaning…',
+        options: [
+          { text: 'Last in, first out', isCorrect: true },
+          { text: 'First in, first out', isCorrect: false },
+          { text: 'Random access only', isCorrect: false },
+          { text: 'No insert allowed', isCorrect: false },
+        ],
+      },
+      {
+        question: 'Binary search requires…',
+        options: [
+          { text: 'A sorted collection (or monotonic search space)', isCorrect: true },
+          { text: 'A random unsorted list always', isCorrect: false },
+          { text: 'A GPU', isCorrect: false },
+          { text: 'No comparisons', isCorrect: false },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'Competitive Programming Basics',
+    shortDescription: 'Contest mindset, templates, and problem patterns.',
+    description:
+      'Learn how to approach contest problems: reading statements, choosing data structures, implementing clean templates, and practicing common patterns.',
+    thumbnailUrl:
+      'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&h=450&fit=crop',
+    lessons: [
+      {
+        title: 'Contest Mindset',
+        lessonType: 'TEXT',
+        content:
+          '## Contests\n\nRead carefully, start with easier problems, and manage time. Wrong answers early waste penalties.',
+      },
+      {
+        title: 'Input/Output Templates',
+        lessonType: 'TEXT',
+        content:
+          '## Templates\n\nHave a fast I/O snippet and a clear main structure so you spend time on the algorithm, not boilerplate.',
+      },
+      {
+        title: 'Greedy Patterns',
+        lessonType: 'VIDEO',
+        videoUrl: 'https://www.youtube.com/embed/bC7o8P_Ste4',
+        content:
+          '## Greedy\n\nProve a local choice leads to a global optimum before coding.',
+      },
+      {
+        title: 'Two Pointers & Prefix Sums',
+        lessonType: 'TEXT',
+        content:
+          '## Patterns\n\nTwo pointers and prefix sums unlock many array contest problems efficiently.',
+      },
+      {
+        title: 'Practice Plan',
+        lessonType: 'TEXT',
+        content:
+          '## Practice\n\nSolve mixed difficulties weekly. Review editorials and rewrite solutions cleanly.',
+      },
+    ],
+    quizTitle: 'Competitive Programming Quiz',
+    questions: [
+      {
+        question: 'In a timed contest you should usually…',
+        options: [
+          { text: 'Solve easier problems first to bank points', isCorrect: true },
+          { text: 'Only attempt the hardest problem', isCorrect: false },
+          { text: 'Ignore sample tests', isCorrect: false },
+          { text: 'Skip reading the statement', isCorrect: false },
+        ],
+      },
+      {
+        question: 'A good contest template helps you…',
+        options: [
+          { text: 'Reduce boilerplate and focus on the algorithm', isCorrect: true },
+          { text: 'Avoid thinking about constraints', isCorrect: false },
+          { text: 'Disable all tests', isCorrect: false },
+          { text: 'Hide compilation errors', isCorrect: false },
+        ],
+      },
+      {
+        question: 'Prefix sums are useful for…',
+        options: [
+          { text: 'Fast range sum queries', isCorrect: true },
+          { text: 'Encrypting passwords', isCorrect: false },
+          { text: 'CSS animations', isCorrect: false },
+          { text: 'DNS lookups', isCorrect: false },
+        ],
+      },
+      {
+        question: 'Before implementing greedy…',
+        options: [
+          { text: 'Check that a local choice is safe / optimal', isCorrect: true },
+          { text: 'Always use DFS instead', isCorrect: false },
+          { text: 'Ignore constraints', isCorrect: false },
+          { text: 'Delete sample input', isCorrect: false },
+        ],
+      },
+      {
+        question: 'After solving, a strong habit is…',
+        options: [
+          { text: 'Review editorials and rewrite a clean solution', isCorrect: true },
+          { text: 'Never look at other approaches', isCorrect: false },
+          { text: 'Commit secrets to Git', isCorrect: false },
+          { text: 'Skip edge cases forever', isCorrect: false },
+        ],
+      },
+    ],
+  },
 ];
 
 export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
-  const userCount = await strapi.db.query('plugin::users-permissions.user').count();
-  const courseCount = await strapi.db.query('api::course.course').count();
-  const force = process.env.SEED_FORCE === 'true';
-
-  if (!force && userCount > 0 && courseCount > 0) {
-    strapi.log.info('[LMS] Demo data already present — skipping seed');
-    return;
-  }
-
-  strapi.log.info('[LMS] Seeding demo users and content...');
+  strapi.log.info('[LMS] Ensuring demo users and course content...');
 
   const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@lms-demo.com';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || DEMO_PASSWORD_ADMIN;
@@ -498,11 +668,6 @@ export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
     );
   }
 
-  if (!force && courseCount > 0) {
-    strapi.log.info('[LMS] Courses already exist — skipping course/blog seed');
-    return;
-  }
-
   const createdCourses: any[] = [];
 
   for (let i = 0; i < COURSE_DEFS.length; i++) {
@@ -527,6 +692,7 @@ export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
           createdByUser: instructor.id,
         },
       });
+      strapi.log.info(`[LMS] Created course: ${def.title}`);
     }
 
     const lessons: any[] = [];
@@ -584,6 +750,7 @@ export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
           });
         }
       }
+      strapi.log.info(`[LMS] Created quiz: ${def.quizTitle}`);
     }
 
     createdCourses.push({ ...course, lessons, quiz });
@@ -638,7 +805,7 @@ export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
     {
       title: 'Welcome to CPS Academy',
       excerpt: 'How this LMS helps you learn modern web development.',
-      body: '## Welcome\n\nCPS Academy combines structured courses, lesson progress, and auto-graded quizzes.\n\nStart with **Next.js Fundamentals**, then move into React, Node, and TypeScript.',
+      body: '## Welcome\n\nCPS Academy combines structured courses, lesson progress, and auto-graded quizzes.\n\nStart with **Next.js Fundamentals**, then move into React, Node, TypeScript, DSA, and competitive programming.',
       status: 'PUBLISHED' as const,
       author: content1,
       cover:
@@ -703,7 +870,8 @@ export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
     });
   }
 
+  const finalCourseCount = await strapi.db.query('api::course.course').count();
   strapi.log.info(
-    `[LMS] Seed complete. Admin: ${adminEmail}. Student: student@lms-demo.com / ${DEMO_PASSWORD_STUDENT}`
+    `[LMS] Seed ensure complete. Courses=${finalCourseCount}. Admin: ${adminEmail}. Student: student@lms-demo.com / ${DEMO_PASSWORD_STUDENT}`
   );
 }

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { LearningPlayer } from "@/features/learn/learning-player";
+import { Navbar } from "@/components/layout/navbar";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import {
@@ -11,7 +12,7 @@ type Props = { params: Promise<{ courseId: string; lessonId: string }> };
 
 export default async function LearnPage({ params }: Props) {
   const { courseId, lessonId } = await params;
-  await requireUser(`/learn/${courseId}/${lessonId}`);
+  const user = await requireUser(`/learn/${courseId}/${lessonId}`);
   const token = await getTokenFromCookies();
 
   const course = await getCourseById(courseId, token).catch(() => null);
@@ -35,11 +36,14 @@ export default async function LearnPage({ params }: Props) {
     .filter((id): id is string | number => id != null);
 
   return (
-    <LearningPlayer
-      course={course}
-      lesson={lesson}
-      completedLessonIds={completedLessonIds}
-      progressPercent={progress?.data.percentage ?? 0}
-    />
+    <div className="min-h-screen bg-background">
+      <Navbar user={user} />
+      <LearningPlayer
+        course={course}
+        lesson={lesson}
+        completedLessonIds={completedLessonIds}
+        progressPercent={progress?.data.percentage ?? 0}
+      />
+    </div>
   );
 }

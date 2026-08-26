@@ -12,10 +12,18 @@ export const metadata: Metadata = {
 };
 
 export default async function CoursesPage() {
-  const [user, courses] = await Promise.all([
-    getCurrentUser(),
-    listPublishedCourses().catch(() => []),
-  ]);
+  const user = await getCurrentUser();
+  let courses: Awaited<ReturnType<typeof listPublishedCourses>> = [];
+  let loadError: string | null = null;
+
+  try {
+    courses = await listPublishedCourses();
+  } catch (err) {
+    loadError =
+      err instanceof Error
+        ? err.message
+        : "Could not load courses. Is the Strapi API running?";
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -25,7 +33,20 @@ export default async function CoursesPage() {
           title="Course catalog"
           description="Explore published courses and enroll to start learning."
         />
-        <CourseCatalog courses={courses} />
+        {loadError ? (
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-10 text-center">
+            <p className="font-display text-lg font-semibold text-navy">
+              Courses unavailable
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">{loadError}</p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Start the API with <code className="rounded bg-muted px-1.5 py-0.5">npm run dev</code>{" "}
+              from the project root, then refresh.
+            </p>
+          </div>
+        ) : (
+          <CourseCatalog courses={courses} />
+        )}
       </main>
       <Footer />
     </div>
