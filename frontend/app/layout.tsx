@@ -24,8 +24,9 @@ export const metadata: Metadata = {
   description:
     "CPS Academy is a modern SaaS learning platform for courses, quizzes, and progress tracking.",
   icons: {
-    icon: "/favicon.png",
-    apple: "/favicon.png",
+    icon: [{ url: "/favicon.png", type: "image/png" }, { url: "/logo.png", type: "image/png" }],
+    apple: "/logo.png",
+    shortcut: "/favicon.png",
   },
   openGraph: {
     title: "CPS Academy",

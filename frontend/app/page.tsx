@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -11,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { BrandLogo } from "@/components/shared/brand-logo";
 import { CourseCard } from "@/features/courses/course-card";
 import { getCurrentUser } from "@/lib/session";
 import { listPublishedCourses } from "@/services/courses.service";
@@ -76,14 +76,7 @@ export default async function HomePage() {
         </div>
 
         <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-20 pt-16 text-center sm:pt-24">
-          <Image
-            src="/logo.png"
-            alt="CPS Academy"
-            width={88}
-            height={88}
-            priority
-            className="animate-fade-up"
-          />
+          <BrandLogo size={96} priority className="animate-fade-up rounded-2xl shadow-md" />
           <p className="animate-fade-up mt-6 font-display text-5xl font-bold tracking-tight text-navy sm:text-6xl">
             CPS Academy
           </p>
@@ -112,7 +105,7 @@ export default async function HomePage() {
 
       <section className="border-y border-border bg-surface/80">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-8 text-center sm:flex-row sm:justify-center sm:gap-8">
-          <Image src="/logo.png" alt="" width={28} height={28} className="opacity-80" />
+          <BrandLogo size={28} className="opacity-90" />
           <p className="text-sm text-muted-foreground">
             Trusted by learners preparing for software engineering interviews and
             contests

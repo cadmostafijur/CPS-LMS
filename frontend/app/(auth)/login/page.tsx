@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { LoginForm } from "@/features/auth/login-form";
+import { BrandLogo } from "@/components/shared/brand-logo";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata = {
@@ -15,7 +15,7 @@ export default function LoginPage() {
       <div className="relative hidden overflow-hidden border-r border-border bg-surface lg:flex lg:flex-col lg:justify-between lg:p-10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(249,115,22,0.12),transparent_45%),radial-gradient(circle_at_80%_70%,rgba(11,18,32,0.05),transparent_40%)]" />
         <Link href="/" className="relative z-10 flex items-center gap-3 text-navy">
-          <Image src="/logo.png" alt="CPS Academy" width={44} height={44} />
+          <BrandLogo size={44} priority />
           <span className="font-display text-xl font-bold">CPS Academy</span>
         </Link>
         <div className="relative z-10 max-w-md">

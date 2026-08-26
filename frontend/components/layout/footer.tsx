@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { BrandLogo } from "@/components/shared/brand-logo";
 
 const columns = [
   {
@@ -31,7 +31,7 @@ export function Footer() {
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2 lg:col-span-1">
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/logo.png" alt="CPS Academy" width={40} height={40} />
+            <BrandLogo size={40} />
             <span className="font-display text-lg font-semibold text-navy">
               CPS Academy
             </span>

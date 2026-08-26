@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, LogOut, LayoutDashboard } from "lucide-react";
@@ -16,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { BrandLogo } from "@/components/shared/brand-logo";
 import { logout } from "@/services/auth.service";
 import { dashboardPathForRole, getRoleName } from "@/lib/roles";
 import type { AuthUser } from "@/types";
@@ -62,7 +62,7 @@ export function Navbar({
     <header className="sticky top-0 z-40 border-b border-border/70 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <Link href="/" className="flex shrink-0 items-center gap-2.5">
-          <Image src="/logo.png" alt="CPS Academy" width={36} height={36} priority />
+          <BrandLogo size={36} priority />
           <span className="font-display text-lg font-bold tracking-tight text-navy">
             CPS Academy
           </span>
