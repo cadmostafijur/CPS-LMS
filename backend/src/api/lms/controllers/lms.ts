@@ -176,4 +176,61 @@ export default ({ strapi }: { strapi: any }) => ({
   async deleteBlog(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').deleteBlog(ctx);
   },
+  async adminListByRole(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminListByRole(ctx);
+  },
+  async adminForceEnroll(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminForceEnroll(ctx);
+  },
+  async adminRemoveEnrollment(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminRemoveEnrollment(ctx);
+  },
+  async adminCrudList(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminCrudList(ctx);
+  },
+  async adminCrudCreate(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminCrudCreate(ctx);
+  },
+  async adminCrudUpdate(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminCrudUpdate(ctx);
+  },
+  async adminCrudDelete(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminCrudDelete(ctx);
+  },
+  async adminStockAdjust(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminStockAdjust(ctx);
+  },
+  async adminRevokeCertificate(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminRevokeCertificate(ctx);
+  },
+  async verifyCertificate(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').verifyCertificate(ctx);
+  },
+  async createOrderCheckout(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').createOrderCheckout(ctx);
+  },
+  async payOrder(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').payOrder(ctx);
+  },
+  async listMyNotifications(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listMyNotifications(ctx);
+  },
+  async markNotificationRead(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').markNotificationRead(ctx);
+  },
+  async listAnnouncements(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listAnnouncements(ctx);
+  },
+  async adminGlobalSearch(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminGlobalSearch(ctx);
+  },
+  async adminReportsSummary(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminReportsSummary(ctx);
+  },
+  async adminGetSettings(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminGetSettings(ctx);
+  },
+  async adminSaveSettings(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminSaveSettings(ctx);
+  },
 });

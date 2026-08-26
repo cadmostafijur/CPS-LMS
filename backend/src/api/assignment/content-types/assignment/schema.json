@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "assignments",
+  "info": {
+    "singularName": "assignment",
+    "pluralName": "assignments",
+    "displayName": "Assignment",
+    "description": "Assignment"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "dueDate": {
+      "type": "datetime"
+    },
+    "maxMarks": {
+      "type": "integer",
+      "default": 100
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "DRAFT",
+        "PUBLISHED",
+        "CLOSED"
+      ],
+      "default": "DRAFT"
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course"
+    },
+    "createdByUser": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

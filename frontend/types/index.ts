@@ -128,6 +128,7 @@ export interface Certificate {
   issuedAt: string;
   studentName: string;
   courseTitle: string;
+  status?: "ISSUED" | "REVOKED" | null;
   student?: User | null;
   course?: {
     id: number | string;

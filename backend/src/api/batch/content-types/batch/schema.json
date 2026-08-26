@@ -1,0 +1,57 @@
+{
+  "kind": "collectionType",
+  "collectionName": "batches",
+  "info": {
+    "singularName": "batch",
+    "pluralName": "batches",
+    "displayName": "Batch",
+    "description": "Batch"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "startDate": {
+      "type": "datetime"
+    },
+    "endDate": {
+      "type": "datetime"
+    },
+    "capacity": {
+      "type": "integer",
+      "default": 30
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "DRAFT",
+        "OPEN",
+        "CLOSED",
+        "ARCHIVED"
+      ],
+      "default": "OPEN"
+    },
+    "schedule": {
+      "type": "text"
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course"
+    },
+    "instructor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "students": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

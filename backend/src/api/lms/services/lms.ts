@@ -17,6 +17,7 @@ import {
 } from '../../../utils/roles';
 import { sanitizeUser } from '../../../utils/sanitize';
 import { ensureUniqueSlug } from '../../../utils/slug';
+import { createOpsHandlers } from './ops';
 
 const { ApplicationError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } =
   errors;
@@ -2455,4 +2456,6 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     await strapi.db.query('api::blog-post.blog-post').delete({ where: { id: post.id } });
     return { data: { id: post.id, documentId: post.documentId } };
   },
+
+  ...createOpsHandlers(strapi),
 });

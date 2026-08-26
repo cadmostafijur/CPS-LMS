@@ -44,6 +44,11 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "api::enrollment.enrollment"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["ISSUED", "REVOKED"],
+      "default": "ISSUED"
     }
   }
 }

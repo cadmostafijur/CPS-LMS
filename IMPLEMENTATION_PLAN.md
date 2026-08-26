@@ -251,29 +251,45 @@ Categories, modules, lesson content types (PDF/URL/preview), media URLs, schedul
 - [x] Seed attaches categories + modules + first-lesson preview
 - [x] Frontend `tsc` clean
 
-### Phase 3 — Students, instructors, batches, attendance
+### Phase 3 — Students, instructors, batches, attendance *(shipped MVP 2026-08-26)*
 
-Dedicated student/instructor profiles, force enroll, cohorts, attendance entry.
+- [x] `/admin/students`, `/admin/instructors` via `GET /lms/admin/people`
+- [x] Force enroll + remove enrollment
+- [x] `batch` + `attendance` CTs + admin CRUD pages
+- [x] User fields: `phone`, `lastLoginAt`
 
-### Phase 4 — Assessment & certificates+
+### Phase 4 — Assessment & certificates+ *(shipped MVP 2026-08-26)*
 
-Question bank, assignments, exams, certificate revoke + public verify.
+- [x] Question bank + assignments admin CRUD
+- [x] Certificate `status` ISSUED/REVOKED + revoke API
+- [x] Public verify at `/verify/[code]` → `GET /lms/certificates/verify/:code`
+- [ ] Dedicated timed exams CT (quizzes cover assessment for now)
 
-### Phase 5 — Commerce
+### Phase 5 — Commerce *(shipped MVP 2026-08-26)*
 
-Orders, payments abstraction (+ webhook stub), coupons mature, subscriptions, invoices/refunds records.
+- [x] `order` / `payment` / `plan` / `subscription` CTs
+- [x] Admin pages + simulated checkout/pay endpoints
+- [x] Coupons already live from Phase 1
+- [ ] Real payment gateway / webhooks
 
-### Phase 6 — Inventory (if required)
+### Phase 6 — Inventory *(shipped MVP 2026-08-26)*
 
-Warehouses, SKUs, stock movements (transactional), suppliers, POs, low-stock alerts.
+- [x] Warehouses, inventory items, stock movements
+- [x] Stock adjust API (`IN` / `OUT` / `ADJUSTMENT`)
+- [ ] Suppliers / purchase orders (deferred)
 
-### Phase 7 — Communication & reviews
+### Phase 7 — Communication & reviews *(shipped MVP 2026-08-26)*
 
-Notifications, announcements, tickets, course reviews moderation.
+- [x] Announcements, tickets, reviews, notifications admin CRUD
+- [x] Public announcements list + my notifications APIs
 
-### Phase 8 — Analytics, reports, settings, audit
+### Phase 8 — Analytics, reports, settings, audit *(shipped MVP 2026-08-26)*
 
-Charts (recharts), CSV/PDF export, org/branding/email/payment settings, audit log search, global search.
+- [x] Reports summary KPIs
+- [x] Audit logs (read-only)
+- [x] Org settings get/save
+- [x] Global admin search
+- [ ] Chart library / CSV export polish
 
 ### Phase 9 — Hardening
 
@@ -285,26 +301,26 @@ Security review, rate limits, performance (indexes, pagination everywhere), E2E 
 
 ### Backend
 
-- [ ] Enrich `adminDashboard` with: totalStudents, activeStudents, instructors, publishedCourses, draftCourses, completionRate, certificatesIssued, bannedUsers, revenueSimulated (sum `enrollment.amountPaid`)
-- [ ] LMS routes: banners list (public) + admin CRUD
-- [ ] LMS routes: coupons admin CRUD + `POST /coupons/validate`
-- [ ] Register new actions in `bootstrap/roles.ts`
-- [ ] Ensure enroll pricing + coupon path remains correct
+- [x] Enrich `adminDashboard` with: totalStudents, activeStudents, instructors, publishedCourses, draftCourses, completionRate, certificatesIssued, bannedUsers, revenueSimulated (sum `enrollment.amountPaid`)
+- [x] LMS routes: banners list (public) + admin CRUD
+- [x] LMS routes: coupons admin CRUD + `POST /coupons/validate`
+- [x] Register new actions in `bootstrap/roles.ts`
+- [x] Ensure enroll pricing + coupon path remains correct
 
 ### Frontend
 
-- [ ] Admin sidebar: grouped labels for live modules only
-- [ ] Dashboard KPI cards + simple charts (if recharts added) or progress bars first
-- [ ] Course form: Free/Paid, price, currency
-- [ ] Course card + detail: show Free or price
-- [ ] Enroll button: coupon field for paid courses
-- [ ] `/admin/banners` CRUD UI
-- [ ] `/admin/coupons` CRUD UI
-- [ ] Home + catalog: render active banners
+- [x] Admin sidebar: grouped labels for live modules only
+- [x] Dashboard KPI cards + simple charts (if recharts added) or progress bars first
+- [x] Course form: Free/Paid, price, currency
+- [x] Course card + detail: show Free or price
+- [x] Enroll button: coupon field for paid courses
+- [x] `/admin/banners` CRUD UI
+- [x] `/admin/coupons` CRUD UI
+- [x] Home + catalog: render active banners
 
 ### Quality
 
-- [ ] `npx tsc --noEmit` in frontend
+- [x] `npx tsc --noEmit` in frontend (re-run after each phase)
 - [ ] Restart Strapi so new CT columns sync
 - [ ] Manual smoke: create paid course → coupon → enroll → certificate path still works
 
@@ -322,21 +338,22 @@ Security review, rate limits, performance (indexes, pagination everywhere), E2E 
 
 ---
 
-## 12. Feature audit baseline (today)
+## 12. Feature audit baseline (post Phases 1–8 MVP)
 
 | Spec area | Status |
 |-----------|--------|
 | Auth + RBAC (4 roles) | **Done** |
-| Admin layout + users | **Partial** (needs richer dashboard/nav) |
-| Courses / lessons / quizzes | **Done** (builder depth later) |
-| Enrollments / progress | **Partial** |
-| Certificates | **Done** (revoke/verify later) |
+| Admin layout + users | **Done** (rich nav) |
+| Courses / lessons / quizzes | **Done** |
+| Enrollments / progress | **Done** (+ force enroll) |
+| Certificates | **Done** (revoke + verify) |
 | Blog | **Done** |
-| Pricing / coupons / banners | **Partial backend** |
-| Orders / payments / inventory / exams / tickets / audit | **Missing** |
+| Pricing / coupons / banners | **Done** |
+| Orders / payments / inventory / tickets / audit | **MVP Done** (simulated pay; inventory without PO) |
+| Timed exams | **Deferred** (use quizzes) |
 
 ---
 
 ## 13. Next action
 
-**Execute Phase 1** against this plan. After Phase 1 passes typecheck and smoke tests, update this document’s checklist and begin Phase 2.
+**Restart Strapi** to sync new content-types, then smoke-test admin modules. Phase 9 = hardening (security, pagination, E2E).

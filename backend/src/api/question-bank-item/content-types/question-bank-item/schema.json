@@ -1,0 +1,59 @@
+{
+  "kind": "collectionType",
+  "collectionName": "question_bank_items",
+  "info": {
+    "singularName": "question-bank-item",
+    "pluralName": "question-bank-items",
+    "displayName": "Question Bank Item",
+    "description": "Question Bank Item"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "question": {
+      "type": "text",
+      "required": true
+    },
+    "questionType": {
+      "type": "enumeration",
+      "enum": [
+        "SINGLE",
+        "MULTI",
+        "TRUE_FALSE",
+        "SHORT"
+      ],
+      "default": "SINGLE"
+    },
+    "options": {
+      "type": "json"
+    },
+    "correctAnswer": {
+      "type": "text"
+    },
+    "explanation": {
+      "type": "text"
+    },
+    "marks": {
+      "type": "integer",
+      "default": 1
+    },
+    "difficulty": {
+      "type": "enumeration",
+      "enum": [
+        "EASY",
+        "MEDIUM",
+        "HARD"
+      ],
+      "default": "MEDIUM"
+    },
+    "tags": {
+      "type": "string"
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course"
+    }
+  }
+}

@@ -75,6 +75,12 @@
       "type": "boolean",
       "default": true
     },
+    "phone": {
+      "type": "string"
+    },
+    "lastLoginAt": {
+      "type": "datetime"
+    },
     "instructedCourses": {
       "type": "relation",
       "relation": "oneToMany",

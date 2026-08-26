@@ -1,0 +1,69 @@
+{
+  "kind": "collectionType",
+  "collectionName": "orders",
+  "info": {
+    "singularName": "order",
+    "pluralName": "orders",
+    "displayName": "Order",
+    "description": "Order"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "orderNumber": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "amount": {
+      "type": "decimal",
+      "required": true
+    },
+    "discount": {
+      "type": "decimal",
+      "default": 0
+    },
+    "total": {
+      "type": "decimal",
+      "required": true
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "PENDING",
+        "PAID",
+        "CANCELLED",
+        "REFUNDED"
+      ],
+      "default": "PENDING"
+    },
+    "paymentStatus": {
+      "type": "enumeration",
+      "enum": [
+        "UNPAID",
+        "PAID",
+        "FAILED",
+        "REFUNDED"
+      ],
+      "default": "UNPAID"
+    },
+    "couponCode": {
+      "type": "string"
+    },
+    "customer": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course"
+    }
+  }
+}

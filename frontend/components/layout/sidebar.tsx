@@ -5,15 +5,31 @@ import { usePathname } from "next/navigation";
 import {
   Award,
   BookOpen,
+  ClipboardList,
   FileText,
-  LayoutDashboard,
-  Users,
-  GraduationCap,
-  PanelLeftClose,
-  PanelLeft,
-  Tag,
-  Image as ImageIcon,
   FolderKanban,
+  GraduationCap,
+  Image as ImageIcon,
+  LayoutDashboard,
+  Megaphone,
+  Package,
+  PanelLeft,
+  PanelLeftClose,
+  Search,
+  Settings,
+  ShoppingCart,
+  Tag,
+  Ticket,
+  Users,
+  BarChart3,
+  ScrollText,
+  Bell,
+  Star,
+  CreditCard,
+  Layers,
+  UserCheck,
+  CalendarCheck,
+  Library,
 } from "lucide-react";
 import { useState, type ComponentType } from "react";
 import { cn } from "@/lib/utils";
@@ -32,14 +48,33 @@ function navForRole(role: string | null | undefined): NavItem[] {
     case ROLE_NAMES.ADMIN:
       return [
         { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { href: "/admin/search", label: "Search", icon: Search },
         { href: "/admin/users", label: "Users", icon: Users },
+        { href: "/admin/students", label: "Students", icon: GraduationCap },
+        { href: "/admin/instructors", label: "Instructors", icon: UserCheck },
         { href: "/admin/courses", label: "Courses", icon: BookOpen },
         { href: "/admin/categories", label: "Categories", icon: FolderKanban },
-        { href: "/admin/enrollments", label: "Enrollments", icon: GraduationCap },
+        { href: "/admin/batches", label: "Batches", icon: Layers },
+        { href: "/admin/attendance", label: "Attendance", icon: CalendarCheck },
+        { href: "/admin/enrollments", label: "Enrollments", icon: ClipboardList },
+        { href: "/admin/assignments", label: "Assignments", icon: FileText },
+        { href: "/admin/question-bank", label: "Question bank", icon: Library },
         { href: "/admin/certificates", label: "Certificates", icon: Award },
+        { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+        { href: "/admin/payments", label: "Payments", icon: CreditCard },
         { href: "/admin/coupons", label: "Coupons", icon: Tag },
+        { href: "/admin/plans", label: "Plans", icon: Layers },
+        { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
+        { href: "/admin/inventory", label: "Inventory", icon: Package },
         { href: "/admin/banners", label: "Banners", icon: ImageIcon },
+        { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
+        { href: "/admin/tickets", label: "Tickets", icon: Ticket },
+        { href: "/admin/reviews", label: "Reviews", icon: Star },
+        { href: "/admin/notifications", label: "Notifications", icon: Bell },
         { href: "/admin/blog", label: "Blog", icon: FileText },
+        { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+        { href: "/admin/audit-logs", label: "Audit logs", icon: ScrollText },
+        { href: "/admin/settings", label: "Settings", icon: Settings },
       ];
     case ROLE_NAMES.CONTENT_MANAGER:
       return [
@@ -87,7 +122,7 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
     <>
       <aside
         className={cn(
-          "sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 border-r border-border bg-surface transition-all md:block",
+          "sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 overflow-y-auto border-r border-border bg-surface transition-all md:block",
           collapsed ? "w-[72px]" : "w-60"
         )}
       >
@@ -105,7 +140,7 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
               <PanelLeftClose className="h-4 w-4" />
             )}
           </Button>
-          <nav className="flex flex-col gap-1">
+          <nav className="flex flex-col gap-1 pb-8">
             {items.map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);

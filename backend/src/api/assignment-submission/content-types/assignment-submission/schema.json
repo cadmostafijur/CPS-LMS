@@ -1,0 +1,50 @@
+{
+  "kind": "collectionType",
+  "collectionName": "assignment_submissions",
+  "info": {
+    "singularName": "assignment-submission",
+    "pluralName": "assignment-submissions",
+    "displayName": "Assignment Submission",
+    "description": "Assignment Submission"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "content": {
+      "type": "text"
+    },
+    "fileUrl": {
+      "type": "string"
+    },
+    "score": {
+      "type": "decimal"
+    },
+    "feedback": {
+      "type": "text"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "SUBMITTED",
+        "LATE",
+        "GRADED",
+        "RETURNED"
+      ],
+      "default": "SUBMITTED"
+    },
+    "submittedAt": {
+      "type": "datetime"
+    },
+    "assignment": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::assignment.assignment"
+    },
+    "student": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

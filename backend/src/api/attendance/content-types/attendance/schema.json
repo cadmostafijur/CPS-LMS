@@ -1,0 +1,47 @@
+{
+  "kind": "collectionType",
+  "collectionName": "attendances",
+  "info": {
+    "singularName": "attendance",
+    "pluralName": "attendances",
+    "displayName": "Attendance",
+    "description": "Attendance"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "date": {
+      "type": "date",
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "PRESENT",
+        "ABSENT",
+        "LATE",
+        "EXCUSED"
+      ],
+      "default": "PRESENT"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "student": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "batch": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::batch.batch"
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course"
+    }
+  }
+}

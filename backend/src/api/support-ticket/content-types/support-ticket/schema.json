@@ -1,0 +1,62 @@
+{
+  "kind": "collectionType",
+  "collectionName": "support_tickets",
+  "info": {
+    "singularName": "support-ticket",
+    "pluralName": "support-tickets",
+    "displayName": "Support Ticket",
+    "description": "Support Ticket"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "ticketNumber": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "subject": {
+      "type": "string",
+      "required": true
+    },
+    "body": {
+      "type": "text"
+    },
+    "category": {
+      "type": "string",
+      "default": "general"
+    },
+    "priority": {
+      "type": "enumeration",
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "URGENT"
+      ],
+      "default": "MEDIUM"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "OPEN",
+        "IN_PROGRESS",
+        "WAITING",
+        "RESOLVED",
+        "CLOSED"
+      ],
+      "default": "OPEN"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "assignedTo": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

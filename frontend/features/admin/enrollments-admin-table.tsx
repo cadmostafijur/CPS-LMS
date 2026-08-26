@@ -3,9 +3,20 @@
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { SearchInput } from "@/components/shared/search-input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -20,11 +31,12 @@ import type { User } from "@/types";
 
 type EnrollmentRow = {
   id: number | string;
+  documentId?: string;
   enrolledAt?: string;
   completedAt?: string | null;
   progress?: { percentage: number };
   student?: User | null;
-  course?: { title?: string } | null;
+  course?: { title?: string; id?: number | string; documentId?: string } | null;
 };
 
 export function EnrollmentsAdminTable() {
@@ -32,8 +44,12 @@ export function EnrollmentsAdminTable() {
   const debounced = useDebounce(search);
   const [items, setItems] = useState<EnrollmentRow[]>([]);
   const [pending, startTransition] = useTransition();
+  const [forceOpen, setForceOpen] = useState(false);
+  const [studentId, setStudentId] = useState("");
+  const [courseId, setCourseId] = useState("");
+  const [removeTarget, setRemoveTarget] = useState<EnrollmentRow | null>(null);
 
-  useEffect(() => {
+  function load() {
     startTransition(async () => {
       try {
         const params = new URLSearchParams();
@@ -48,13 +64,48 @@ export function EnrollmentsAdminTable() {
         );
       }
     });
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced]);
+
+  async function forceEnroll() {
+    try {
+      await bffFetch("/api/lms/admin/enrollments/force", {
+        method: "POST",
+        body: JSON.stringify({ studentId, courseId }),
+      });
+      toast.success("Student enrolled");
+      setForceOpen(false);
+      setStudentId("");
+      setCourseId("");
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Force enroll failed");
+    }
+  }
+
+  async function confirmRemove() {
+    if (!removeTarget) return;
+    try {
+      const id = removeTarget.documentId || removeTarget.id;
+      await bffFetch(`/api/lms/admin/enrollments/${id}`, { method: "DELETE" });
+      toast.success("Enrollment removed");
+      setRemoveTarget(null);
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Remove failed");
+    }
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Enrollments"
-        description="Track who is enrolled and how far they have progressed."
+        description="Track progress, force-enroll students, or remove access."
+        actions={<Button onClick={() => setForceOpen(true)}>Force enroll</Button>}
       />
       <SearchInput
         value={search}
@@ -71,12 +122,13 @@ export function EnrollmentsAdminTable() {
               <TableHead>Progress</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Enrolled</TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
             {items.length === 0 && !pending ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground">
+                <TableCell colSpan={6} className="text-muted-foreground">
                   No enrollments yet.
                 </TableCell>
               </TableRow>
@@ -109,12 +161,66 @@ export function EnrollmentsAdminTable() {
                       ? new Date(row.enrolledAt).toLocaleDateString()
                       : "—"}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => setRemoveTarget(row)}
+                    >
+                      Remove
+                    </Button>
+                  </TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={forceOpen} onOpenChange={setForceOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Force enroll</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3 py-2">
+            <div className="space-y-1.5">
+              <Label>Student ID</Label>
+              <Input
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                placeholder="User id or documentId"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Course ID</Label>
+              <Input
+                value={courseId}
+                onChange={(e) => setCourseId(e.target.value)}
+                placeholder="Course id or documentId"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setForceOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={forceEnroll} disabled={!studentId || !courseId}>
+              Enroll
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(removeTarget)}
+        onOpenChange={(v) => !v && setRemoveTarget(null)}
+        title="Remove enrollment?"
+        description="The student will lose access to this course."
+        confirmLabel="Remove"
+        destructive
+        onConfirm={confirmRemove}
+      />
     </div>
   );
 }

@@ -1,0 +1,27 @@
+{
+  "kind": "collectionType",
+  "collectionName": "settings",
+  "info": {
+    "singularName": "setting",
+    "pluralName": "settings",
+    "displayName": "Setting",
+    "description": "Setting"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "key": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "value": {
+      "type": "json"
+    },
+    "group": {
+      "type": "string",
+      "default": "general"
+    }
+  }
+}

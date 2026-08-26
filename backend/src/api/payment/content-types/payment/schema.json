@@ -1,0 +1,59 @@
+{
+  "kind": "collectionType",
+  "collectionName": "payments",
+  "info": {
+    "singularName": "payment",
+    "pluralName": "payments",
+    "displayName": "Payment",
+    "description": "Payment"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "transactionId": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "amount": {
+      "type": "decimal",
+      "required": true
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "method": {
+      "type": "string",
+      "default": "SIMULATED"
+    },
+    "gateway": {
+      "type": "string",
+      "default": "internal"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "PENDING",
+        "SUCCESS",
+        "FAILED",
+        "REFUNDED"
+      ],
+      "default": "PENDING"
+    },
+    "paidAt": {
+      "type": "datetime"
+    },
+    "order": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::order.order"
+    },
+    "customer": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

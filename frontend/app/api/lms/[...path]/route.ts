@@ -5,11 +5,19 @@ import { getApiBaseUrl, TOKEN_COOKIE } from "@/lib/config";
 async function proxy(request: NextRequest, pathParts: string[]) {
   const jar = await cookies();
   const token = jar.get(TOKEN_COOKIE)?.value;
-  if (!token) {
+  const targetPath = pathParts.join("/");
+  const isPublic =
+    targetPath.startsWith("certificates/verify/") ||
+    targetPath === "announcements" ||
+    targetPath === "banners" ||
+    targetPath === "catalog" ||
+    targetPath.startsWith("catalog/") ||
+    targetPath === "categories";
+
+  if (!token && !isPublic) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const targetPath = pathParts.join("/");
   // Client calls /api/lms/<rest> → Strapi /api/lms/<rest>
   const url = new URL(`${getApiBaseUrl()}/lms/${targetPath}`);
   request.nextUrl.searchParams.forEach((value, key) => {
@@ -19,7 +27,7 @@ async function proxy(request: NextRequest, pathParts: string[]) {
   const init: RequestInit = {
     method: request.method,
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       "Content-Type": "application/json",
     },
     cache: "no-store",

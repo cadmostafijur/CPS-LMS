@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "subscriptions",
+  "info": {
+    "singularName": "subscription",
+    "pluralName": "subscriptions",
+    "displayName": "Subscription",
+    "description": "Subscription"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "ACTIVE",
+        "TRIAL",
+        "PAST_DUE",
+        "CANCELLED",
+        "EXPIRED"
+      ],
+      "default": "ACTIVE"
+    },
+    "startDate": {
+      "type": "datetime"
+    },
+    "renewalDate": {
+      "type": "datetime"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "plan": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::plan.plan"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "kind": "collectionType",
+  "collectionName": "announcements",
+  "info": {
+    "singularName": "announcement",
+    "pluralName": "announcements",
+    "displayName": "Announcement",
+    "description": "Announcement"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "content": {
+      "type": "text",
+      "required": true
+    },
+    "audience": {
+      "type": "enumeration",
+      "enum": [
+        "EVERYONE",
+        "STUDENTS",
+        "INSTRUCTORS"
+      ],
+      "default": "EVERYONE"
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    },
+    "publishAt": {
+      "type": "datetime"
+    },
+    "expiresAt": {
+      "type": "datetime"
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course"
+    }
+  }
+}

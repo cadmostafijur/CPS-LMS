@@ -1,0 +1,66 @@
+{
+  "kind": "collectionType",
+  "collectionName": "inventory_items",
+  "info": {
+    "singularName": "inventory-item",
+    "pluralName": "inventory-items",
+    "displayName": "Inventory Item",
+    "description": "Inventory Item"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "sku": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "unit": {
+      "type": "string",
+      "default": "pcs"
+    },
+    "costPrice": {
+      "type": "decimal",
+      "default": 0
+    },
+    "sellingPrice": {
+      "type": "decimal",
+      "default": 0
+    },
+    "quantity": {
+      "type": "integer",
+      "default": 0
+    },
+    "minStock": {
+      "type": "integer",
+      "default": 5
+    },
+    "reorderLevel": {
+      "type": "integer",
+      "default": 10
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "IN_STOCK",
+        "LOW_STOCK",
+        "OUT_OF_STOCK",
+        "DISCONTINUED"
+      ],
+      "default": "IN_STOCK"
+    },
+    "warehouse": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::warehouse.warehouse"
+    }
+  }
+}

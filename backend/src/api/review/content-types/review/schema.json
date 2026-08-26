@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "reviews",
+  "info": {
+    "singularName": "review",
+    "pluralName": "reviews",
+    "displayName": "Review",
+    "description": "Review"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "rating": {
+      "type": "integer",
+      "required": true
+    },
+    "body": {
+      "type": "text"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED",
+        "HIDDEN"
+      ],
+      "default": "PENDING"
+    },
+    "student": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course"
+    }
+  }
+}
