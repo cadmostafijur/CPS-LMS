@@ -8,8 +8,10 @@ type RoleLike = {
 export type SanitizedUser = {
   id: number | string;
   documentId?: string;
+  username?: string | null;
   name?: string | null;
   email?: string | null;
+  phone?: string | null;
   role?: RoleLike;
   avatarUrl?: string | null;
   isActive?: boolean | null;
@@ -24,8 +26,10 @@ export function sanitizeUser(user: Record<string, unknown> | null | undefined): 
   return {
     id: user.id as number | string,
     documentId: user.documentId as string | undefined,
+    username: (user.username as string | null | undefined) ?? null,
     name: (user.name as string | null | undefined) ?? null,
     email: (user.email as string | null | undefined) ?? null,
+    phone: (user.phone as string | null | undefined) ?? null,
     role: normalizedRole
       ? {
           id: normalizedRole.id,

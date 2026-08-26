@@ -13,6 +13,18 @@ export default {
       config: { auth: false },
     },
     {
+      method: 'PUT',
+      path: '/lms/me',
+      handler: 'lms.updateMe',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/me/password',
+      handler: 'lms.changeMyPassword',
+      config: { policies: ['global::is-authenticated'] },
+    },
+    {
       method: 'POST',
       path: '/lms/enroll/:courseId',
       handler: 'lms.enroll',
@@ -71,6 +83,12 @@ export default {
       path: '/lms/dashboard/content-manager',
       handler: 'lms.contentManagerDashboard',
       config: { policies: ['global::is-content-manager-or-admin'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/staff/courses',
+      handler: 'lms.staffListCourses',
+      config: { policies: ['global::is-authenticated'] },
     },
     {
       method: 'GET',
@@ -142,25 +160,25 @@ export default {
       method: 'GET',
       path: '/lms/admin/banners',
       handler: 'lms.adminListBanners',
-      config: { policies: ['global::is-admin'] },
+      config: { policies: ['global::is-content-manager-or-admin'] },
     },
     {
       method: 'POST',
       path: '/lms/admin/banners',
       handler: 'lms.adminCreateBanner',
-      config: { policies: ['global::is-admin'] },
+      config: { policies: ['global::is-content-manager-or-admin'] },
     },
     {
       method: 'PUT',
       path: '/lms/admin/banners/:id',
       handler: 'lms.adminUpdateBanner',
-      config: { policies: ['global::is-admin'] },
+      config: { policies: ['global::is-content-manager-or-admin'] },
     },
     {
       method: 'DELETE',
       path: '/lms/admin/banners/:id',
       handler: 'lms.adminDeleteBanner',
-      config: { policies: ['global::is-admin'] },
+      config: { policies: ['global::is-content-manager-or-admin'] },
     },
     {
       method: 'GET',

@@ -135,19 +135,56 @@ function flatNavForRole(role: string | null | undefined): NavItem[] {
         { href: "/content-manager/courses", label: "Courses", icon: BookOpen },
         { href: "/content-manager/categories", label: "Categories", icon: FolderKanban },
         { href: "/content-manager/blog", label: "Blog", icon: FileText },
+        { href: "/content-manager/banners", label: "Banners", icon: ImageIcon },
+        { href: "/profile", label: "Profile", icon: UserCheck },
       ];
     case ROLE_NAMES.INSTRUCTOR:
       return [
         { href: "/instructor/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/instructor/courses", label: "My courses", icon: BookOpen },
+        { href: "/profile", label: "Profile", icon: UserCheck },
       ];
     default:
       return [
         { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/student/my-courses", label: "My courses", icon: GraduationCap },
         { href: "/student/certificates", label: "Certificates", icon: Award },
+        { href: "/profile", label: "Profile", icon: UserCheck },
       ];
   }
+}
+
+function contentManagerSections(): NavSection[] {
+  return [
+    {
+      id: "overview",
+      label: "Overview",
+      items: [
+        { href: "/content-manager/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      ],
+    },
+    {
+      id: "learning",
+      label: "Learning content",
+      items: [
+        { href: "/content-manager/courses", label: "Courses", icon: BookOpen },
+        { href: "/content-manager/categories", label: "Categories", icon: FolderKanban },
+      ],
+    },
+    {
+      id: "publishing",
+      label: "Publishing",
+      items: [
+        { href: "/content-manager/blog", label: "Blog", icon: FileText },
+        { href: "/content-manager/banners", label: "Banners", icon: ImageIcon },
+      ],
+    },
+    {
+      id: "account",
+      label: "Account",
+      items: [{ href: "/profile", label: "Profile", icon: UserCheck }],
+    },
+  ];
 }
 
 function isActivePath(pathname: string, href: string) {
@@ -162,16 +199,22 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const isAdmin = role === ROLE_NAMES.ADMIN;
-  const sections = useMemo(() => (isAdmin ? adminSections() : []), [isAdmin]);
+  const isContentManager = role === ROLE_NAMES.CONTENT_MANAGER;
+  const sections = useMemo(() => {
+    if (isAdmin) return adminSections();
+    if (isContentManager) return contentManagerSections();
+    return [];
+  }, [isAdmin, isContentManager]);
   const flatItems = useMemo(() => flatNavForRole(role), [role]);
+  const useSections = isAdmin || isContentManager;
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!useSections) return;
     setOpenSections((prev) => {
       const next = { ...prev };
-      for (const section of adminSections()) {
+      for (const section of sections) {
         if (sectionContainsPath(section, pathname)) {
           next[section.id] = true;
         }
@@ -179,7 +222,7 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
       if (Object.keys(next).length === 0) next.overview = true;
       return next;
     });
-  }, [pathname, isAdmin]);
+  }, [pathname, useSections, sections]);
 
   function toggleSection(id: string) {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -209,7 +252,7 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
             )}
           </Button>
 
-          {isAdmin && !collapsed ? (
+          {useSections && !collapsed ? (
             <nav className="flex flex-col gap-3">
               {sections.map((section) => {
                 const open = openSections[section.id] ?? false;
@@ -258,7 +301,7 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
             </nav>
           ) : (
             <nav className="flex flex-col gap-0.5">
-              {(isAdmin ? flatItems : flatItems).map((item) => {
+              {flatItems.map((item) => {
                 const active = isActivePath(pathname, item.href);
                 const Icon = item.icon;
                 return (

@@ -5,6 +5,12 @@ export default ({ strapi }: { strapi: any }) => ({
   async me(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').me(ctx);
   },
+  async updateMe(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').updateMe(ctx);
+  },
+  async changeMyPassword(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').changeMyPassword(ctx);
+  },
   async enroll(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').enroll(ctx);
   },
@@ -34,6 +40,9 @@ export default ({ strapi }: { strapi: any }) => ({
   },
   async contentManagerDashboard(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').contentManagerDashboard(ctx);
+  },
+  async staffListCourses(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').staffListCourses(ctx);
   },
   async adminDashboard(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').adminDashboard(ctx);

@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImageUrlField } from "@/components/shared/image-url-field";
 import { bffFetch, ApiError } from "@/lib/api";
 import type {
   Course,
@@ -48,6 +49,8 @@ export function CourseForm({
   const [categoryId, setCategoryId] = useState(
     course?.category ? String(course.category.documentId || course.category.id) : "none"
   );
+  const [thumbnailUrl, setThumbnailUrl] = useState(course?.thumbnailUrl || "");
+  const [coverImageUrl, setCoverImageUrl] = useState(course?.coverImageUrl || "");
 
   useEffect(() => {
     bffFetch<{ data: CourseCategory[] }>("/api/lms/categories")
@@ -62,8 +65,8 @@ export function CourseForm({
       title: String(form.get("title") || ""),
       shortDescription: String(form.get("shortDescription") || ""),
       description: String(form.get("description") || ""),
-      thumbnailUrl: String(form.get("thumbnailUrl") || ""),
-      coverImageUrl: String(form.get("coverImageUrl") || ""),
+      thumbnailUrl: thumbnailUrl || String(form.get("thumbnailUrl") || ""),
+      coverImageUrl: coverImageUrl || String(form.get("coverImageUrl") || ""),
       language: String(form.get("language") || "English"),
       requirements: String(form.get("requirements") || ""),
       outcomes: String(form.get("outcomes") || ""),
@@ -151,22 +154,20 @@ export function CourseForm({
             />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="thumbnailUrl">Thumbnail URL</Label>
-              <Input
-                id="thumbnailUrl"
-                name="thumbnailUrl"
-                defaultValue={course?.thumbnailUrl || ""}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="coverImageUrl">Cover image URL</Label>
-              <Input
-                id="coverImageUrl"
-                name="coverImageUrl"
-                defaultValue={course?.coverImageUrl || ""}
-              />
-            </div>
+            <ImageUrlField
+              name="thumbnailUrl"
+              label="Course thumbnail"
+              value={thumbnailUrl}
+              onChange={setThumbnailUrl}
+              hint="Shown on course cards. Upload or paste a URL."
+            />
+            <ImageUrlField
+              name="coverImageUrl"
+              label="Cover image"
+              value={coverImageUrl}
+              onChange={setCoverImageUrl}
+              hint="Large banner on the course detail page."
+            />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">

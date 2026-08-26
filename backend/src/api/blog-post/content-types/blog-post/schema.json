@@ -27,7 +27,7 @@
       "type": "text"
     },
     "coverImageUrl": {
-      "type": "string"
+      "type": "text"
     },
     "status": {
       "type": "enumeration",

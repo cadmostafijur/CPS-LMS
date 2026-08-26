@@ -863,7 +863,7 @@ export interface ApiCourseCourse extends Struct.CollectionTypeSchema {
       'oneToMany',
       'api::certificate.certificate'
     >;
-    coverImageUrl: Schema.Attribute.String;
+    coverImageUrl: Schema.Attribute.Text;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -908,7 +908,7 @@ export interface ApiCourseCourse extends Struct.CollectionTypeSchema {
     slug: Schema.Attribute.UID<'title'> & Schema.Attribute.Required;
     status: Schema.Attribute.Enumeration<['DRAFT', 'PUBLISHED', 'ARCHIVED']> &
       Schema.Attribute.DefaultTo<'DRAFT'>;
-    thumbnailUrl: Schema.Attribute.String;
+    thumbnailUrl: Schema.Attribute.Text;
     title: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &

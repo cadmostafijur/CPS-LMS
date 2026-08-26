@@ -26,6 +26,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ImageUrlField } from "@/components/shared/image-url-field";
 import { bffFetch, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import type { BlogPost, BlogStatus } from "@/types";
@@ -36,6 +37,7 @@ export function BlogManager({ posts }: { posts: BlogPost[] }) {
   const [status, setStatus] = useState<BlogStatus>("DRAFT");
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
   const [editing, setEditing] = useState<BlogPost | null>(null);
+  const [coverImageUrl, setCoverImageUrl] = useState("");
 
   async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -44,7 +46,7 @@ export function BlogManager({ posts }: { posts: BlogPost[] }) {
       title: String(form.get("title") || ""),
       excerpt: String(form.get("excerpt") || ""),
       body: String(form.get("body") || ""),
-      coverImageUrl: String(form.get("coverImageUrl") || ""),
+      coverImageUrl: coverImageUrl || String(form.get("coverImageUrl") || ""),
       status,
     };
     if (!payload.title.trim()) {
@@ -67,6 +69,7 @@ export function BlogManager({ posts }: { posts: BlogPost[] }) {
         toast.success("Post created");
       }
       setEditing(null);
+      setCoverImageUrl("");
       e.currentTarget.reset();
       setStatus("DRAFT");
       router.refresh();
@@ -109,14 +112,13 @@ export function BlogManager({ posts }: { posts: BlogPost[] }) {
               <Label htmlFor="body">Body</Label>
               <Textarea id="body" name="body" rows={8} defaultValue={editing?.body || ""} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="coverImageUrl">Cover image URL</Label>
-              <Input
-                id="coverImageUrl"
-                name="coverImageUrl"
-                defaultValue={editing?.coverImageUrl || ""}
-              />
-            </div>
+            <ImageUrlField
+              name="coverImageUrl"
+              label="Cover image"
+              value={coverImageUrl}
+              onChange={setCoverImageUrl}
+              hint="Upload a cover or paste a URL (spec allows cover image URL)."
+            />
             <div className="space-y-2">
               <Label>Status</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as BlogStatus)}>
@@ -139,6 +141,7 @@ export function BlogManager({ posts }: { posts: BlogPost[] }) {
                   variant="outline"
                   onClick={() => {
                     setEditing(null);
+                    setCoverImageUrl("");
                     setStatus("DRAFT");
                   }}
                 >
@@ -180,6 +183,7 @@ export function BlogManager({ posts }: { posts: BlogPost[] }) {
                       onClick={() => {
                         setEditing(post);
                         setStatus(post.status);
+                        setCoverImageUrl(post.coverImageUrl || "");
                       }}
                     >
                       Edit

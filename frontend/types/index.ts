@@ -29,6 +29,7 @@ export interface User {
   username?: string | null;
   name?: string | null;
   email?: string | null;
+  phone?: string | null;
   role?: RoleLike;
   avatarUrl?: string | null;
   isActive?: boolean | null;
@@ -238,9 +239,23 @@ export interface InstructorDashboard {
 export interface ContentManagerDashboard {
   user: User | null;
   courses: number;
+  publishedCourses?: number;
+  draftCourses?: number;
   blogPosts: number;
   publishedBlog: number;
   draftBlog: number;
+  categories?: number;
+  lessons?: number;
+  quizzes?: number;
+  activeBanners?: number;
+  recentCourses?: Array<{
+    id: number | string;
+    documentId?: string;
+    title: string;
+    status: CourseStatus;
+    instructor?: User | null;
+    updatedAt?: string;
+  }>;
 }
 
 export interface AdminDashboard {

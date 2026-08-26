@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, LogOut, LayoutDashboard, X } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, X, UserRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
@@ -141,6 +141,10 @@ export function Navbar({
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push("/profile")}>
+                    <UserRound className="mr-2 h-4 w-4" />
+                    My profile
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push(dash)}>
                     <LayoutDashboard className="mr-2 h-4 w-4" />
                     Go to dashboard
@@ -197,6 +201,13 @@ export function Navbar({
               : null}
             {user ? (
               <>
+                <Link
+                  href="/profile"
+                  className="text-sm font-medium text-navy"
+                  onClick={() => setOpen(false)}
+                >
+                  My profile
+                </Link>
                 <Link
                   href={dash}
                   className="text-sm font-medium text-navy"

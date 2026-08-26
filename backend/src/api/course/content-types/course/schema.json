@@ -27,7 +27,7 @@
       "type": "string"
     },
     "thumbnailUrl": {
-      "type": "string"
+      "type": "text"
     },
     "status": {
       "type": "enumeration",
@@ -50,7 +50,7 @@
       "type": "decimal"
     },
     "coverImageUrl": {
-      "type": "string"
+      "type": "text"
     },
     "difficulty": {
       "type": "enumeration",

@@ -343,6 +343,68 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     return { data: sanitizeUser(user) };
   },
 
+  async updateMe(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    const body = ctx.request.body || {};
+    const data: Record<string, unknown> = {};
+
+    if (body.name !== undefined) {
+      const name = String(body.name || '').trim();
+      if (!name) throw new ValidationError('Name is required');
+      data.name = name;
+    }
+    if (body.phone !== undefined) {
+      data.phone = body.phone ? String(body.phone).trim() : null;
+    }
+    if (body.avatarUrl !== undefined) {
+      data.avatarUrl = body.avatarUrl ? String(body.avatarUrl).trim() : null;
+    }
+    if (body.username !== undefined) {
+      const username = String(body.username || '').trim();
+      if (username.length < 3) throw new ValidationError('Username must be at least 3 characters');
+      const clash = await strapi.db.query('plugin::users-permissions.user').findOne({
+        where: { username, id: { $ne: user.id } },
+      });
+      if (clash) throw new ValidationError('Username already taken');
+      data.username = username;
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new ValidationError('No profile fields to update');
+    }
+
+    const updated = await strapi.db.query('plugin::users-permissions.user').update({
+      where: { id: user.id },
+      data,
+      populate: { role: true },
+    });
+
+    return { data: sanitizeUser(updated) };
+  },
+
+  async changeMyPassword(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    const { currentPassword, newPassword } = ctx.request.body || {};
+    if (!currentPassword || !newPassword) {
+      throw new ValidationError('currentPassword and newPassword are required');
+    }
+    if (String(newPassword).length < 8) {
+      throw new ValidationError('New password must be at least 8 characters');
+    }
+
+    const valid = await strapi
+      .plugin('users-permissions')
+      .service('user')
+      .validatePassword(String(currentPassword), user.password);
+    if (!valid) throw new ValidationError('Current password is incorrect');
+
+    await strapi.plugin('users-permissions').service('user').edit(user.id, {
+      password: String(newPassword),
+    });
+
+    return { data: { ok: true } };
+  },
+
   async enroll(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
     const { courseId } = ctx.params;
@@ -810,21 +872,97 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       throw new ForbiddenError('Content Manager or Admin required');
     }
 
-    const [courses, blogPosts, publishedBlog, draftBlog] = await Promise.all([
+    const [
+      courses,
+      publishedCourses,
+      draftCourses,
+      blogPosts,
+      publishedBlog,
+      draftBlog,
+      categories,
+      lessons,
+      quizzes,
+      banners,
+    ] = await Promise.all([
       strapi.db.query('api::course.course').count(),
+      strapi.db.query('api::course.course').count({ where: { status: 'PUBLISHED' } }),
+      strapi.db.query('api::course.course').count({ where: { status: 'DRAFT' } }),
       strapi.db.query('api::blog-post.blog-post').count(),
       strapi.db.query('api::blog-post.blog-post').count({ where: { status: 'PUBLISHED' } }),
       strapi.db.query('api::blog-post.blog-post').count({ where: { status: 'DRAFT' } }),
+      strapi.db.query('api::course-category.course-category').count().catch(() => 0),
+      strapi.db.query('api::lesson.lesson').count(),
+      strapi.db.query('api::quiz.quiz').count(),
+      strapi.db.query('api::banner.banner').count({ where: { isActive: true } }).catch(() => 0),
     ]);
+
+    const recentCourses = await strapi.db.query('api::course.course').findMany({
+      orderBy: { updatedAt: 'desc' },
+      limit: 5,
+      populate: { instructor: true },
+    });
 
     return {
       data: {
         user: sanitizeUser(user),
         courses,
+        publishedCourses,
+        draftCourses,
         blogPosts,
         publishedBlog,
         draftBlog,
+        categories,
+        lessons,
+        quizzes,
+        activeBanners: banners,
+        recentCourses: recentCourses.map((c: any) => ({
+          id: c.id,
+          documentId: c.documentId,
+          title: c.title,
+          status: c.status,
+          instructor: sanitizeUser(c.instructor),
+          updatedAt: c.updatedAt,
+        })),
       },
+    };
+  },
+
+  async staffListCourses(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user) && !isContentManager(user) && !isInstructor(user)) {
+      throw new ForbiddenError('Staff required');
+    }
+
+    const where: any = {};
+    if (isInstructor(user) && !isAdmin(user) && !isContentManager(user)) {
+      where.instructor = user.id;
+    }
+
+    const courses = await strapi.db.query('api::course.course').findMany({
+      where,
+      populate: { instructor: true, lessons: true, quizzes: true, category: true },
+      orderBy: { updatedAt: 'desc' },
+      limit: 200,
+    });
+
+    return {
+      data: courses.map((c: any) => ({
+        id: c.id,
+        documentId: c.documentId,
+        title: c.title,
+        slug: c.slug,
+        status: c.status,
+        isFree: c.isFree,
+        price: c.price,
+        currency: c.currency,
+        category: c.category
+          ? { id: c.category.id, name: c.category.name, slug: c.category.slug }
+          : null,
+        instructor: sanitizeUser(c.instructor),
+        lessonCount: c.lessons?.length || 0,
+        quizCount: c.quizzes?.length || 0,
+        updatedAt: c.updatedAt,
+      })),
     };
   },
 
@@ -1327,7 +1465,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   async adminListBanners(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
-    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+    if (!isAdmin(user) && !isContentManager(user)) {
+      throw new ForbiddenError('Content Manager or Admin required');
+    }
     const banners = await strapi.db.query('api::banner.banner').findMany({
       orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
     });
@@ -1336,7 +1476,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   async adminCreateBanner(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
-    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+    if (!isAdmin(user) && !isContentManager(user)) {
+      throw new ForbiddenError('Content Manager or Admin required');
+    }
     const body = ctx.request.body || {};
     if (!body.title) throw new ValidationError('title is required');
     const created = await strapi.db.query('api::banner.banner').create({
@@ -1356,7 +1498,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   async adminUpdateBanner(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
-    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+    if (!isAdmin(user) && !isContentManager(user)) {
+      throw new ForbiddenError('Content Manager or Admin required');
+    }
     const target = await resolveByIdOrDocumentId(
       strapi,
       'api::banner.banner',
@@ -1386,7 +1530,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   async adminDeleteBanner(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
-    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+    if (!isAdmin(user) && !isContentManager(user)) {
+      throw new ForbiddenError('Content Manager or Admin required');
+    }
     const target = await resolveByIdOrDocumentId(
       strapi,
       'api::banner.banner',
