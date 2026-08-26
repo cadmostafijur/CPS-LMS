@@ -28,6 +28,9 @@ export function CourseForm({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<CourseStatus>(course?.status || "DRAFT");
+  const [isFree, setIsFree] = useState(course?.isFree !== false && !(Number(course?.price) > 0));
+  const [price, setPrice] = useState(String(course?.price ?? 0));
+  const [currency, setCurrency] = useState(course?.currency || "USD");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,9 +41,16 @@ export function CourseForm({
       description: String(form.get("description") || ""),
       thumbnailUrl: String(form.get("thumbnailUrl") || ""),
       status,
+      isFree,
+      price: isFree ? 0 : Number(price || 0),
+      currency,
     };
     if (!payload.title.trim()) {
       toast.error("Title is required");
+      return;
+    }
+    if (!isFree && !(payload.price > 0)) {
+      toast.error("Paid courses need a price greater than 0");
       return;
     }
 
@@ -128,6 +138,49 @@ export function CourseForm({
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <Label>Pricing</Label>
+            <Select
+              value={isFree ? "free" : "paid"}
+              onValueChange={(v) => setIsFree(v === "free")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="free">Free</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {!isFree ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="price">Price</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Currency</Label>
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="BDT">BDT</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : null}
           <Button type="submit" disabled={loading}>
             {loading ? "Saving…" : course ? "Save changes" : "Create course"}
           </Button>

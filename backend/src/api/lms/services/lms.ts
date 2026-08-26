@@ -120,6 +120,107 @@ function sanitizeCertificate(cert: any) {
   };
 }
 
+function courseIsFree(course: any) {
+  if (typeof course?.isFree === 'boolean') return course.isFree;
+  const price = Number(course?.price ?? 0);
+  return !(price > 0);
+}
+
+function coursePrice(course: any) {
+  if (courseIsFree(course)) return 0;
+  return Math.max(0, Number(course?.price ?? 0));
+}
+
+function sanitizeCoupon(coupon: any) {
+  if (!coupon) return null;
+  return {
+    id: coupon.id,
+    documentId: coupon.documentId,
+    code: coupon.code,
+    description: coupon.description,
+    discountType: coupon.discountType,
+    discountValue: Number(coupon.discountValue ?? 0),
+    isActive: coupon.isActive !== false,
+    maxUses: coupon.maxUses ?? null,
+    usedCount: coupon.usedCount ?? 0,
+    expiresAt: coupon.expiresAt ?? null,
+    minAmount: Number(coupon.minAmount ?? 0),
+  };
+}
+
+function sanitizeBanner(banner: any) {
+  if (!banner) return null;
+  return {
+    id: banner.id,
+    documentId: banner.documentId,
+    title: banner.title,
+    subtitle: banner.subtitle,
+    ctaLabel: banner.ctaLabel,
+    linkUrl: banner.linkUrl,
+    imageUrl: banner.imageUrl,
+    placement: banner.placement || 'BOTH',
+    isActive: banner.isActive !== false,
+    sortOrder: banner.sortOrder ?? 0,
+  };
+}
+
+async function applyCouponToPrice(
+  strapi: Core.Strapi,
+  originalPrice: number,
+  couponCode?: string | null
+) {
+  if (!couponCode || !String(couponCode).trim()) {
+    return {
+      amountDue: originalPrice,
+      discount: 0,
+      coupon: null as any,
+    };
+  }
+
+  const code = String(couponCode).trim().toUpperCase();
+  const coupon = await strapi.db.query('api::coupon.coupon').findOne({
+    where: { code },
+  });
+  if (!coupon) throw new ValidationError('Invalid coupon code');
+  if (coupon.isActive === false) throw new ValidationError('Coupon is inactive');
+  if (coupon.expiresAt && new Date(coupon.expiresAt).getTime() < Date.now()) {
+    throw new ValidationError('Coupon has expired');
+  }
+  if (
+    coupon.maxUses != null &&
+    Number(coupon.usedCount || 0) >= Number(coupon.maxUses)
+  ) {
+    throw new ValidationError('Coupon usage limit reached');
+  }
+  const minAmount = Number(coupon.minAmount || 0);
+  if (originalPrice < minAmount) {
+    throw new ValidationError(`Coupon requires a minimum of ${minAmount}`);
+  }
+
+  let discount = 0;
+  const value = Number(coupon.discountValue || 0);
+  if (coupon.discountType === 'FIXED') {
+    discount = Math.min(originalPrice, value);
+  } else {
+    discount = Math.min(originalPrice, (originalPrice * value) / 100);
+  }
+
+  return {
+    amountDue: Math.max(0, Number((originalPrice - discount).toFixed(2))),
+    discount: Number(discount.toFixed(2)),
+    coupon,
+  };
+}
+
+function pricingFields(course: any) {
+  const free = courseIsFree(course);
+  return {
+    isFree: free,
+    price: free ? 0 : coursePrice(course),
+    currency: course.currency || 'USD',
+  };
+}
+
 async function getCourseProgressForStudent(
   strapi: Core.Strapi,
   studentId: number,
@@ -186,6 +287,8 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   async enroll(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
     const { courseId } = ctx.params;
+    const body = ctx.request.body || {};
+    const couponCode = body.couponCode || body.coupon || null;
 
     const course = await findCourse(strapi, courseId, {
       instructor: true,
@@ -208,16 +311,56 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       throw new ApplicationError('Already enrolled in this course');
     }
 
+    const originalPrice = coursePrice(course);
+    const free = courseIsFree(course);
+    let amountPaid = 0;
+    let appliedCoupon: any = null;
+
+    if (!free && originalPrice > 0) {
+      const priced = await applyCouponToPrice(strapi, originalPrice, couponCode);
+      amountPaid = priced.amountDue;
+      appliedCoupon = priced.coupon;
+
+      // Simulated checkout: paid courses enroll after price/coupon resolution.
+      // amountPaid === 0 means a 100% coupon was applied.
+    } else if (couponCode) {
+      // Ignore coupons on free courses (still enroll)
+    }
+
     const enrollment = await strapi.db.query('api::enrollment.enrollment').create({
       data: {
         student: user.id,
         course: course.id,
         enrolledAt: new Date().toISOString(),
+        isFreeEnrollment: free || amountPaid === 0,
+        originalPrice,
+        amountPaid,
+        couponCode: appliedCoupon?.code || null,
+        currency: course.currency || 'USD',
       },
       populate: { course: true, student: true },
     });
 
-    return { data: enrollment };
+    if (appliedCoupon) {
+      await strapi.db.query('api::coupon.coupon').update({
+        where: { id: appliedCoupon.id },
+        data: { usedCount: Number(appliedCoupon.usedCount || 0) + 1 },
+      });
+    }
+
+    return {
+      data: {
+        ...enrollment,
+        student: sanitizeUser(enrollment.student || user),
+        pricing: {
+          isFree: free,
+          originalPrice,
+          amountPaid,
+          couponCode: appliedCoupon?.code || null,
+          currency: course.currency || 'USD',
+        },
+      },
+    };
   },
 
   async myCourses(ctx: Ctx) {
@@ -630,18 +773,70 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     const user = await getAuthUser(ctx, strapi);
     if (!isAdmin(user)) throw new ForbiddenError('Admin required');
 
-    const [users, courses, enrollments, blogPosts, quizzes, certificates, bannedUsers] =
-      await Promise.all([
-        strapi.db.query('plugin::users-permissions.user').count(),
-        strapi.db.query('api::course.course').count(),
-        strapi.db.query('api::enrollment.enrollment').count(),
-        strapi.db.query('api::blog-post.blog-post').count(),
-        strapi.db.query('api::quiz.quiz').count(),
-        strapi.db.query('api::certificate.certificate').count(),
-        strapi.db.query('plugin::users-permissions.user').count({
-          where: { $or: [{ blocked: true }, { isActive: false }] },
-        }),
-      ]);
+    const studentRole = await strapi.db.query('plugin::users-permissions.role').findOne({
+      where: { name: ROLE_NAMES.STUDENT },
+    });
+    const instructorRole = await strapi.db.query('plugin::users-permissions.role').findOne({
+      where: { name: ROLE_NAMES.INSTRUCTOR },
+    });
+
+    const [
+      users,
+      courses,
+      enrollments,
+      blogPosts,
+      quizzes,
+      certificates,
+      bannedUsers,
+      publishedCourses,
+      draftCourses,
+      completedEnrollments,
+      activeStudents,
+      students,
+      instructors,
+      activeCoupons,
+      activeBanners,
+    ] = await Promise.all([
+      strapi.db.query('plugin::users-permissions.user').count(),
+      strapi.db.query('api::course.course').count(),
+      strapi.db.query('api::enrollment.enrollment').count(),
+      strapi.db.query('api::blog-post.blog-post').count(),
+      strapi.db.query('api::quiz.quiz').count(),
+      strapi.db.query('api::certificate.certificate').count(),
+      strapi.db.query('plugin::users-permissions.user').count({
+        where: { $or: [{ blocked: true }, { isActive: false }] },
+      }),
+      strapi.db.query('api::course.course').count({ where: { status: 'PUBLISHED' } }),
+      strapi.db.query('api::course.course').count({ where: { status: 'DRAFT' } }),
+      strapi.db.query('api::enrollment.enrollment').count({
+        where: { completedAt: { $notNull: true } },
+      }),
+      studentRole
+        ? strapi.db.query('plugin::users-permissions.user').count({
+            where: { role: studentRole.id, isActive: true, blocked: false },
+          })
+        : 0,
+      studentRole
+        ? strapi.db.query('plugin::users-permissions.user').count({
+            where: { role: studentRole.id },
+          })
+        : 0,
+      instructorRole
+        ? strapi.db.query('plugin::users-permissions.user').count({
+            where: { role: instructorRole.id },
+          })
+        : 0,
+      strapi.db.query('api::coupon.coupon').count({ where: { isActive: true } }).catch(() => 0),
+      strapi.db.query('api::banner.banner').count({ where: { isActive: true } }).catch(() => 0),
+    ]);
+
+    const paidRows = await strapi.db.query('api::enrollment.enrollment').findMany({
+      select: ['amountPaid'],
+    });
+    const revenue = paidRows.reduce(
+      (sum: number, row: any) => sum + Number(row.amountPaid || 0),
+      0
+    );
 
     const roles = await strapi.db.query('plugin::users-permissions.role').findMany();
     const usersByRole: Record<string, number> = {};
@@ -650,6 +845,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         where: { role: role.id },
       });
     }
+
+    const completionRate =
+      enrollments > 0 ? Math.round((completedEnrollments / enrollments) * 100) : 0;
 
     return {
       data: {
@@ -662,6 +860,16 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         certificates,
         bannedUsers,
         usersByRole,
+        students,
+        activeStudents,
+        instructors,
+        publishedCourses,
+        draftCourses,
+        completedEnrollments,
+        completionRate,
+        revenue: Number(revenue.toFixed(2)),
+        activeCoupons,
+        activeBanners,
       },
     };
   },
@@ -1044,12 +1252,210 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     };
   },
 
+  async listBanners(ctx: Ctx) {
+    const placement = String(ctx.query?.placement || '').toUpperCase();
+    const where: any = { isActive: true };
+    if (placement === 'HOME' || placement === 'CATALOG') {
+      where.$or = [{ placement }, { placement: 'BOTH' }];
+    }
+
+    const banners = await strapi.db.query('api::banner.banner').findMany({
+      where,
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    });
+    return { data: banners.map(sanitizeBanner) };
+  },
+
+  async adminListBanners(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+    const banners = await strapi.db.query('api::banner.banner').findMany({
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    });
+    return { data: banners.map(sanitizeBanner) };
+  },
+
+  async adminCreateBanner(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+    const body = ctx.request.body || {};
+    if (!body.title) throw new ValidationError('title is required');
+    const created = await strapi.db.query('api::banner.banner').create({
+      data: {
+        title: String(body.title).trim(),
+        subtitle: body.subtitle || null,
+        ctaLabel: body.ctaLabel || null,
+        linkUrl: body.linkUrl || null,
+        imageUrl: body.imageUrl || null,
+        placement: body.placement || 'BOTH',
+        isActive: body.isActive !== false,
+        sortOrder: Number(body.sortOrder || 0),
+      },
+    });
+    return { data: sanitizeBanner(created) };
+  },
+
+  async adminUpdateBanner(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+    const target = await resolveByIdOrDocumentId(
+      strapi,
+      'api::banner.banner',
+      ctx.params.id
+    );
+    if (!target) throw new NotFoundError('Banner not found');
+    const body = ctx.request.body || {};
+    const data: any = {};
+    for (const key of [
+      'title',
+      'subtitle',
+      'ctaLabel',
+      'linkUrl',
+      'imageUrl',
+      'placement',
+      'isActive',
+      'sortOrder',
+    ]) {
+      if (body[key] !== undefined) data[key] = body[key];
+    }
+    const updated = await strapi.db.query('api::banner.banner').update({
+      where: { id: target.id },
+      data,
+    });
+    return { data: sanitizeBanner(updated) };
+  },
+
+  async adminDeleteBanner(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+    const target = await resolveByIdOrDocumentId(
+      strapi,
+      'api::banner.banner',
+      ctx.params.id
+    );
+    if (!target) throw new NotFoundError('Banner not found');
+    await strapi.db.query('api::banner.banner').delete({ where: { id: target.id } });
+    return { data: { id: target.id, deleted: true } };
+  },
+
+  async adminListCoupons(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+    const coupons = await strapi.db.query('api::coupon.coupon').findMany({
+      orderBy: { id: 'desc' },
+    });
+    return { data: coupons.map(sanitizeCoupon) };
+  },
+
+  async adminCreateCoupon(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+    const body = ctx.request.body || {};
+    if (!body.code) throw new ValidationError('code is required');
+    if (body.discountValue === undefined || body.discountValue === null) {
+      throw new ValidationError('discountValue is required');
+    }
+    const code = String(body.code).trim().toUpperCase();
+    const existing = await strapi.db.query('api::coupon.coupon').findOne({ where: { code } });
+    if (existing) throw new ValidationError('Coupon code already exists');
+
+    const created = await strapi.db.query('api::coupon.coupon').create({
+      data: {
+        code,
+        description: body.description || null,
+        discountType: body.discountType === 'FIXED' ? 'FIXED' : 'PERCENT',
+        discountValue: Number(body.discountValue),
+        isActive: body.isActive !== false,
+        maxUses: body.maxUses != null ? Number(body.maxUses) : null,
+        usedCount: 0,
+        expiresAt: body.expiresAt || null,
+        minAmount: Number(body.minAmount || 0),
+      },
+    });
+    return { data: sanitizeCoupon(created) };
+  },
+
+  async adminUpdateCoupon(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+    const target = await resolveByIdOrDocumentId(
+      strapi,
+      'api::coupon.coupon',
+      ctx.params.id
+    );
+    if (!target) throw new NotFoundError('Coupon not found');
+    const body = ctx.request.body || {};
+    const data: any = {};
+    if (body.code !== undefined) data.code = String(body.code).trim().toUpperCase();
+    for (const key of [
+      'description',
+      'discountType',
+      'discountValue',
+      'isActive',
+      'maxUses',
+      'expiresAt',
+      'minAmount',
+    ]) {
+      if (body[key] !== undefined) data[key] = body[key];
+    }
+    const updated = await strapi.db.query('api::coupon.coupon').update({
+      where: { id: target.id },
+      data,
+    });
+    return { data: sanitizeCoupon(updated) };
+  },
+
+  async adminDeleteCoupon(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user)) throw new ForbiddenError('Admin required');
+    const target = await resolveByIdOrDocumentId(
+      strapi,
+      'api::coupon.coupon',
+      ctx.params.id
+    );
+    if (!target) throw new NotFoundError('Coupon not found');
+    await strapi.db.query('api::coupon.coupon').delete({ where: { id: target.id } });
+    return { data: { id: target.id, deleted: true } };
+  },
+
+  async validateCoupon(ctx: Ctx) {
+    await getAuthUser(ctx, strapi);
+    const body = ctx.request.body || {};
+    const courseId = body.courseId;
+    const couponCode = body.couponCode || body.code;
+    if (!courseId) throw new ValidationError('courseId is required');
+    const course = await findCourse(strapi, String(courseId));
+    if (!course) throw new NotFoundError('Course not found');
+    const originalPrice = coursePrice(course);
+    const priced = await applyCouponToPrice(strapi, originalPrice, couponCode);
+    return {
+      data: {
+        originalPrice,
+        discount: priced.discount,
+        amountDue: priced.amountDue,
+        currency: course.currency || 'USD',
+        coupon: sanitizeCoupon(priced.coupon),
+        isFree: courseIsFree(course),
+      },
+    };
+  },
+
   async createCourse(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
     assertNotStudent(user);
 
     const body = ctx.request.body?.data || ctx.request.body || {};
-    const { title, description, shortDescription, thumbnailUrl, status, instructorId } = body;
+    const {
+      title,
+      description,
+      shortDescription,
+      thumbnailUrl,
+      status,
+      instructorId,
+      isFree,
+      price,
+      currency,
+    } = body;
 
     if (!title) throw new ValidationError('title is required');
 
@@ -1068,6 +1474,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       instructorUserId = user.id;
     }
 
+    const free =
+      typeof isFree === 'boolean' ? isFree : !(Number(price || 0) > 0);
+
     const course = await strapi.db.query('api::course.course').create({
       data: {
         title,
@@ -1076,6 +1485,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         shortDescription,
         thumbnailUrl,
         status: status || 'DRAFT',
+        isFree: free,
+        price: free ? 0 : Math.max(0, Number(price || 0)),
+        currency: currency || 'USD',
         instructor: instructorUserId,
         createdByUser: user.id,
       },
@@ -1105,8 +1517,18 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       'shortDescription',
       'thumbnailUrl',
       'status',
+      'currency',
     ]) {
       if (body[key] !== undefined) data[key] = body[key];
+    }
+
+    if (body.isFree !== undefined || body.price !== undefined) {
+      const free =
+        typeof body.isFree === 'boolean'
+          ? body.isFree
+          : !(Number(body.price ?? course.price ?? 0) > 0);
+      data.isFree = free;
+      data.price = free ? 0 : Math.max(0, Number(body.price ?? course.price ?? 0));
     }
 
     if (body.title) {
@@ -1455,6 +1877,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         shortDescription: course.shortDescription,
         thumbnailUrl: course.thumbnailUrl,
         status: course.status,
+        ...pricingFields(course),
         instructor: sanitizeUser(course.instructor),
         lessonCount: course.lessons?.length ?? 0,
         quizCount: course.quizzes?.length ?? 0,
@@ -1487,6 +1910,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         shortDescription: course.shortDescription,
         thumbnailUrl: course.thumbnailUrl,
         status: course.status,
+        ...pricingFields(course),
         instructor: sanitizeUser(course.instructor),
         lessons: (course.lessons || []).map((lesson: any) => ({
           id: lesson.id,

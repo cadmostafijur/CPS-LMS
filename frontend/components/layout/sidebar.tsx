@@ -11,6 +11,8 @@ import {
   GraduationCap,
   PanelLeftClose,
   PanelLeft,
+  Tag,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useState, type ComponentType } from "react";
 import { cn } from "@/lib/utils";
@@ -33,6 +35,8 @@ function navForRole(role: string | null | undefined): NavItem[] {
         { href: "/admin/courses", label: "Courses", icon: BookOpen },
         { href: "/admin/enrollments", label: "Enrollments", icon: GraduationCap },
         { href: "/admin/certificates", label: "Certificates", icon: Award },
+        { href: "/admin/coupons", label: "Coupons", icon: Tag },
+        { href: "/admin/banners", label: "Banners", icon: ImageIcon },
         { href: "/admin/blog", label: "Blog", icon: FileText },
       ];
     case ROLE_NAMES.CONTENT_MANAGER:

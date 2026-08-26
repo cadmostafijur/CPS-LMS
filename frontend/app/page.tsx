@@ -12,8 +12,11 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import { CourseCard } from "@/features/courses/course-card";
+import { PromoBanners } from "@/features/marketing/promo-banners";
 import { getCurrentUser } from "@/lib/session";
 import { listPublishedCourses } from "@/services/courses.service";
+import { apiFetch } from "@/lib/api";
+import type { Banner } from "@/types";
 
 const features = [
   {
@@ -57,10 +60,22 @@ const faqs = [
   },
 ];
 
+async function listHomeBanners() {
+  try {
+    const res = await apiFetch<{ data: Banner[] }>("/lms/banners", {
+      searchParams: { placement: "HOME" },
+    });
+    return res.data || [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function HomePage() {
-  const [user, courses] = await Promise.all([
+  const [user, courses, banners] = await Promise.all([
     getCurrentUser(),
     listPublishedCourses().catch(() => []),
+    listHomeBanners(),
   ]);
   const featured = courses.slice(0, 3);
   const courseCount = courses.length || 4;
@@ -102,6 +117,12 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {banners.length > 0 ? (
+        <section className="mx-auto max-w-6xl px-4 pb-4">
+          <PromoBanners banners={banners} />
+        </section>
+      ) : null}
 
       <section className="border-y border-border bg-surface/80">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-8 text-center sm:flex-row sm:justify-center sm:gap-8">

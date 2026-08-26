@@ -25,6 +25,9 @@ export interface Course {
   shortDescription?: string | null;
   thumbnailUrl?: string | null;
   status: CourseStatus;
+  isFree?: boolean;
+  price?: number | null;
+  currency?: string | null;
   instructor?: User | null;
   createdByUser?: User | null;
   lessons?: Lesson[];
@@ -214,7 +217,44 @@ export interface AdminDashboard {
   quizzes: number;
   certificates?: number;
   bannedUsers?: number;
+  students?: number;
+  activeStudents?: number;
+  instructors?: number;
+  publishedCourses?: number;
+  draftCourses?: number;
+  completedEnrollments?: number;
+  completionRate?: number;
+  revenue?: number;
+  activeCoupons?: number;
+  activeBanners?: number;
   usersByRole: Record<string, number>;
+}
+
+export interface Banner {
+  id: number | string;
+  documentId?: string;
+  title: string;
+  subtitle?: string | null;
+  ctaLabel?: string | null;
+  linkUrl?: string | null;
+  imageUrl?: string | null;
+  placement?: "HOME" | "CATALOG" | "BOTH";
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface Coupon {
+  id: number | string;
+  documentId?: string;
+  code: string;
+  description?: string | null;
+  discountType: "PERCENT" | "FIXED";
+  discountValue: number;
+  isActive?: boolean;
+  maxUses?: number | null;
+  usedCount?: number;
+  expiresAt?: string | null;
+  minAmount?: number;
 }
 
 export interface StrapiListResponse<T> {

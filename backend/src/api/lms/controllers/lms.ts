@@ -65,6 +65,36 @@ export default ({ strapi }: { strapi: any }) => ({
   async adminListEnrollments(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').adminListEnrollments(ctx);
   },
+  async listBanners(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listBanners(ctx);
+  },
+  async adminListBanners(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminListBanners(ctx);
+  },
+  async adminCreateBanner(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminCreateBanner(ctx);
+  },
+  async adminUpdateBanner(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminUpdateBanner(ctx);
+  },
+  async adminDeleteBanner(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminDeleteBanner(ctx);
+  },
+  async adminListCoupons(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminListCoupons(ctx);
+  },
+  async adminCreateCoupon(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminCreateCoupon(ctx);
+  },
+  async adminUpdateCoupon(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminUpdateCoupon(ctx);
+  },
+  async adminDeleteCoupon(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').adminDeleteCoupon(ctx);
+  },
+  async validateCoupon(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').validateCoupon(ctx);
+  },
   async getCoursePlayer(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').getCoursePlayer(ctx);
   },

@@ -32,7 +32,9 @@ export function CourseCard({ course }: { course: Course }) {
           </div>
         )}
         <Badge className="absolute left-3 top-3" variant="gold">
-          {course.status}
+          {course.isFree === false && Number(course.price) > 0
+            ? `${course.currency || "USD"} ${Number(course.price).toFixed(0)}`
+            : "Free"}
         </Badge>
       </div>
       <CardHeader className="space-y-2">

@@ -3,18 +3,33 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { PageHeader } from "@/components/shared/page-header";
 import { CourseCatalog } from "@/features/courses/course-catalog";
+import { PromoBanners } from "@/features/marketing/promo-banners";
 import { listPublishedCourses } from "@/services/courses.service";
 import { getCurrentUser } from "@/lib/session";
+import { apiFetch } from "@/lib/api";
+import type { Banner } from "@/types";
 
 export const metadata: Metadata = {
   title: "Courses",
   description: "Browse published courses at CPS Academy.",
 };
 
+async function listCatalogBanners() {
+  try {
+    const res = await apiFetch<{ data: Banner[] }>("/lms/banners", {
+      searchParams: { placement: "CATALOG" },
+    });
+    return res.data || [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function CoursesPage() {
   const user = await getCurrentUser();
   let courses: Awaited<ReturnType<typeof listPublishedCourses>> = [];
   let loadError: string | null = null;
+  const banners = await listCatalogBanners();
 
   try {
     courses = await listPublishedCourses();
@@ -33,6 +48,11 @@ export default async function CoursesPage() {
           title="Course catalog"
           description="Explore published courses and enroll to start learning."
         />
+        {banners.length > 0 ? (
+          <div className="mb-8">
+            <PromoBanners banners={banners} />
+          </div>
+        ) : null}
         {loadError ? (
           <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-10 text-center">
             <p className="font-display text-lg font-semibold text-navy">
