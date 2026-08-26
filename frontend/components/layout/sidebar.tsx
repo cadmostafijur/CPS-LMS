@@ -231,6 +231,18 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
+  function navLinkClass(active: boolean, iconOnly: boolean) {
+    return cn(
+      "flex items-center rounded-lg text-[13px] font-medium transition-colors",
+      iconOnly
+        ? "mx-auto h-10 w-10 justify-center"
+        : "gap-2.5 px-2.5 py-1.5",
+      active
+        ? "bg-orange/10 text-orange"
+        : "text-muted-foreground hover:bg-white hover:text-navy"
+    );
+  }
+
   return (
     <>
       <aside
@@ -240,11 +252,19 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
           collapsed ? "w-[72px]" : "w-64"
         )}
       >
-        <div className="flex flex-col p-2.5 pb-6">
+        <div
+          className={cn(
+            "flex flex-col pb-6",
+            collapsed ? "items-center px-2 pt-2" : "p-2.5"
+          )}
+        >
           <Button
             variant="ghost"
             size="icon"
-            className="mb-1 h-8 w-8 self-end"
+            className={cn(
+              "mb-2 h-10 w-10 shrink-0",
+              !collapsed && "self-end h-8 w-8"
+            )}
             onClick={() => setCollapsed((v) => !v)}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -256,7 +276,7 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
           </Button>
 
           {useSections && !collapsed ? (
-            <nav className="flex flex-col gap-3">
+            <nav className="flex w-full flex-col gap-3">
               {sections.map((section) => {
                 const open = openSections[section.id] ?? false;
                 return (
@@ -284,12 +304,7 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
                               key={item.href}
                               href={item.href}
                               title={item.label}
-                              className={cn(
-                                "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors",
-                                active
-                                  ? "bg-orange/10 text-orange"
-                                  : "text-muted-foreground hover:bg-white hover:text-navy"
-                              )}
+                              className={navLinkClass(active, false)}
                             >
                               <Icon className="h-3.5 w-3.5 shrink-0" />
                               <span className="truncate">{item.label}</span>
@@ -303,7 +318,12 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
               })}
             </nav>
           ) : (
-            <nav className="flex flex-col gap-0.5">
+            <nav
+              className={cn(
+                "flex flex-col",
+                collapsed ? "w-full items-center gap-1.5" : "w-full gap-0.5"
+              )}
+            >
               {flatItems.map((item) => {
                 const active = isActivePath(pathname, item.href);
                 const Icon = item.icon;
@@ -312,15 +332,9 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
                     key={item.href}
                     href={item.href}
                     title={item.label}
-                    className={cn(
-                      "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors",
-                      active
-                        ? "bg-orange/10 text-orange"
-                        : "text-muted-foreground hover:bg-white hover:text-navy",
-                      collapsed && "justify-center px-0"
-                    )}
+                    className={navLinkClass(active, collapsed)}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
+                    <Icon className={cn("shrink-0", collapsed ? "h-5 w-5" : "h-4 w-4")} />
                     {!collapsed ? <span className="truncate">{item.label}</span> : null}
                   </Link>
                 );
