@@ -3,7 +3,20 @@ import { ensureLmsRoles } from './bootstrap/roles';
 import { seedDemoData } from './bootstrap/seed';
 
 export default {
-  register(/* { strapi }: { strapi: Core.Strapi } */) {},
+  register({ strapi }: { strapi: Core.Strapi }) {
+    // Railway / load-balancer health probe (outside /api)
+    strapi.server.routes([
+      {
+        method: 'GET',
+        path: '/_health',
+        handler: (ctx) => {
+          ctx.status = 200;
+          ctx.body = { ok: true, service: 'cps-lms-strapi' };
+        },
+        config: { auth: false },
+      },
+    ]);
+  },
 
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
     try {

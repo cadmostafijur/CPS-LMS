@@ -1,12 +1,13 @@
-# Deploy Strapi from monorepo root (Railway Root Directory can stay "/")
-# Prefer setting Root Directory to "backend" in the Railway UI when possible.
+# Deploy Strapi from monorepo root.
+# IMPORTANT: start must `cd backend` so Strapi finds config/dist (cwd matters).
 
 [build]
 builder = "RAILPACK"
 buildCommand = "npm ci --prefix backend && npm run build --prefix backend"
 
 [deploy]
-startCommand = "npm run start --prefix backend"
+startCommand = "cd backend && npm run start"
 healthcheckPath = "/_health"
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5

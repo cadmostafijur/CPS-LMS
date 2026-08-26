@@ -1,4 +1,4 @@
-# Use when Railway Root Directory = "backend"
+# Use when Railway Root Directory = "backend" (recommended)
 
 [build]
 builder = "RAILPACK"
@@ -7,5 +7,6 @@ buildCommand = "npm ci && npm run build"
 [deploy]
 startCommand = "npm run start"
 healthcheckPath = "/_health"
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5

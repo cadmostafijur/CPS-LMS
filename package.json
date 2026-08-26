@@ -10,7 +10,8 @@
     "build": "npm run build --prefix backend",
     "build:frontend": "npm run build --prefix frontend",
     "build:backend": "npm run build --prefix backend",
-    "start": "npm run start --prefix backend",
+    "start": "cd backend && npm run start",
+    "start:backend": "cd backend && npm run start",
     "test:backend": "npm test --prefix backend",
     "lint:frontend": "npm run lint --prefix frontend"
   },
