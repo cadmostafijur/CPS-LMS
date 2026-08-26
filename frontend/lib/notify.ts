@@ -80,16 +80,16 @@ export const notify = {
 
 /** Drop-in replacement for sonner `toast` API */
 export const toast = {
-  success(message: string, _opts?: unknown) {
+  success(message: string) {
     void notify.success(message);
   },
-  error(message: string, _opts?: unknown) {
+  error(message: string) {
     void notify.error(message);
   },
-  info(message: string, _opts?: unknown) {
+  info(message: string) {
     void notify.info(message);
   },
-  message(message: string, _opts?: unknown) {
+  message(message: string) {
     void notify.info(message);
   },
 };
