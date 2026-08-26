@@ -4,6 +4,7 @@
   "private": true,
   "description": "CPS Academy Learning Management System — Next.js + Strapi + PostgreSQL",
   "scripts": {
+    "dev": "concurrently -n backend,frontend -c yellow,cyan \"npm run develop --prefix backend\" \"npm run dev --prefix frontend\"",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run develop --prefix backend",
     "build:frontend": "npm run build --prefix frontend",
@@ -13,5 +14,8 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

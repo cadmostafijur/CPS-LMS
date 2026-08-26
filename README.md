@@ -194,25 +194,24 @@ DATABASE_CLIENT=postgres
 DATABASE_URL=postgres://user:pass@host:5432/cps_lms
 ```
 
-### 4. Run backend
+### 4. Run everything (one command)
+
+From the repo root:
 
 ```bash
-cd backend
-npm run develop
-```
-
-First boot seeds roles, demo users, courses, quizzes, and blog posts when the DB is empty / seed flag is on.
-
-Strapi admin panel (CMS UI) is separate from LMS Admin role — create a Strapi admin at `/admin` if you need the CMS console.
-
-### 5. Run frontend
-
-```bash
-cd frontend
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+This starts Strapi on [http://localhost:1337](http://localhost:1337) and Next.js on [http://localhost:3000](http://localhost:3000).
+
+First backend boot seeds roles, demo users, courses, quizzes, and blog posts when the DB is empty / seed flag is on.
+
+Or run them separately:
+
+```bash
+npm run dev:backend
+npm run dev:frontend
+```
 
 ---
 
