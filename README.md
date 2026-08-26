@@ -319,10 +319,15 @@ As Student, direct API calls to create courses, manage users, or read another st
 
 ### Backend (Railway)
 
-1. New Railway project from `backend/`
-2. Set env vars from `.env.example` (strong secrets, `CORS_ORIGIN` = your Vercel URL)
-3. Deploy; health via Strapi start on `PORT`
-4. Confirm `/api/lms/blog` returns published posts only
+1. New Railway project from `backend/` (or monorepo root with `railway.toml`)
+2. Set env vars from `.env.example` (strong secrets)
+3. Generate a public domain in Railway → Networking
+4. Set `PUBLIC_URL=https://<your-railway-domain>` (or rely on auto `RAILWAY_PUBLIC_DOMAIN`)
+5. Set `CORS_ORIGIN` = your Vercel URL
+6. Deploy; healthcheck hits `/_health`
+
+> Important: keep `HOST=0.0.0.0` for binding, but never use `0.0.0.0` as `PUBLIC_URL`.
+> That causes `getaddrinfo ENOTFOUND 0.0.0.0` after seed.
 
 ### Frontend (Vercel)
 
