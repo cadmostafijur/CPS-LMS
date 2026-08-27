@@ -480,19 +480,23 @@ export function LearningPlayer({
             ) : (
               <>
                 {embedUrl ? (
-                  <div className="mt-6 aspect-video overflow-hidden rounded-xl border border-border bg-navy shadow-sm">
-                    <iframe
-                      src={embedUrl}
-                      title={lesson.title}
-                      className="h-full w-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
+                  <div className="mt-6 w-full max-w-3xl">
+                    <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-border bg-navy shadow-sm">
+                      <iframe
+                        src={embedUrl}
+                        title={lesson.title}
+                        className="absolute inset-0 h-full w-full border-0"
+                        loading="lazy"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allowFullScreen
+                      />
+                    </div>
                   </div>
                 ) : lesson.lessonType === "AUDIO" && lesson.videoUrl ? (
-                  <audio className="mt-6 w-full" controls src={lesson.videoUrl} />
+                  <audio className="mt-6 w-full max-w-3xl" controls src={lesson.videoUrl} />
                 ) : lesson.videoUrl ? (
-                  <div className="mt-6 rounded-xl border border-border bg-surface p-4">
+                  <div className="mt-6 max-w-3xl rounded-xl border border-border bg-surface p-4">
                     <Button asChild variant="outline">
                       <a href={lesson.videoUrl} target="_blank" rel="noreferrer">
                         Open media
@@ -501,17 +505,17 @@ export function LearningPlayer({
                     </Button>
                   </div>
                 ) : (
-                  <div className="mt-6 rounded-xl border border-dashed border-border bg-surface/80 px-4 py-3 text-sm text-muted-foreground">
+                  <div className="mt-6 max-w-3xl rounded-xl border border-dashed border-border bg-surface/80 px-4 py-3 text-sm text-muted-foreground">
                     No video attached yet for this topic. Text lesson is below.
                   </div>
                 )}
 
                 {lesson.documentUrl ? (
-                  <div className="mt-6 overflow-hidden rounded-xl border border-border">
+                  <div className="mt-6 w-full max-w-3xl overflow-hidden rounded-xl border border-border">
                     <iframe
                       title={lesson.title}
                       src={lesson.documentUrl}
-                      className="h-[70vh] w-full bg-white"
+                      className="h-[min(70vh,32rem)] w-full bg-white"
                     />
                   </div>
                 ) : null}

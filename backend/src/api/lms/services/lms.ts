@@ -973,6 +973,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         course: {
           populate: { lessons: true },
         },
+        certificate: true,
       },
     });
 

@@ -82,31 +82,54 @@ export default async function MyCoursesPage() {
               resumeByCourse.get(String(id)) ||
               continueLessonHref(id, course.lessons) ||
               `/courses/${course.slug}`;
+            const done = pct >= 100;
             return (
-              <Card key={String(enrollment.id)}>
-                <CardHeader>
-                  <CardTitle className="text-base">{course.title}</CardTitle>
+              <Card
+                key={String(enrollment.id)}
+                className={
+                  done
+                    ? "rounded-2xl border-orange/25 shadow-sm"
+                    : "rounded-2xl border-border/80 shadow-sm"
+                }
+              >
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base text-navy">{course.title}</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <Progress value={pct} />
-                  <p className="text-sm text-muted-foreground">
-                    {enrollment.progress?.completedCount ?? 0}/
-                    {enrollment.progress?.totalLessons ?? 0} lessons · {pct}%
-                  </p>
-                  <Button asChild className="w-full">
-                    <Link href={href}>
-                      {pct >= 100 ? "Review course" : pct > 0 ? "Continue" : "Start"}
-                    </Link>
-                  </Button>
-                  {enrollment.certificate ? (
-                    <Button asChild variant="outline" className="w-full">
-                      <Link
-                        href={`/certificates/${enrollment.certificate.documentId || enrollment.certificate.id}`}
-                      >
-                        View certificate
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="mb-1.5 flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {enrollment.progress?.completedCount ?? 0}/
+                        {enrollment.progress?.totalLessons ?? 0} lessons
+                      </span>
+                      <span className="font-display font-semibold text-navy">
+                        {pct}%
+                      </span>
+                    </div>
+                    <Progress value={pct} className="h-2" />
+                  </div>
+                  {done ? (
+                    <div className="flex flex-col gap-2">
+                      <Button asChild variant="outline" className="w-full">
+                        <Link href={href}>Review course</Link>
+                      </Button>
+                      {enrollment.certificate ? (
+                        <Button asChild className="w-full">
+                          <Link
+                            href={`/certificates/${enrollment.certificate.documentId || enrollment.certificate.id}`}
+                          >
+                            View certificate
+                          </Link>
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <Button asChild className="w-full">
+                      <Link href={href}>
+                        {pct > 0 ? "Continue learning" : "Start learning"}
                       </Link>
                     </Button>
-                  ) : null}
+                  )}
                 </CardContent>
               </Card>
             );

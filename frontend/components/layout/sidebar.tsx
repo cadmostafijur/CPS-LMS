@@ -238,9 +238,9 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
       "flex items-center rounded-lg text-[13px] font-medium transition-colors",
       iconOnly
         ? "mx-auto h-10 w-10 justify-center"
-        : "gap-2.5 px-2.5 py-1.5",
+        : "gap-2.5 px-2.5 py-2",
       active
-        ? "bg-orange/10 text-orange"
+        ? "bg-orange/15 font-semibold text-orange ring-1 ring-orange/25"
         : "text-muted-foreground hover:bg-white hover:text-navy"
     );
   }

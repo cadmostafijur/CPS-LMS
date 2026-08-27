@@ -17,8 +17,8 @@ export function DashboardShell({
       <Navbar user={user} />
       <div className="mx-auto flex max-w-[1400px]">
         <Sidebar role={role} />
-        <main className="min-w-0 flex-1 px-4 py-6 pb-24 md:px-8 md:pb-10">
-          <div className="space-y-1">{children}</div>
+        <main className="min-w-0 flex-1 px-4 py-8 pb-24 md:px-8 md:py-10 md:pb-12">
+          {children}
         </main>
       </div>
     </div>
