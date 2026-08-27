@@ -16,6 +16,5 @@ ENV HOST=0.0.0.0
 ENV NODE_ENV=production
 ENV NODE_OPTIONS=--dns-result-order=ipv4first
 
-EXPOSE 1337
-
+# Railway injects PORT at runtime. Do not hardcode EXPOSE as the public target.
 CMD ["npm", "run", "start"]

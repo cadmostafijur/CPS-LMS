@@ -7,7 +7,8 @@ try {
 }
 
 export default ({ env }) => {
-  const port = env.int('PORT', 1337);
+  // Railway injects PORT — must use it, not a hardcoded 1337.
+  const port = Number(process.env.PORT || env('PORT') || 1337);
 
   const railwayDomain = String(env('RAILWAY_PUBLIC_DOMAIN', '') || '')
     .trim()
