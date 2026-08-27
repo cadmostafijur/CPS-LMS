@@ -823,6 +823,14 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         ...data,
         passPercent: Number(quiz.passPercent ?? DEFAULT_QUIZ_PASS_PERCENT),
         module: quiz.module ? sanitizeModule(quiz.module) : null,
+        course: quiz.course
+          ? {
+              id: quiz.course.id,
+              documentId: quiz.course.documentId,
+              slug: quiz.course.slug,
+              title: quiz.course.title,
+            }
+          : null,
       },
     };
   },

@@ -35,11 +35,17 @@ export function QuizTaker({ quiz }: { quiz: Quiz }) {
 
     startTransition(async () => {
       try {
-        await bffFetch<{ data: QuizAttempt }>(`/api/lms/quizzes/${quizId}/submit`, {
+        const result = await bffFetch<{
+          data: QuizAttempt & { passed?: boolean; courseId?: string | number };
+        }>(`/api/lms/quizzes/${quizId}/submit`, {
           method: "POST",
           body: JSON.stringify({ answers: payload }),
         });
-        toast.success("Quiz submitted — need 80% to unlock the next module");
+        if (result.data?.passed) {
+          toast.success("Passed! Next module unlocked — open results to continue");
+        } else {
+          toast.success("Submitted — need 80% to unlock the next module");
+        }
         router.push(`/quizzes/${quizId}/results`);
         router.refresh();
       } catch (err) {

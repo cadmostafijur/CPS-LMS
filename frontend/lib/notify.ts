@@ -7,6 +7,16 @@ const brand = {
   cancelButtonColor: "#64748b",
 };
 
+const toastOpts = {
+  showConfirmButton: false,
+  timer: 2200,
+  timerProgressBar: true,
+  ...brand,
+  customClass: {
+    popup: "cps-swal",
+  },
+};
+
 /** Polished SweetAlert2 notifications — use instead of toast / window.alert */
 export const notify = {
   success(message: string, title = "Done") {
@@ -14,12 +24,7 @@ export const notify = {
       icon: "success",
       title,
       text: message,
-      confirmButtonText: "OK",
-      ...brand,
-      customClass: {
-        popup: "cps-swal",
-        confirmButton: "cps-swal-confirm",
-      },
+      ...toastOpts,
     });
   },
 
@@ -28,12 +33,9 @@ export const notify = {
       icon: "error",
       title,
       text: message,
-      confirmButtonText: "OK",
-      ...brand,
-      customClass: {
-        popup: "cps-swal",
-        confirmButton: "cps-swal-confirm",
-      },
+      // Errors stay a bit longer so they can be read; still no OK click required
+      ...toastOpts,
+      timer: 3200,
     });
   },
 
@@ -42,12 +44,7 @@ export const notify = {
       icon: "info",
       title,
       text: message,
-      confirmButtonText: "OK",
-      ...brand,
-      customClass: {
-        popup: "cps-swal",
-        confirmButton: "cps-swal-confirm",
-      },
+      ...toastOpts,
     });
   },
 
