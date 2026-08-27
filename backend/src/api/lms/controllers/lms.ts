@@ -275,4 +275,46 @@ export default ({ strapi }: { strapi: any }) => ({
   async replyCourseDiscussion(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').replyCourseDiscussion(ctx);
   },
+  async listCourseReviews(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listCourseReviews(ctx);
+  },
+  async submitCourseReview(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').submitCourseReview(ctx);
+  },
+  async listCourseAnnouncements(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listCourseAnnouncements(ctx);
+  },
+  async createCourseAnnouncement(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').createCourseAnnouncement(ctx);
+  },
+  async listCourseQuestionBank(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listCourseQuestionBank(ctx);
+  },
+  async importQuestionBankToQuiz(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').importQuestionBankToQuiz(ctx);
+  },
+  async listCourseLiveSessions(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listCourseLiveSessions(ctx);
+  },
+  async createCourseLiveSession(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').createCourseLiveSession(ctx);
+  },
+  async listMyTickets(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listMyTickets(ctx);
+  },
+  async createMyTicket(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').createMyTicket(ctx);
+  },
+  async listMyWishlist(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listMyWishlist(ctx);
+  },
+  async addWishlist(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').addWishlist(ctx);
+  },
+  async removeWishlist(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').removeWishlist(ctx);
+  },
+  async instructorCourseAnalytics(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').instructorCourseAnalytics(ctx);
+  },
 });

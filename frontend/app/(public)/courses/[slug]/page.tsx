@@ -12,6 +12,8 @@ import {
   CourseDiscussions,
   type DiscussionThread,
 } from "@/features/courses/course-discussions";
+import { CourseReviewsPanel } from "@/features/courses/course-reviews-panel";
+import { WishlistButton } from "@/features/courses/wishlist-button";
 import {
   getCourseBySlug,
   getCourseProgress,
@@ -89,6 +91,35 @@ export default async function CourseDetailPage({ params }: Props) {
     isAdmin(user) || isContentManager(user) || isInstructor(user);
   const canDiscuss = Boolean(enrolled || staff);
   let threads: DiscussionThread[] = [];
+  let reviews: any[] = [];
+  let wishlisted = false;
+  let liveSessions: any[] = [];
+  let announcements: any[] = [];
+
+  try {
+    const rev = await apiFetch<{ data: any[] }>(
+      `/lms/courses/${courseKey}/reviews`
+    );
+    reviews = rev.data || [];
+  } catch {
+    reviews = [];
+  }
+
+  if (user && token && student) {
+    try {
+      const wish = await apiFetch<{ data: any[] }>("/lms/wishlist", { token });
+      wishlisted = Boolean(
+        (wish.data || []).some(
+          (w) =>
+            String(w.course?.id) === String(course.id) ||
+            String(w.course?.documentId) === String(course.documentId)
+        )
+      );
+    } catch {
+      wishlisted = false;
+    }
+  }
+
   if (user && token && canDiscuss) {
     try {
       const res = await apiFetch<{ data: DiscussionThread[] }>(
@@ -98,6 +129,24 @@ export default async function CourseDetailPage({ params }: Props) {
       threads = res.data || [];
     } catch {
       threads = [];
+    }
+    try {
+      const live = await apiFetch<{ data: any[] }>(
+        `/lms/courses/${courseKey}/live-sessions`,
+        { token }
+      );
+      liveSessions = live.data || [];
+    } catch {
+      liveSessions = [];
+    }
+    try {
+      const ann = await apiFetch<{ data: any[] }>(
+        `/lms/courses/${courseKey}/announcements`,
+        { token }
+      );
+      announcements = ann.data || [];
+    } catch {
+      announcements = [];
     }
   }
 
@@ -270,6 +319,63 @@ export default async function CourseDetailPage({ params }: Props) {
                 </p>
               </section>
             )}
+
+            {announcements.length > 0 ? (
+              <section id="announcements" className="mt-10 scroll-mt-24">
+                <h2 className="font-display text-xl font-semibold text-navy">
+                  Announcements
+                </h2>
+                <ul className="mt-4 space-y-3">
+                  {announcements.map((a) => (
+                    <li
+                      key={String(a.documentId || a.id)}
+                      className="rounded-xl border border-border bg-white px-4 py-3 text-sm"
+                    >
+                      <p className="font-semibold text-navy">{a.title}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
+                        {a.content}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {liveSessions.length > 0 ? (
+              <section id="live" className="mt-10 scroll-mt-24">
+                <h2 className="font-display text-xl font-semibold text-navy">
+                  Live classes
+                </h2>
+                <ul className="mt-4 space-y-3">
+                  {liveSessions.map((s) => (
+                    <li
+                      key={String(s.documentId || s.id)}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm"
+                    >
+                      <div>
+                        <p className="font-semibold text-navy">{s.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {s.startsAt
+                            ? new Date(s.startsAt).toLocaleString()
+                            : ""}
+                        </p>
+                      </div>
+                      <Button asChild size="sm">
+                        <a href={s.meetingUrl} target="_blank" rel="noreferrer">
+                          Join
+                        </a>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            <CourseReviewsPanel
+              courseId={courseKey}
+              canReview={Boolean(enrolled && student)}
+              initialReviews={reviews}
+            />
           </div>
 
           <Card className="hidden h-fit rounded-2xl border-border/80 bg-white shadow-sm lg:block lg:sticky lg:top-24">
@@ -284,6 +390,9 @@ export default async function CourseDetailPage({ params }: Props) {
                   ? ` · Instructor: ${course.instructor.name}`
                   : ""}
               </p>
+              {student && user ? (
+                <WishlistButton courseId={courseKey} initialSaved={wishlisted} />
+              ) : null}
               {enrollBlock}
             </CardContent>
           </Card>

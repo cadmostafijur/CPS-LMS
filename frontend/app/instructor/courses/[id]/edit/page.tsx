@@ -6,6 +6,7 @@ import { CourseForm } from "@/features/courses/course-form";
 import { LessonManager } from "@/features/courses/lesson-manager";
 import { ModuleManager } from "@/features/courses/module-manager";
 import { QuizManager } from "@/features/courses/quiz-manager";
+import { InstructorCourseExtras } from "@/features/instructor/instructor-course-extras";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { getCourseById } from "@/services/courses.service";
@@ -49,6 +50,7 @@ export default async function EditCoursePage({ params }: Props) {
           />
         </div>
       </div>
+      <InstructorCourseExtras courseId={courseKey} />
     </DashboardShell>
   );
 }

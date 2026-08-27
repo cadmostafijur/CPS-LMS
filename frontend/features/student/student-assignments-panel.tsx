@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { bffFetch, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
@@ -22,6 +23,7 @@ type AssignmentRow = {
   submission?: {
     id: number | string;
     content?: string | null;
+    fileUrl?: string | null;
     score?: number | null;
     feedback?: string | null;
     status?: string;
@@ -33,6 +35,7 @@ export function StudentAssignmentsPanel() {
   const [items, setItems] = useState<AssignmentRow[]>([]);
   const [pending, startTransition] = useTransition();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
   function load() {
@@ -53,15 +56,19 @@ export function StudentAssignmentsPanel() {
   async function submit(row: AssignmentRow) {
     const key = String(row.documentId || row.id);
     const content = drafts[key] ?? row.submission?.content ?? "";
-    if (!content.trim()) {
-      toast.error("Write your answer before submitting");
+    const fileUrl = fileDrafts[key] ?? row.submission?.fileUrl ?? "";
+    if (!content.trim() && !fileUrl.trim()) {
+      toast.error("Add text or a file URL before submitting");
       return;
     }
     setSavingId(key);
     try {
       await bffFetch(`/api/lms/assignments/${key}/submit`, {
         method: "POST",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content: content || undefined,
+          fileUrl: fileUrl || undefined,
+        }),
       });
       toast.success("Submitted");
       load();
@@ -128,6 +135,23 @@ export function StudentAssignmentsPanel() {
                       setDrafts((d) => ({ ...d, [key]: e.target.value }))
                     }
                   />
+                  <Input
+                    placeholder="File URL (Drive, Dropbox, PDF link)…"
+                    value={fileDrafts[key] ?? sub?.fileUrl ?? ""}
+                    onChange={(e) =>
+                      setFileDrafts((d) => ({ ...d, [key]: e.target.value }))
+                    }
+                  />
+                  {sub?.fileUrl ? (
+                    <a
+                      href={sub.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-medium text-orange underline"
+                    >
+                      Current file
+                    </a>
+                  ) : null}
                   <Button
                     disabled={savingId === key}
                     onClick={() => void submit(row)}

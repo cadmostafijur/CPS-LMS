@@ -19,6 +19,7 @@ import { sanitizeUser } from '../../../utils/sanitize';
 import { ensureUniqueSlug } from '../../../utils/slug';
 import { notifyUser } from '../../../utils/notify-user';
 import { createOpsHandlers } from './ops';
+import { createExtrasHandlers } from './extras';
 
 const { ApplicationError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } =
   errors;
@@ -3446,5 +3447,6 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     };
   },
 
+  ...createExtrasHandlers(strapi),
   ...createOpsHandlers(strapi),
 });

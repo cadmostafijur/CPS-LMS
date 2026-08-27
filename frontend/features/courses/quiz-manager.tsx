@@ -140,6 +140,30 @@ export function QuizManager({
     }
   }
 
+  async function importFromBank(quizId: string | number) {
+    setLoading(true);
+    try {
+      const bank = await bffFetch<{ data: Array<{ id: string | number; documentId?: string }> }>(
+        `/api/lms/courses/${courseId}/question-bank`
+      );
+      const itemIds = (bank.data || []).map((i) => i.documentId || i.id);
+      if (!itemIds.length) {
+        toast.error("No question-bank items for this course yet");
+        return;
+      }
+      const res = await bffFetch<{ data: { imported: number } }>(
+        `/api/lms/quizzes/${quizId}/import-bank`,
+        { method: "POST", body: JSON.stringify({ itemIds }) }
+      );
+      toast.success(`Imported ${res.data.imported} question(s) from bank`);
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Import failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -160,6 +184,15 @@ export function QuizManager({
                 </span>
               </span>
               <div className="flex gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={loading}
+                  onClick={() => void importFromBank(quiz.documentId || quiz.id)}
+                >
+                  Import bank
+                </Button>
                 <Button
                   type="button"
                   size="icon"

@@ -1,0 +1,43 @@
+{
+  "kind": "collectionType",
+  "collectionName": "live_sessions",
+  "info": {
+    "singularName": "live-session",
+    "pluralName": "live-sessions",
+    "displayName": "Live Session",
+    "description": "Scheduled live class with meeting URL"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "startsAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "endsAt": {
+      "type": "datetime"
+    },
+    "meetingUrl": {
+      "type": "string",
+      "required": true
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course"
+    },
+    "createdByUser": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}
