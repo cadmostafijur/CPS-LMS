@@ -6,10 +6,11 @@ export function AssignmentsManager() {
   return (
     <AdminResourceManager
       title="Assignments"
-      description="Homework and graded assignments for courses."
+      description="Homework linked to a course. Students submit from their Assignments page; instructors grade submissions."
       uid="assignments"
       columns={[
         { key: "title", label: "Title" },
+        { key: "course.title", label: "Course" },
         {
           key: "status",
           label: "Status",
@@ -21,6 +22,13 @@ export function AssignmentsManager() {
       fields={[
         { key: "title", label: "Title", type: "text" },
         { key: "description", label: "Description", type: "textarea" },
+        {
+          key: "course",
+          label: "Course",
+          type: "relation",
+          optionsPath: "/api/lms/staff/courses",
+          labelKey: "title",
+        },
         { key: "maxMarks", label: "Max marks", type: "number" },
         {
           key: "status",

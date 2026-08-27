@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "@/lib/notify";
 import { PageHeader } from "@/components/shared/page-header";
@@ -8,8 +7,6 @@ import { SearchInput } from "@/components/shared/search-input";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -25,17 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ALL_ROLES, ROLE_NAMES, type RoleName } from "@/lib/roles";
 import { bffFetch, ApiError } from "@/lib/api";
+import { CreateAccountDialog } from "@/features/admin/create-account-dialog";
 import type { User } from "@/types";
 
 export function UsersAdminTable({ currentUserId }: { currentUserId: string | number }) {
@@ -51,12 +41,6 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
   } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: ROLE_NAMES.STUDENT as RoleName,
-  });
 
   function load() {
     startTransition(async () => {
@@ -127,26 +111,6 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
     }
   }
 
-  async function createUser() {
-    try {
-      await bffFetch(`/api/lms/admin/users`, {
-        method: "POST",
-        body: JSON.stringify(createForm),
-      });
-      toast.success("User created");
-      setCreateOpen(false);
-      setCreateForm({
-        name: "",
-        email: "",
-        password: "",
-        role: ROLE_NAMES.STUDENT,
-      });
-      load();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Create failed");
-    }
-  }
-
   const isSelfChange =
     roleChange && String(roleChange.user.id) === String(currentUserId);
 
@@ -154,7 +118,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
     <div className="space-y-6">
       <PageHeader
         title="Users"
-        description="Create accounts for any role, ban, or permanently delete users."
+        description="Create accounts for any role (including instructors), ban, or permanently delete users."
         actions={
           <Button onClick={() => setCreateOpen(true)}>Create user</Button>
         }
@@ -205,6 +169,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
             {users.map((user) => {
               const active = user.isActive ?? !user.blocked;
               const isSelf = String(user.id) === String(currentUserId);
+              const currentRole = (user.role?.name || ROLE_NAMES.STUDENT) as RoleName;
               return (
                 <TableRow key={String(user.id)}>
                   <TableCell>
@@ -213,10 +178,11 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
                   </TableCell>
                   <TableCell>
                     <Select
-                      value={user.role?.name || ROLE_NAMES.STUDENT}
-                      onValueChange={(value) =>
-                        setRoleChange({ user, role: value as RoleName })
-                      }
+                      value={currentRole}
+                      onValueChange={(value) => {
+                        if (value === currentRole) return;
+                        setRoleChange({ user, role: value as RoleName });
+                      }}
                     >
                       <SelectTrigger className="w-44">
                         <SelectValue />
@@ -285,76 +251,13 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string | num
         onConfirm={() => void confirmDelete()}
       />
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create user</DialogTitle>
-            <DialogDescription>
-              Create a real account for any role (Admin, Content Manager, Instructor, or Student).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="create-name">Full name</Label>
-              <Input
-                id="create-name"
-                value={createForm.name}
-                onChange={(e) =>
-                  setCreateForm((f) => ({ ...f, name: e.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="create-email">Email</Label>
-              <Input
-                id="create-email"
-                type="email"
-                value={createForm.email}
-                onChange={(e) =>
-                  setCreateForm((f) => ({ ...f, email: e.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="create-password">Password</Label>
-              <Input
-                id="create-password"
-                type="password"
-                value={createForm.password}
-                onChange={(e) =>
-                  setCreateForm((f) => ({ ...f, password: e.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Role</Label>
-              <Select
-                value={createForm.role}
-                onValueChange={(value) =>
-                  setCreateForm((f) => ({ ...f, role: value as RoleName }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ALL_ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {r}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => void createUser()}>Create account</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateAccountDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Create user"
+        description="Create a real account for any role. After create, copy credentials to share."
+        onCreated={() => load()}
+      />
     </div>
   );
 }

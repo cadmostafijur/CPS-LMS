@@ -68,7 +68,7 @@ export function GlobalSearchAdmin() {
               id: c.id,
               label: c.title,
               sub: c.slug,
-              href: `/admin/courses/${c.documentId || c.id}`,
+              href: `/instructor/courses/${c.documentId || c.id}/edit`,
             }))}
           />
           <ResultBlock

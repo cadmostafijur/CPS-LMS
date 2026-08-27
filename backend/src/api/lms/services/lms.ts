@@ -106,6 +106,7 @@ function sanitizeCertificate(cert: any) {
     id: cert.id,
     documentId: cert.documentId,
     code: cert.code,
+    status: cert.status || "ISSUED",
     issuedAt: cert.issuedAt,
     studentName: cert.studentName,
     courseTitle: cert.courseTitle,

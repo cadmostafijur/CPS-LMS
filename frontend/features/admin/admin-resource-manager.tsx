@@ -37,7 +37,15 @@ import { bffFetch, ApiError } from "@/lib/api";
 
 export type FieldDef =
   | { key: string; label: string; type: "text" | "number" | "textarea" | "datetime" | "boolean" }
-  | { key: string; label: string; type: "select"; options: string[] };
+  | { key: string; label: string; type: "select"; options: string[] }
+  | {
+      key: string;
+      label: string;
+      type: "relation";
+      /** Resource endpoint under /api/lms/... that returns { data: [{ id, documentId, title|name }] } */
+      optionsPath: string;
+      labelKey?: string;
+    };
 
 type ColumnDef = {
   key: string;
@@ -90,6 +98,9 @@ export function AdminResourceManager({
   const [editing, setEditing] = useState<any | null>(null);
   const [form, setForm] = useState<Record<string, any>>({});
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [relationOptions, setRelationOptions] = useState<
+    Record<string, Array<{ value: string; label: string }>>
+  >({});
 
   function load() {
     startTransition(async () => {
@@ -106,10 +117,43 @@ export function AdminResourceManager({
     });
   }
 
+  async function loadRelationOptions() {
+    const relationFields = fields.filter((f) => f.type === "relation");
+    if (relationFields.length === 0) return;
+    const next: Record<string, Array<{ value: string; label: string }>> = {};
+    await Promise.all(
+      relationFields.map(async (f) => {
+        if (f.type !== "relation") return;
+        try {
+          const res = await bffFetch<{ data: any[] }>(f.optionsPath);
+          next[f.key] = (res.data || []).map((row) => ({
+            value: String(row.documentId || row.id),
+            label: String(
+              row[f.labelKey || "title"] ||
+                row.name ||
+                row.title ||
+                row.email ||
+                row.documentId ||
+                row.id
+            ),
+          }));
+        } catch {
+          next[f.key] = [];
+        }
+      })
+    );
+    setRelationOptions(next);
+  }
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced, uid]);
+
+  useEffect(() => {
+    void loadRelationOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid]);
 
   function openCreate() {
     setEditing(null);
@@ -124,6 +168,9 @@ export function AdminResourceManager({
       let v = row[f.key];
       if (f.type === "datetime" && v) v = String(v).slice(0, 16);
       if (f.type === "boolean") v = Boolean(v);
+      if (f.type === "relation") {
+        v = v?.documentId || v?.id || v || "";
+      }
       next[f.key] = v ?? (f.type === "boolean" ? false : "");
     }
     setForm(next);
@@ -138,6 +185,7 @@ export function AdminResourceManager({
       if (f.type === "datetime") v = v ? new Date(v).toISOString() : null;
       if (f.type === "boolean") v = Boolean(v);
       if (f.type === "text" || f.type === "textarea") v = v === "" ? null : v;
+      if (f.type === "relation") v = v === "" || v == null ? null : v;
       payload[f.key] = v;
     }
     try {
@@ -287,6 +335,22 @@ export function AdminResourceManager({
                     <SelectContent>
                       <SelectItem value="true">Yes</SelectItem>
                       <SelectItem value="false">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : f.type === "relation" ? (
+                  <Select
+                    value={String(form[f.key] ?? "")}
+                    onValueChange={(v) => setForm((s) => ({ ...s, [f.key]: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(relationOptions[f.key] || []).map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 ) : (

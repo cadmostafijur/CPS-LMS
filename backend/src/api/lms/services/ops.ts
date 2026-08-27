@@ -168,7 +168,9 @@ export function createOpsHandlers(strapi: Core.Strapi) {
       const allowed = UID_MAP[uid];
       if (!allowed) throw new ValidationError('Unknown resource');
       const body = ctx.request.body || {};
-      const data = allowed.prepareCreate ? allowed.prepareCreate(body, admin) : body;
+      const data = allowed.prepareCreate
+        ? await Promise.resolve(allowed.prepareCreate(body, admin, strapi))
+        : body;
       const created = await strapi.db.query(allowed.uid).create({
         data,
         populate: allowed.populate || true,
@@ -185,7 +187,9 @@ export function createOpsHandlers(strapi: Core.Strapi) {
       const target = await resolve(strapi, allowed.uid, ctx.params.id);
       if (!target) throw new NotFoundError('Not found');
       const body = ctx.request.body || {};
-      const data = allowed.prepareUpdate ? allowed.prepareUpdate(body, admin) : body;
+      const data = allowed.prepareUpdate
+        ? await Promise.resolve(allowed.prepareUpdate(body, admin, strapi))
+        : body;
       const updated = await strapi.db.query(allowed.uid).update({
         where: { id: target.id },
         data,
@@ -538,9 +542,18 @@ type UidConfig = {
   uid: string;
   searchFields?: string[];
   populate?: any;
-  prepareCreate?: (body: any, admin: any) => any;
-  prepareUpdate?: (body: any, admin: any) => any;
+  prepareCreate?: (body: any, admin: any, strapi: Core.Strapi) => any | Promise<any>;
+  prepareUpdate?: (body: any, admin: any, strapi: Core.Strapi) => any | Promise<any>;
 };
+
+async function resolveCourseId(strapi: Core.Strapi, courseRef: unknown) {
+  if (courseRef == null || courseRef === '') return null;
+  if (typeof courseRef === 'object' && courseRef && 'id' in (courseRef as object)) {
+    return (courseRef as { id: number }).id;
+  }
+  const course = await resolve(strapi, 'api::course.course', String(courseRef));
+  return course?.id ?? null;
+}
 
 const UID_MAP: Record<string, UidConfig> = {
   batches: {
@@ -556,7 +569,15 @@ const UID_MAP: Record<string, UidConfig> = {
     uid: 'api::assignment.assignment',
     searchFields: ['title'],
     populate: { course: true, createdByUser: true },
-    prepareCreate: (body, admin) => ({ ...body, createdByUser: admin.id }),
+    prepareCreate: async (body, admin, s) => ({
+      ...body,
+      course: await resolveCourseId(s, body.course),
+      createdByUser: admin.id,
+    }),
+    prepareUpdate: async (body, _admin, s) => ({
+      ...body,
+      course: body.course != null ? await resolveCourseId(s, body.course) : body.course,
+    }),
   },
   'question-bank': {
     uid: 'api::question-bank-item.question-bank-item',

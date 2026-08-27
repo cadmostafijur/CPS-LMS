@@ -15,6 +15,7 @@ export type SanitizedUser = {
   role?: RoleLike;
   avatarUrl?: string | null;
   isActive?: boolean | null;
+  blocked?: boolean | null;
 };
 
 export function sanitizeUser(user: Record<string, unknown> | null | undefined): SanitizedUser | null {
@@ -22,6 +23,9 @@ export function sanitizeUser(user: Record<string, unknown> | null | undefined): 
 
   const role = user.role as RoleLike | RoleLike[] | undefined;
   const normalizedRole = Array.isArray(role) ? role[0] ?? null : role ?? null;
+  const blocked = Boolean(user.blocked);
+  const isActive =
+    typeof user.isActive === "boolean" ? user.isActive : !blocked;
 
   return {
     id: user.id as number | string,
@@ -39,6 +43,7 @@ export function sanitizeUser(user: Record<string, unknown> | null | undefined): 
         }
       : null,
     avatarUrl: (user.avatarUrl as string | null | undefined) ?? null,
-    isActive: (user.isActive as boolean | null | undefined) ?? null,
+    isActive,
+    blocked,
   };
 }
