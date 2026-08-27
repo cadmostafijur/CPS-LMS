@@ -18,9 +18,13 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     const raw = jar.get(USER_COOKIE)?.value;
     if (!raw) return null;
     try {
-      return JSON.parse(raw) as AuthUser;
+      return JSON.parse(decodeURIComponent(raw)) as AuthUser;
     } catch {
-      return null;
+      try {
+        return JSON.parse(raw) as AuthUser;
+      } catch {
+        return null;
+      }
     }
   }
 }

@@ -1,10 +1,10 @@
 export function getApiBaseUrl() {
   // Prefer 127.0.0.1 over localhost to avoid Windows IPv6 (::1) connection issues
-  return (
+  const raw =
     process.env.NEXT_PUBLIC_API_URL ||
     process.env.STRAPI_API_URL ||
-    "http://127.0.0.1:1337/api"
-  );
+    "http://127.0.0.1:1337/api";
+  return raw.replace(/\/+$/, "");
 }
 
 export function getSiteUrl() {

@@ -24,11 +24,28 @@ import { Progress } from "@/components/ui/progress";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { getAdminDashboard } from "@/services/dashboard.service";
+import type { AdminDashboard } from "@/types";
 
 export default async function AdminDashboardPage() {
   const user = await requireUser("/admin/dashboard");
   const token = await getTokenFromCookies();
-  const { data } = await getAdminDashboard(token);
+
+  let data: AdminDashboard = {
+    user: null,
+    users: 0,
+    courses: 0,
+    enrollments: 0,
+    blogPosts: 0,
+    quizzes: 0,
+    usersByRole: {},
+  };
+  let loadError: string | null = null;
+  try {
+    const res = await getAdminDashboard(token);
+    data = { ...data, ...res.data, usersByRole: res.data?.usersByRole || {} };
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : "Could not load dashboard";
+  }
 
   const primary = [
     {
@@ -79,6 +96,12 @@ export default async function AdminDashboardPage() {
 
   return (
     <DashboardShell user={user}>
+      {loadError ? (
+        <p className="mb-6 rounded-xl border border-dashed border-destructive/30 bg-card px-4 py-3 text-sm text-muted-foreground">
+          <span className="font-medium text-navy">Dashboard data unavailable.</span>{" "}
+          {loadError}
+        </p>
+      ) : null}
       <div className="overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-navy via-navy to-navy-2 px-6 py-7 text-white shadow-sm sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>

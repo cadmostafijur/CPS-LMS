@@ -19,7 +19,22 @@ import { getInstructorDashboard } from "@/services/dashboard.service";
 export default async function InstructorCoursesPage() {
   const user = await requireUser("/instructor/courses");
   const token = await getTokenFromCookies();
-  const { data } = await getInstructorDashboard(token);
+
+  let courses: Array<{
+    id: number | string;
+    documentId?: string;
+    title: string;
+    status: string;
+    lessonCount: number;
+    quizCount: number;
+  }> = [];
+  let loadError: string | null = null;
+  try {
+    const { data } = await getInstructorDashboard(token);
+    courses = data?.courses || [];
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : "Could not load courses";
+  }
 
   return (
     <DashboardShell user={user}>
@@ -32,7 +47,12 @@ export default async function InstructorCoursesPage() {
           </Button>
         }
       />
-      {data.courses.length === 0 ? (
+      {loadError ? (
+        <p className="mb-4 rounded-xl border border-dashed border-destructive/30 bg-card px-4 py-3 text-sm text-muted-foreground">
+          {loadError}
+        </p>
+      ) : null}
+      {courses.length === 0 ? (
         <EmptyState
           title="No courses"
           description="Start by creating a draft course."
@@ -55,7 +75,7 @@ export default async function InstructorCoursesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.courses.map((course) => (
+              {courses.map((course) => (
                 <TableRow key={String(course.documentId || course.id)}>
                   <TableCell className="font-medium">{course.title}</TableCell>
                   <TableCell>

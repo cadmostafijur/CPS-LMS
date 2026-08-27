@@ -10,11 +10,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { getStudentDashboard } from "@/services/dashboard.service";
+import type { StudentDashboard } from "@/types";
+
+const empty: StudentDashboard = {
+  user: null,
+  enrolledCount: 0,
+  completedCourses: 0,
+  quizAttempts: 0,
+  courses: [],
+};
 
 export default async function StudentDashboardPage() {
   const user = await requireUser("/student/dashboard");
   const token = await getTokenFromCookies();
-  const { data } = await getStudentDashboard(token);
+
+  let data = empty;
+  let loadError: string | null = null;
+  try {
+    const res = await getStudentDashboard(token);
+    data = {
+      ...empty,
+      ...res.data,
+      courses: res.data?.courses || [],
+    };
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : "Could not load dashboard";
+  }
 
   return (
     <DashboardShell user={user}>
@@ -27,6 +48,14 @@ export default async function StudentDashboardPage() {
           </Button>
         }
       />
+
+      {loadError ? (
+        <p className="mb-6 rounded-xl border border-dashed border-destructive/30 bg-card px-4 py-3 text-sm text-muted-foreground">
+          <span className="font-medium text-navy">Dashboard data unavailable.</span>{" "}
+          {loadError}
+        </p>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-3">
         <StatsCard
           title="Enrolled"

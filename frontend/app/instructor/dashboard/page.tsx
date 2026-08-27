@@ -17,11 +17,34 @@ import {
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { getInstructorDashboard } from "@/services/dashboard.service";
+import type { InstructorDashboard } from "@/types";
+
+const empty: InstructorDashboard = {
+  user: null,
+  courseCount: 0,
+  enrollmentCount: 0,
+  courses: [],
+};
 
 export default async function InstructorDashboardPage() {
   const user = await requireUser("/instructor/dashboard");
   const token = await getTokenFromCookies();
-  const { data } = await getInstructorDashboard(token);
+
+  let data = empty;
+  let loadError: string | null = null;
+  try {
+    const res = await getInstructorDashboard(token);
+    data = {
+      ...empty,
+      ...res.data,
+      courses: res.data?.courses || [],
+    };
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : "Could not load dashboard";
+  }
+
+  const courses = data.courses || [];
+  const published = courses.filter((c) => c.status === "PUBLISHED").length;
 
   return (
     <DashboardShell user={user}>
@@ -42,6 +65,14 @@ export default async function InstructorDashboardPage() {
           </div>
         }
       />
+
+      {loadError ? (
+        <p className="mb-6 rounded-xl border border-dashed border-destructive/30 bg-card px-4 py-3 text-sm text-muted-foreground">
+          <span className="font-medium text-navy">Dashboard data unavailable.</span>{" "}
+          {loadError}
+        </p>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-3">
         <StatsCard
           title="My courses"
@@ -55,7 +86,7 @@ export default async function InstructorDashboardPage() {
         />
         <StatsCard
           title="Published"
-          value={data.courses.filter((c) => c.status === "PUBLISHED").length}
+          value={published}
           icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
@@ -90,7 +121,7 @@ export default async function InstructorDashboardPage() {
       </div>
 
       <div className="mt-8 rounded-xl border border-border bg-card">
-        {data.courses.length === 0 ? (
+        {courses.length === 0 ? (
           <EmptyState
             className="border-0"
             title="No courses yet"
@@ -114,7 +145,7 @@ export default async function InstructorDashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.courses.map((course) => (
+              {courses.map((course) => (
                 <TableRow key={String(course.documentId || course.id)}>
                   <TableCell className="font-medium">{course.title}</TableCell>
                   <TableCell>
