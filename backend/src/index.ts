@@ -4,14 +4,22 @@ import { seedDemoData } from './bootstrap/seed';
 
 export default {
   register({ strapi }: { strapi: Core.Strapi }) {
-    // Railway / load-balancer health probe (outside /api)
+    const ok = { ok: true, service: 'cps-lms-strapi' };
+    strapi.server.use(async (ctx, next) => {
+      if (ctx.path === '/_health' || ctx.path === '/healthz') {
+        ctx.status = 200;
+        ctx.body = ok;
+        return;
+      }
+      await next();
+    });
     strapi.server.routes([
       {
         method: 'GET',
         path: '/_health',
         handler: (ctx) => {
           ctx.status = 200;
-          ctx.body = { ok: true, service: 'cps-lms-strapi' };
+          ctx.body = ok;
         },
         config: { auth: false },
       },
