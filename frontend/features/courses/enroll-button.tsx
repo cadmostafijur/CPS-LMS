@@ -54,8 +54,15 @@ export function EnrollButton({
 
   if (!canEnroll) {
     return (
-      <div className="rounded-lg border border-border bg-surface px-3 py-3 text-sm text-muted-foreground">
-        Enrollment is available to Student accounts only. Staff manage courses from their dashboard.
+      <div className="space-y-3 rounded-lg border border-border bg-surface px-3 py-3 text-sm text-muted-foreground">
+        <p>
+          Enrollment is for <span className="font-medium text-navy">Student</span> accounts
+          only. You are signed in with a staff role — use your dashboard to manage courses,
+          or sign out and use a student login.
+        </p>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/dashboard">Go to dashboard</Link>
+        </Button>
       </div>
     );
   }
@@ -158,9 +165,20 @@ export function EnrollButton({
                 router.push(`/login?next=/courses`);
                 return;
               }
-              toast.error(
-                err instanceof ApiError ? err.message : "Enrollment failed"
-              );
+              const message =
+                err instanceof ApiError ? err.message : "Enrollment failed";
+              if (
+                err instanceof ApiError &&
+                (err.status === 403 || /forbidden/i.test(message))
+              ) {
+                toast.error(
+                  /student/i.test(message)
+                    ? message
+                    : "Only Student accounts can enroll. Sign out and sign in as a student (or register a new student account)."
+                );
+                return;
+              }
+              toast.error(message);
             }
           });
         }}

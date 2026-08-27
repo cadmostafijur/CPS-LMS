@@ -9,6 +9,7 @@ export type RoleName = (typeof ROLE_NAMES)[keyof typeof ROLE_NAMES];
 
 export type RoleLike = {
   name?: string | null;
+  type?: string | null;
 } | null;
 
 export type UserWithRole = {
@@ -18,13 +19,32 @@ export type UserWithRole = {
   [key: string]: unknown;
 } | null | undefined;
 
-function normalizeRole(user: UserWithRole): string | null {
-  if (!user?.role) return null;
-  const role = Array.isArray(user.role) ? user.role[0] : user.role;
-  return role?.name ?? null;
+const ROLE_ALIASES: Record<string, RoleName> = {
+  admin: ROLE_NAMES.ADMIN,
+  'lms-admin': ROLE_NAMES.ADMIN,
+  'content manager': ROLE_NAMES.CONTENT_MANAGER,
+  'content-manager': ROLE_NAMES.CONTENT_MANAGER,
+  instructor: ROLE_NAMES.INSTRUCTOR,
+  student: ROLE_NAMES.STUDENT,
+  authenticated: ROLE_NAMES.STUDENT,
+};
+
+export function normalizeRoleName(raw: string | null | undefined): RoleName | null {
+  if (!raw) return null;
+  const value = String(raw).trim();
+  if ((Object.values(ROLE_NAMES) as string[]).includes(value)) {
+    return value as RoleName;
+  }
+  return ROLE_ALIASES[value.toLowerCase()] ?? null;
 }
 
-export function getRoleName(user: UserWithRole): string | null {
+function normalizeRole(user: UserWithRole): RoleName | null {
+  if (!user?.role) return null;
+  const role = Array.isArray(user.role) ? user.role[0] : user.role;
+  return normalizeRoleName(role?.name || role?.type || null);
+}
+
+export function getRoleName(user: UserWithRole): RoleName | null {
   return normalizeRole(user);
 }
 

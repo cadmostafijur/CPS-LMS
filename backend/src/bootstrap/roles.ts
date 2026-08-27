@@ -22,6 +22,8 @@ const STUDENT_ONLY_ACTIONS = [
   'api::lms.lms.takeQuiz',
   'api::lms.lms.submitQuiz',
   'api::lms.lms.studentDashboard',
+  'api::lms.lms.listMyAssignments',
+  'api::lms.lms.submitAssignment',
 ];
 
 /** Shared profile / catalog / read for all authenticated LMS roles */
@@ -65,6 +67,10 @@ const COURSE_AUTHORING_ACTIONS = [
   'api::lms.lms.staffListCourses',
   'api::lms.lms.staffListProgress',
   'api::lms.lms.instructorDashboard',
+  'api::lms.lms.staffListAssignments',
+  'api::lms.lms.staffCreateAssignment',
+  'api::lms.lms.staffListSubmissions',
+  'api::lms.lms.staffGradeSubmission',
 ];
 
 const CONTENT_MANAGER_ACTIONS = [

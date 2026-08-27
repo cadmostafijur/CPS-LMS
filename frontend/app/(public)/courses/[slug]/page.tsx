@@ -171,7 +171,7 @@ export default async function CourseDetailPage({ params }: Props) {
                 isFree={course.isFree !== false && !(Number(course.price) > 0)}
                 price={Number(course.discountPrice ?? course.price ?? 0)}
                 currency={course.currency || "USD"}
-                canEnroll={student}
+                canEnroll={!user || student}
               />
             </CardContent>
           </Card>

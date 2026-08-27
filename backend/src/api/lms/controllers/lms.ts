@@ -245,4 +245,22 @@ export default ({ strapi }: { strapi: any }) => ({
   async adminSaveSettings(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').adminSaveSettings(ctx);
   },
+  async listMyAssignments(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listMyAssignments(ctx);
+  },
+  async submitAssignment(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').submitAssignment(ctx);
+  },
+  async staffListAssignments(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').staffListAssignments(ctx);
+  },
+  async staffCreateAssignment(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').staffCreateAssignment(ctx);
+  },
+  async staffListSubmissions(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').staffListSubmissions(ctx);
+  },
+  async staffGradeSubmission(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').staffGradeSubmission(ctx);
+  },
 });

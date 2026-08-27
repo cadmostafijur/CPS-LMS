@@ -144,12 +144,14 @@ function flatNavForRole(role: string | null | undefined): NavItem[] {
         { href: "/instructor/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/instructor/courses", label: "My courses", icon: BookOpen },
         { href: "/instructor/progress", label: "Progress", icon: BarChart3 },
+        { href: "/instructor/assignments", label: "Assignments", icon: FileText },
         { href: "/profile", label: "Profile", icon: UserCheck },
       ];
     default:
       return [
         { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/student/my-courses", label: "My courses", icon: GraduationCap },
+        { href: "/student/assignments", label: "Assignments", icon: FileText },
         { href: "/student/certificates", label: "Certificates", icon: Award },
         { href: "/profile", label: "Profile", icon: UserCheck },
       ];

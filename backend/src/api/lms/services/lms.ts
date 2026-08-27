@@ -313,7 +313,9 @@ function assertNotStudent(user: any) {
 /** Spec matrix: enroll / take quizzes / complete lessons = Student only */
 function assertStudentOnly(user: any) {
   if (!isStudent(user)) {
-    throw new ForbiddenError('Only students can perform this action');
+    throw new ForbiddenError(
+      'Only Student accounts can enroll and take courses. Sign out and use a student login.'
+    );
   }
 }
 
@@ -2724,6 +2726,301 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
     await strapi.db.query('api::blog-post.blog-post').delete({ where: { id: post.id } });
     return { data: { id: post.id, documentId: post.documentId } };
+  },
+
+  /** Student: published assignments for enrolled courses */
+  async listMyAssignments(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    assertStudentOnly(user);
+
+    const enrollments = await strapi.db.query('api::enrollment.enrollment').findMany({
+      where: { student: user.id },
+      populate: { course: true },
+    });
+    const courseIds = enrollments
+      .map((e: any) => e.course?.id)
+      .filter(Boolean);
+    if (courseIds.length === 0) return { data: [] };
+
+    const assignments = await strapi.db.query('api::assignment.assignment').findMany({
+      where: {
+        status: 'PUBLISHED',
+        course: { id: { $in: courseIds } },
+      },
+      populate: { course: true },
+      orderBy: { dueDate: 'asc' },
+      limit: 100,
+    });
+
+    const submissions = await strapi.db
+      .query('api::assignment-submission.assignment-submission')
+      .findMany({
+        where: {
+          student: user.id,
+          assignment: { id: { $in: assignments.map((a: any) => a.id) } },
+        },
+      });
+    const byAssignment = new Map(
+      submissions.map((s: any) => [String(s.assignment?.id || s.assignment), s])
+    );
+
+    return {
+      data: assignments.map((a: any) => {
+        const sub = byAssignment.get(String(a.id));
+        return {
+          id: a.id,
+          documentId: a.documentId,
+          title: a.title,
+          description: a.description,
+          dueDate: a.dueDate,
+          maxMarks: a.maxMarks,
+          status: a.status,
+          course: a.course
+            ? {
+                id: a.course.id,
+                documentId: a.course.documentId,
+                title: a.course.title,
+              }
+            : null,
+          submission: sub
+            ? {
+                id: sub.id,
+                documentId: sub.documentId,
+                content: sub.content,
+                fileUrl: sub.fileUrl,
+                score: sub.score,
+                feedback: sub.feedback,
+                status: sub.status,
+                submittedAt: sub.submittedAt,
+              }
+            : null,
+        };
+      }),
+    };
+  },
+
+  async submitAssignment(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    assertStudentOnly(user);
+    const assignment = await resolveByIdOrDocumentId(
+      strapi,
+      'api::assignment.assignment',
+      ctx.params.id
+    );
+    if (!assignment) throw new NotFoundError('Assignment not found');
+
+    const full = await strapi.db.query('api::assignment.assignment').findOne({
+      where: { id: assignment.id },
+      populate: { course: true },
+    });
+    if (!full || full.status !== 'PUBLISHED') {
+      throw new ValidationError('Assignment is not open for submissions');
+    }
+    if (!full.course?.id) throw new ValidationError('Assignment has no course');
+
+    const enrolled = await strapi.db.query('api::enrollment.enrollment').findOne({
+      where: { student: user.id, course: full.course.id },
+    });
+    if (!enrolled) throw new ForbiddenError('Enroll in the course first');
+
+    const { content, fileUrl } = ctx.request.body || {};
+    if (!content && !fileUrl) {
+      throw new ValidationError('Provide content or a file URL');
+    }
+
+    const now = new Date();
+    const late = full.dueDate && new Date(full.dueDate) < now;
+    const existing = await strapi.db
+      .query('api::assignment-submission.assignment-submission')
+      .findOne({
+        where: { student: user.id, assignment: full.id },
+      });
+
+    const payload = {
+      content: content ? String(content) : null,
+      fileUrl: fileUrl ? String(fileUrl) : null,
+      status: late ? 'LATE' : 'SUBMITTED',
+      submittedAt: now.toISOString(),
+      assignment: full.id,
+      student: user.id,
+    };
+
+    const saved = existing
+      ? await strapi.db.query('api::assignment-submission.assignment-submission').update({
+          where: { id: existing.id },
+          data: payload,
+        })
+      : await strapi.db.query('api::assignment-submission.assignment-submission').create({
+          data: payload,
+        });
+
+    return { data: saved };
+  },
+
+  async staffListAssignments(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user) && !isContentManager(user) && !isInstructor(user)) {
+      throw new ForbiddenError('Staff required');
+    }
+
+    const courseWhere: any =
+      isInstructor(user) && !isAdmin(user) && !isContentManager(user)
+        ? { $or: [{ instructor: user.id }, { createdByUser: user.id }] }
+        : {};
+    const courses = await strapi.db.query('api::course.course').findMany({
+      where: courseWhere,
+      limit: 200,
+    });
+    const courseIds = courses.map((c: any) => c.id);
+    if (courseIds.length === 0) return { data: [] };
+
+    const assignments = await strapi.db.query('api::assignment.assignment').findMany({
+      where: { course: { id: { $in: courseIds } } },
+      populate: { course: true },
+      orderBy: { updatedAt: 'desc' },
+      limit: 200,
+    });
+
+    return {
+      data: assignments.map((a: any) => ({
+        id: a.id,
+        documentId: a.documentId,
+        title: a.title,
+        description: a.description,
+        dueDate: a.dueDate,
+        maxMarks: a.maxMarks,
+        status: a.status,
+        course: a.course
+          ? {
+              id: a.course.id,
+              documentId: a.course.documentId,
+              title: a.course.title,
+            }
+          : null,
+      })),
+    };
+  },
+
+  async staffCreateAssignment(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user) && !isContentManager(user) && !isInstructor(user)) {
+      throw new ForbiddenError('Staff required');
+    }
+    const body = ctx.request.body || {};
+    if (!body.title || !body.course) {
+      throw new ValidationError('title and course are required');
+    }
+    const course = await resolveByIdOrDocumentId(
+      strapi,
+      'api::course.course',
+      String(body.course)
+    );
+    if (!course) throw new NotFoundError('Course not found');
+    const fullCourse = await strapi.db.query('api::course.course').findOne({
+      where: { id: course.id },
+      populate: { instructor: true, createdByUser: true },
+    });
+    assertCourseOwnerOrManager(user, fullCourse);
+
+    const created = await strapi.db.query('api::assignment.assignment').create({
+      data: {
+        title: String(body.title).trim(),
+        description: body.description ? String(body.description) : null,
+        maxMarks: Number(body.maxMarks ?? 100),
+        status: body.status || 'DRAFT',
+        dueDate: body.dueDate || null,
+        course: course.id,
+        createdByUser: user.id,
+      },
+      populate: { course: true },
+    });
+    return { data: created };
+  },
+
+  async staffListSubmissions(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user) && !isContentManager(user) && !isInstructor(user)) {
+      throw new ForbiddenError('Staff required');
+    }
+    const assignment = await resolveByIdOrDocumentId(
+      strapi,
+      'api::assignment.assignment',
+      ctx.params.id
+    );
+    if (!assignment) throw new NotFoundError('Assignment not found');
+    const full = await strapi.db.query('api::assignment.assignment').findOne({
+      where: { id: assignment.id },
+      populate: { course: { populate: { instructor: true, createdByUser: true } } },
+    });
+    assertCourseOwnerOrManager(user, full?.course);
+
+    const rows = await strapi.db
+      .query('api::assignment-submission.assignment-submission')
+      .findMany({
+        where: { assignment: full.id },
+        populate: { student: true },
+        orderBy: { submittedAt: 'desc' },
+        limit: 200,
+      });
+
+    return {
+      data: rows.map((s: any) => ({
+        id: s.id,
+        documentId: s.documentId,
+        content: s.content,
+        fileUrl: s.fileUrl,
+        score: s.score,
+        feedback: s.feedback,
+        status: s.status,
+        submittedAt: s.submittedAt,
+        student: sanitizeUser(s.student),
+      })),
+    };
+  },
+
+  async staffGradeSubmission(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    if (!isAdmin(user) && !isContentManager(user) && !isInstructor(user)) {
+      throw new ForbiddenError('Staff required');
+    }
+    const submission = await resolveByIdOrDocumentId(
+      strapi,
+      'api::assignment-submission.assignment-submission',
+      ctx.params.id
+    );
+    if (!submission) throw new NotFoundError('Submission not found');
+
+    const full = await strapi.db
+      .query('api::assignment-submission.assignment-submission')
+      .findOne({
+        where: { id: submission.id },
+        populate: {
+          assignment: {
+            populate: { course: { populate: { instructor: true, createdByUser: true } } },
+          },
+        },
+      });
+    assertCourseOwnerOrManager(user, full?.assignment?.course);
+
+    const { score, feedback, status } = ctx.request.body || {};
+    const updated = await strapi.db
+      .query('api::assignment-submission.assignment-submission')
+      .update({
+        where: { id: submission.id },
+        data: {
+          score: score == null || score === '' ? null : Number(score),
+          feedback: feedback != null ? String(feedback) : full.feedback,
+          status: status || 'GRADED',
+        },
+        populate: { student: true },
+      });
+
+    return {
+      data: {
+        ...updated,
+        student: sanitizeUser(updated.student),
+      },
+    };
   },
 
   ...createOpsHandlers(strapi),
