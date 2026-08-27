@@ -30,7 +30,7 @@ export default async function LearnPage({ params }: Props) {
     token
   ).catch(() => null);
 
-  const completedLessonIds = (progress?.data.lessons || [])
+  const completedLessonIds = (progress?.data?.lessons || [])
     .filter((lp) => lp.completed)
     .map((lp) => lp.lesson?.documentId || lp.lesson?.id)
     .filter((id): id is string | number => id != null);
@@ -42,7 +42,7 @@ export default async function LearnPage({ params }: Props) {
         course={course}
         lesson={lesson}
         completedLessonIds={completedLessonIds}
-        progressPercent={progress?.data.percentage ?? 0}
+        progressPercent={progress?.data?.percentage ?? 0}
       />
     </div>
   );

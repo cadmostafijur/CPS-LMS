@@ -19,7 +19,15 @@ async function proxy(request: NextRequest, pathParts: string[]) {
   }
 
   // Client calls /api/lms/<rest> → Strapi /api/lms/<rest>
-  const url = new URL(`${getApiBaseUrl()}/lms/${targetPath}`);
+  let url: URL;
+  try {
+    url = new URL(`${getApiBaseUrl()}/lms/${targetPath}`);
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid API base URL configuration" },
+      { status: 500 }
+    );
+  }
   request.nextUrl.searchParams.forEach((value, key) => {
     url.searchParams.set(key, value);
   });
@@ -38,7 +46,17 @@ async function proxy(request: NextRequest, pathParts: string[]) {
     if (body) init.body = body;
   }
 
-  const res = await fetch(url.toString(), init);
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), init);
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error: err instanceof Error ? err.message : "Upstream fetch failed",
+      },
+      { status: 502 }
+    );
+  }
   const text = await res.text();
   let payload: unknown = null;
   try {

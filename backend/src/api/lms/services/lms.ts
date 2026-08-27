@@ -819,7 +819,11 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
     const enrollments = await strapi.db.query('api::enrollment.enrollment').findMany({
       where: { student: user.id },
-      populate: { course: true },
+      populate: {
+        course: {
+          populate: { lessons: true },
+        },
+      },
     });
 
     const withProgress = await Promise.all(
@@ -839,7 +843,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       data: {
         user: sanitizeUser(user),
         enrolledCount: enrollments.length,
-        completedCourses: withProgress.filter((p) => p.progress.percentage >= 100).length,
+        completedCourses: withProgress.filter((p) => (p.progress?.percentage ?? 0) >= 100).length,
         quizAttempts: attempts,
         courses: withProgress,
       },

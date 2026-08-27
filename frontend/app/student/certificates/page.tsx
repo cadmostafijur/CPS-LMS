@@ -11,7 +11,8 @@ import { getMyCertificates } from "@/services/admin.service";
 export default async function StudentCertificatesPage() {
   const user = await requireUser("/student/certificates");
   const token = await getTokenFromCookies();
-  const { data } = await getMyCertificates(token).catch(() => ({ data: [] }));
+  const { data } = await getMyCertificates(token).catch(() => ({ data: [] as never[] }));
+  const certs = data || [];
 
   return (
     <DashboardShell user={user}>
@@ -19,7 +20,7 @@ export default async function StudentCertificatesPage() {
         title="Certificates"
         description="Certificates earned when you complete a course."
       />
-      {data.length === 0 ? (
+      {certs.length === 0 ? (
         <EmptyState
           title="No certificates yet"
           description="Finish all lessons in a course to earn a certificate."
@@ -31,7 +32,7 @@ export default async function StudentCertificatesPage() {
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {data.map((cert) => (
+          {certs.map((cert) => (
             <Card key={String(cert.id)}>
               <CardHeader>
                 <CardTitle className="text-base">{cert.courseTitle}</CardTitle>

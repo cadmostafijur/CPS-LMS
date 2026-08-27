@@ -90,7 +90,7 @@ export default async function StudentDashboardPage() {
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {data.courses.map((item) => {
-              const course = item.enrollment.course;
+              const course = item.enrollment?.course;
               if (!course) return null;
               const id = course.documentId || course.id;
               const lessons = [...(course.lessons || [])].sort(
@@ -98,7 +98,7 @@ export default async function StudentDashboardPage() {
               );
               const first = lessons[0]?.documentId || lessons[0]?.id;
               return (
-                <Card key={String(item.enrollment.id)}>
+                <Card key={String(item.enrollment?.id ?? id)}>
                   <CardHeader>
                     <CardTitle className="text-base">{course.title}</CardTitle>
                   </CardHeader>
@@ -106,10 +106,10 @@ export default async function StudentDashboardPage() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Progress</span>
                       <span className="font-medium">
-                        {item.progress.percentage}%
+                        {item.progress?.percentage ?? 0}%
                       </span>
                     </div>
-                    <Progress value={item.progress.percentage} />
+                    <Progress value={item.progress?.percentage ?? 0} />
                     <Button asChild size="sm" className="w-full">
                       <Link
                         href={

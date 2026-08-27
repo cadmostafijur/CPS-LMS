@@ -84,13 +84,19 @@ export function clearAuthCookies(response: NextResponse) {
 }
 
 export async function fetchStrapiMe(token: string): Promise<AuthUser> {
-  const res = await fetch(`${getApiBaseUrl()}/lms/me`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
-  });
+  const base = getApiBaseUrl().replace(/\/+$/, "");
+  let res: Response;
+  try {
+    res = await fetch(`${base}/lms/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+  } catch {
+    throw new Error("Failed to fetch current user");
+  }
 
   if (!res.ok) {
     throw new Error("Failed to fetch current user");

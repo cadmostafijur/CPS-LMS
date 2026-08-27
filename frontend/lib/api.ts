@@ -22,9 +22,14 @@ function buildUrl(
   path: string,
   searchParams?: FetchOptions["searchParams"]
 ): string {
-  const base = getApiBaseUrl().replace(/\/$/, "");
+  const base = getApiBaseUrl().replace(/\/+$/, "");
   const normalized = path.startsWith("/") ? path : `/${path}`;
-  const url = new URL(`${base}${normalized}`);
+  let url: URL;
+  try {
+    url = new URL(`${base}${normalized}`);
+  } catch {
+    throw new ApiError(`Invalid API base URL: ${base}`, 0);
+  }
 
   if (searchParams) {
     for (const [key, value] of Object.entries(searchParams)) {
@@ -38,7 +43,6 @@ function buildUrl(
 
 async function resolveToken(explicit?: string | null, auth = true) {
   if (!auth) return null;
-  // Callers must pass token on the server (from cookies). Client mutations use bffFetch.
   if (explicit) return explicit;
   return null;
 }
@@ -51,15 +55,23 @@ export async function apiFetch<T>(
   const bearer = await resolveToken(token, auth);
   const url = buildUrl(path, searchParams);
 
-  const res = await fetch(url, {
-    ...rest,
-    headers: {
-      "Content-Type": "application/json",
-      ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
-      ...headers,
-    },
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...rest,
+      headers: {
+        "Content-Type": "application/json",
+        ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
+        ...headers,
+      },
+      cache: "no-store",
+    });
+  } catch (err) {
+    throw new ApiError(
+      err instanceof Error ? err.message : "Network request failed",
+      0
+    );
+  }
 
   const text = await res.text();
   let payload: unknown = null;
@@ -84,19 +96,39 @@ export async function apiFetch<T>(
   return payload as T;
 }
 
+/** Like apiFetch but returns null instead of throwing (for Server Components). */
+export async function apiFetchSafe<T>(
+  path: string,
+  options: FetchOptions = {}
+): Promise<T | null> {
+  try {
+    return await apiFetch<T>(path, options);
+  } catch {
+    return null;
+  }
+}
+
 /** Client-side fetch through Next.js BFF so httpOnly cookie is sent. */
 export async function bffFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const res = await fetch(path, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-    credentials: "same-origin",
-  });
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+      credentials: "same-origin",
+    });
+  } catch (err) {
+    throw new ApiError(
+      err instanceof Error ? err.message : "Network request failed",
+      0
+    );
+  }
 
   const text = await res.text();
   let payload: unknown = null;

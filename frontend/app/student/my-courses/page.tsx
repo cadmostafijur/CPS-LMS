@@ -8,11 +8,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { getMyCourses } from "@/services/courses.service";
+import type { Enrollment } from "@/types";
 
 export default async function MyCoursesPage() {
   const user = await requireUser("/student/my-courses");
   const token = await getTokenFromCookies();
-  const { data } = await getMyCourses(token);
+
+  let data: Enrollment[] = [];
+  let loadError: string | null = null;
+  try {
+    const res = await getMyCourses(token);
+    data = res.data || [];
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : "Could not load courses";
+  }
 
   return (
     <DashboardShell user={user}>
@@ -25,6 +34,11 @@ export default async function MyCoursesPage() {
           </Button>
         }
       />
+      {loadError ? (
+        <p className="mb-4 rounded-xl border border-dashed border-destructive/30 bg-card px-4 py-3 text-sm text-muted-foreground">
+          {loadError}
+        </p>
+      ) : null}
       {data.length === 0 ? (
         <EmptyState
           title="No courses yet"

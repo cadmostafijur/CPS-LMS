@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { getQuizAttempts } from "@/services/quizzes.service";
 import { formatDate } from "@/lib/utils";
+import type { QuizAttempt } from "@/types";
 
 type Props = { params: Promise<{ quizId: string }> };
 
@@ -14,7 +15,15 @@ export default async function QuizResultsPage({ params }: Props) {
   const { quizId } = await params;
   await requireUser(`/quizzes/${quizId}/results`);
   const token = await getTokenFromCookies();
-  const { data: attempts } = await getQuizAttempts(quizId, token);
+
+  let attempts: QuizAttempt[] = [];
+  let loadError: string | null = null;
+  try {
+    const res = await getQuizAttempts(quizId, token);
+    attempts = res.data || [];
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : "Could not load results";
+  }
 
   const latest = attempts[0];
 
@@ -31,6 +40,12 @@ export default async function QuizResultsPage({ params }: Props) {
           <Link href={`/quizzes/${quizId}`}>Retake quiz</Link>
         </Button>
       </div>
+
+      {loadError ? (
+        <p className="mb-6 rounded-xl border border-dashed border-destructive/30 bg-card px-4 py-3 text-sm text-muted-foreground">
+          {loadError}
+        </p>
+      ) : null}
 
       {latest ? (
         <Card className="mb-8 border-gold/40 bg-gold/5">

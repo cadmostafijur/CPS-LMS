@@ -42,7 +42,11 @@ export default async function ContentManagerDashboardPage() {
   let loadError: string | null = null;
   try {
     const res = await getContentManagerDashboard(token);
-    data = { ...empty, ...res.data };
+    data = {
+      ...empty,
+      ...res.data,
+      recentCourses: res.data?.recentCourses || [],
+    };
   } catch (err) {
     loadError =
       err instanceof Error

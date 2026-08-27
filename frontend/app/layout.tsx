@@ -13,10 +13,17 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
 });
 
+function safeSiteUrl() {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  try {
+    return new URL(raw);
+  } catch {
+    return new URL("http://localhost:3000");
+  }
+}
+
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
-  ),
+  metadataBase: safeSiteUrl(),
   title: {
     default: "CPS Academy — Modern Learning Platform",
     template: "%s | CPS Academy",

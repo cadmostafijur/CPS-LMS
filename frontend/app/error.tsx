@@ -30,6 +30,9 @@ export default function Error({
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <Button onClick={reset}>Try again</Button>
         <Button variant="outline" asChild>
+          <Link href="/api/auth/logout">Sign out</Link>
+        </Button>
+        <Button variant="outline" asChild>
           <Link href="/dashboard">Dashboard</Link>
         </Button>
         <Button variant="outline" asChild>
