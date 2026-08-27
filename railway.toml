@@ -1,13 +1,13 @@
-# Deploy Strapi from monorepo root.
-# IMPORTANT: start must `cd backend` so Strapi finds config/dist (cwd matters).
+# Docker build from repo root (Railway).
+# Start cwd is /opt/app (backend files copied there).
 
 [build]
-builder = "RAILPACK"
-buildCommand = "npm ci --prefix backend && npm run build --prefix backend"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "cd backend && npm run start"
+startCommand = "npm run start"
 healthcheckPath = "/_health"
-healthcheckTimeout = 300
+healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5

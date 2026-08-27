@@ -1,8 +1,13 @@
+import dns from 'node:dns';
+
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {
+  /* Node < 17 */
+}
+
 export default ({ env }) => {
   const port = env.int('PORT', 1337);
-
-  // Railway's public proxy talks IPv4. Bind 0.0.0.0 — never "::" (that 502s the domain).
-  const host = '0.0.0.0';
 
   const railwayDomain = String(env('RAILWAY_PUBLIC_DOMAIN', '') || '')
     .trim()
@@ -14,7 +19,6 @@ export default ({ env }) => {
     .trim()
     .replace(/\/$/, '');
 
-  // Strapi must not use 0.0.0.0 / :: as its public URL (getaddrinfo ENOTFOUND).
   if (!publicUrl || /0\.0\.0\.0|\[?::\]?/.test(publicUrl)) {
     publicUrl = railwayDomain
       ? `https://${railwayDomain}`
@@ -22,7 +26,8 @@ export default ({ env }) => {
   }
 
   return {
-    host,
+    // Always IPv4 bind. Passing HOST=:: on Railway 502s the public domain.
+    host: '0.0.0.0',
     port,
     url: publicUrl,
     proxy: true,
