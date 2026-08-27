@@ -6,15 +6,19 @@ import { Footer } from "@/components/layout/footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/shared/empty-state";
 import { EnrollButton } from "@/features/courses/enroll-button";
 import {
   getCourseBySlug,
+  getCourseProgress,
   getMyCourses,
 } from "@/services/courses.service";
 import { getCurrentUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/config";
+import { continueLessonHref } from "@/lib/continue-lesson";
 import { isStudent } from "@/lib/roles";
+import { BookOpen } from "lucide-react";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -42,6 +46,16 @@ export default async function CourseDetailPage({ params }: Props) {
   const token = await getTokenFromCookies();
   const student = isStudent(user);
   let enrolled = false;
+  let continueHref: string | null = null;
+
+  const lessons = [...(course.lessons || [])].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0)
+  );
+  const modules = [...(course.modules || [])].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0)
+  );
+  const courseKey = course.documentId || course.id;
+
   if (user && token && student) {
     const mine = await getMyCourses(token).catch(() => null);
     enrolled = Boolean(
@@ -51,28 +65,58 @@ export default async function CourseDetailPage({ params }: Props) {
           String(e.course?.documentId) === String(course.documentId)
       )
     );
+    if (enrolled) {
+      const progress = await getCourseProgress(courseKey, token).catch(() => null);
+      const completedIds = (progress?.data?.lessons || [])
+        .filter((lp) => lp.completed)
+        .map((lp) => lp.lesson?.documentId || lp.lesson?.id)
+        .filter((id): id is string | number => id != null);
+      continueHref = continueLessonHref(
+        courseKey,
+        lessons,
+        completedIds,
+        progress?.data?.moduleGates || course.moduleGates
+      );
+    }
   }
 
-  const lessons = [...(course.lessons || [])].sort(
-    (a, b) => (a.order ?? 0) - (b.order ?? 0)
-  );
   const firstPreview = lessons.find((l) => l.isPreview);
   const firstLessonId =
     firstPreview?.documentId ||
     firstPreview?.id ||
     lessons[0]?.documentId ||
     lessons[0]?.id;
-  const courseKey = course.documentId || course.id;
+
+  const enrollBlock = (
+    <EnrollButton
+      courseId={courseKey}
+      enrolled={enrolled}
+      firstLessonId={firstLessonId}
+      continueHref={continueHref}
+      isFree={course.isFree !== false && !(Number(course.price) > 0)}
+      price={Number(course.discountPrice ?? course.price ?? 0)}
+      currency={course.currency || "USD"}
+      canEnroll={!user || student}
+    />
+  );
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar user={user} />
-      <main className="mx-auto max-w-6xl px-4 py-12">
+      <main className="mx-auto max-w-6xl px-4 py-10 pb-28 lg:py-12 lg:pb-12">
         <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
           <div>
-            <Badge variant="gold" className="mb-3">
-              {course.status}
-            </Badge>
+            <div className="mb-3 flex flex-wrap gap-2">
+              {course.category?.name ? (
+                <Badge variant="secondary">{course.category.name}</Badge>
+              ) : null}
+              {course.difficulty ? (
+                <Badge variant="outline">{course.difficulty}</Badge>
+              ) : null}
+              {course.language ? (
+                <Badge variant="outline">{course.language}</Badge>
+              ) : null}
+            </div>
             <h1 className="font-display text-3xl font-bold tracking-tight text-navy md:text-4xl">
               {course.title}
             </h1>
@@ -84,6 +128,7 @@ export default async function CourseDetailPage({ params }: Props) {
                 {course.description}
               </p>
             ) : null}
+
             <div className="mt-8">
               <h2 className="font-display text-xl font-semibold text-navy">
                 Curriculum
@@ -100,13 +145,65 @@ export default async function CourseDetailPage({ params }: Props) {
                   {course.outcomes}
                 </p>
               ) : null}
-              <ul className="mt-4 space-y-2">
-                {lessons.length === 0 ? (
-                  <li className="text-sm text-muted-foreground">
-                    Lessons coming soon.
-                  </li>
-                ) : (
-                  lessons.map((lesson, index) => {
+
+              {modules.length > 0 ? (
+                <div className="mt-4 space-y-4">
+                  {modules.map((mod) => {
+                    const modLessons = lessons.filter(
+                      (l) =>
+                        String(l.module?.documentId || l.module?.id) ===
+                        String(mod.documentId || mod.id)
+                    );
+                    return (
+                      <div key={String(mod.documentId || mod.id)}>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {mod.title}
+                        </p>
+                        <ul className="space-y-2">
+                          {modLessons.map((lesson, index) => {
+                            const preview = lesson.isPreview;
+                            const lessonKey = lesson.documentId || lesson.id;
+                            return (
+                              <li
+                                key={String(lessonKey)}
+                                className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm shadow-sm"
+                              >
+                                <div>
+                                  <span className="mr-2 text-muted-foreground">
+                                    {index + 1}.
+                                  </span>
+                                  {lesson.title}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {preview ? (
+                                    <Badge variant="gold">Preview</Badge>
+                                  ) : null}
+                                  {preview && user ? (
+                                    <Button asChild size="sm" variant="outline">
+                                      <Link href={`/learn/${courseKey}/${lessonKey}`}>
+                                        Preview
+                                      </Link>
+                                    </Button>
+                                  ) : null}
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : lessons.length === 0 ? (
+                <EmptyState
+                  className="mt-4"
+                  icon={BookOpen}
+                  title="Curriculum coming soon"
+                  description="Lessons and modules will appear here once the instructor publishes them."
+                />
+              ) : (
+                <ul className="mt-4 space-y-2">
+                  {lessons.map((lesson, index) => {
                     const preview = lesson.isPreview;
                     const lessonKey = lesson.documentId || lesson.id;
                     return (
@@ -119,11 +216,6 @@ export default async function CourseDetailPage({ params }: Props) {
                             {index + 1}.
                           </span>
                           {lesson.title}
-                          {lesson.module?.title ? (
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              · {lesson.module.title}
-                            </span>
-                          ) : null}
                         </div>
                         <div className="flex items-center gap-2">
                           {preview ? <Badge variant="gold">Preview</Badge> : null}
@@ -137,46 +229,34 @@ export default async function CourseDetailPage({ params }: Props) {
                         </div>
                       </li>
                     );
-                  })
-                )}
-              </ul>
+                  })}
+                </ul>
+              )}
             </div>
           </div>
-          <Card className="h-fit rounded-2xl border-border/80 bg-white shadow-sm">
+
+          <Card className="hidden h-fit rounded-2xl border-border/80 bg-white shadow-sm lg:block lg:sticky lg:top-24">
             <CardHeader>
               <CardTitle className="font-display text-navy">Get started</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {course.category?.name ? (
-                  <Badge variant="secondary">{course.category.name}</Badge>
-                ) : null}
-                {course.difficulty ? (
-                  <Badge variant="outline">{course.difficulty}</Badge>
-                ) : null}
-                {course.language ? (
-                  <Badge variant="outline">{course.language}</Badge>
-                ) : null}
-              </div>
               <p className="text-sm text-muted-foreground">
                 {lessons.length} lessons
+                {modules.length ? ` · ${modules.length} modules` : ""}
                 {course.instructor?.name
                   ? ` · Instructor: ${course.instructor.name}`
                   : ""}
               </p>
-              <EnrollButton
-                courseId={courseKey}
-                enrolled={enrolled}
-                firstLessonId={firstLessonId}
-                isFree={course.isFree !== false && !(Number(course.price) > 0)}
-                price={Number(course.discountPrice ?? course.price ?? 0)}
-                currency={course.currency || "USD"}
-                canEnroll={!user || student}
-              />
+              {enrollBlock}
             </CardContent>
           </Card>
         </div>
       </main>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 p-3 backdrop-blur-md lg:hidden">
+        <div className="mx-auto max-w-6xl">{enrollBlock}</div>
+      </div>
+
       <Footer />
     </div>
   );

@@ -3,7 +3,6 @@ import {
   ArrowRight,
   BookOpen,
   ClipboardCheck,
-  FileText,
   LineChart,
   Minus,
   Plus,
@@ -166,8 +165,8 @@ export default async function HomePage() {
           </p>
         ) : featured.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center text-muted-foreground shadow-sm">
-            No published courses yet. Publish a course in Admin, or restart Strapi
-            with <code className="text-xs">SEED_ON_BOOTSTRAP=true</code>.
+            No published courses yet. Check back soon, or browse the full catalog
+            once instructors publish their tracks.
           </p>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -212,24 +211,30 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="border-y border-border">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-12 md:grid-cols-4">
-          {[
-            { label: "Courses", value: String(courseCount), icon: BookOpen },
-            { label: "Quizzes", value: "12+", icon: ClipboardCheck },
-            { label: "Blog posts", value: "8+", icon: FileText },
-            { label: "Roles", value: "4", icon: ShieldCheck },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <stat.icon className="mx-auto mb-2 h-5 w-5 text-orange" />
-              <p className="font-display text-3xl font-bold text-navy">
-                {stat.value}
+      {courseCount > 0 ? (
+        <section className="border-y border-border bg-navy text-white">
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 py-12 text-center sm:flex-row sm:justify-between sm:text-left">
+            <div>
+              <p className="font-display text-2xl font-bold tracking-tight">
+                {courseCount} published {courseCount === 1 ? "course" : "courses"}
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">{stat.label}</p>
+              <p className="mt-1 text-sm text-white/70">
+                Enroll free, track progress, and unlock modules with quiz checkpoints.
+              </p>
             </div>
-          ))}
-        </div>
-      </section>
+            <Button
+              size="lg"
+              className="bg-orange text-white hover:bg-orange/90"
+              asChild
+            >
+              <Link href="/courses">
+                Explore catalog
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-auto max-w-3xl px-4 py-16">
         <div className="mb-8 text-center">

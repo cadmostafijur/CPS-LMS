@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  List,
   Lock,
   PlayCircle,
 } from "lucide-react";
@@ -94,6 +96,7 @@ export function LearningPlayer({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [curriculumOpen, setCurriculumOpen] = useState(false);
   const lessons = [...(course.lessons || [])].sort(
     (a, b) => (a.order ?? 0) - (b.order ?? 0)
   );
@@ -211,6 +214,7 @@ export function LearningPlayer({
       toast.error("Pass the previous module quiz with 80% to unlock this lesson");
       return;
     }
+    setCurriculumOpen(false);
     router.push(`/learn/${courseId}/${target.documentId || target.id}`);
   }
 
@@ -252,7 +256,7 @@ export function LearningPlayer({
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[1400px] flex-col md:flex-row">
-      <aside className="w-full border-b border-border bg-card md:w-72 md:border-b-0 md:border-r">
+      <aside className="w-full border-b border-border bg-card md:w-72 md:shrink-0 md:border-b-0 md:border-r">
         <div className="space-y-3 p-4">
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -273,7 +277,32 @@ export function LearningPlayer({
               module.
             </p>
           </div>
-          <nav className="space-y-3">
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-between md:hidden"
+            onClick={() => setCurriculumOpen((v) => !v)}
+            aria-expanded={curriculumOpen}
+          >
+            <span className="flex items-center gap-2">
+              <List className="h-4 w-4" />
+              {curriculumOpen ? "Hide curriculum" : "Show curriculum"}
+            </span>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 transition-transform",
+                curriculumOpen && "rotate-180"
+              )}
+            />
+          </Button>
+
+          <nav
+            className={cn(
+              "max-h-[55vh] space-y-3 overflow-y-auto md:max-h-[calc(100vh-12rem)]",
+              curriculumOpen ? "block" : "hidden md:block"
+            )}
+          >
             {modules.length > 0
               ? modules.map((mod) => {
                   const unlocked = isModuleUnlocked(mod);
@@ -313,6 +342,7 @@ export function LearningPlayer({
                             <Link
                               key={String(id)}
                               href={`/learn/${courseId}/${id}`}
+                              onClick={() => setCurriculumOpen(false)}
                               className={cn(
                                 "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
                                 active
@@ -337,6 +367,7 @@ export function LearningPlayer({
                           unlocked ? (
                             <Link
                               href={`/quizzes/${qz.id}`}
+                              onClick={() => setCurriculumOpen(false)}
                               className={cn(
                                 "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium",
                                 qz.passed
@@ -377,6 +408,7 @@ export function LearningPlayer({
                     <Link
                       key={String(id)}
                       href={`/learn/${courseId}/${id}`}
+                      onClick={() => setCurriculumOpen(false)}
                       className={cn(
                         "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
                         active

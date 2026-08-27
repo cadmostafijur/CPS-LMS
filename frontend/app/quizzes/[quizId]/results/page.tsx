@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Navbar } from "@/components/layout/navbar";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { getQuizAttempts, takeQuiz } from "@/services/quizzes.service";
@@ -136,7 +137,7 @@ function resolveContinueTarget(
 
 export default async function QuizResultsPage({ params }: Props) {
   const { quizId } = await params;
-  await requireUser(`/quizzes/${quizId}/results`);
+  const user = await requireUser(`/quizzes/${quizId}/results`);
   const token = await getTokenFromCookies();
 
   let attempts: QuizAttempt[] = [];
@@ -199,10 +200,12 @@ export default async function QuizResultsPage({ params }: Props) {
   const passed = best >= passPercent;
 
   return (
-    <div className="mx-auto min-h-screen max-w-3xl px-4 py-8">
+    <div className="min-h-screen bg-background">
+      <Navbar user={user} />
+      <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-bold">Quiz results</h1>
+          <h1 className="font-display text-3xl font-bold text-navy">Quiz results</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {courseTitle
               ? `${courseTitle} · need ${passPercent}% to unlock the next module`
@@ -276,12 +279,19 @@ export default async function QuizResultsPage({ params }: Props) {
       ) : null}
 
       {!passed && latest ? (
-        <div className="mb-8 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-muted-foreground">
-          Score at least <strong>{passPercent}%</strong> to unlock the next
-          module.{" "}
-          <Link href={`/quizzes/${quizId}`} className="font-medium text-orange underline">
-            Retake quiz
-          </Link>
+        <div className="mb-8 flex flex-col gap-3 rounded-2xl border border-orange/30 bg-orange/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-display text-lg font-semibold text-navy">
+              Not quite there yet
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Score at least <strong>{passPercent}%</strong> to unlock the next
+              module. Best so far: {best}%.
+            </p>
+          </div>
+          <Button asChild size="lg">
+            <Link href={`/quizzes/${quizId}`}>Retake quiz</Link>
+          </Button>
         </div>
       ) : null}
 
@@ -317,6 +327,7 @@ export default async function QuizResultsPage({ params }: Props) {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

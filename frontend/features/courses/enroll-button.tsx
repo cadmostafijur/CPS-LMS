@@ -25,6 +25,7 @@ export function EnrollButton({
   courseId,
   enrolled,
   firstLessonId,
+  continueHref,
   isFree = true,
   price = 0,
   currency = "USD",
@@ -33,6 +34,8 @@ export function EnrollButton({
   courseId: string | number;
   enrolled: boolean;
   firstLessonId?: string | number | null;
+  /** Prefer resume link (next incomplete lesson) when enrolled */
+  continueHref?: string | null;
   isFree?: boolean;
   price?: number;
   currency?: string;
@@ -47,9 +50,11 @@ export function EnrollButton({
     amountDue: number;
     discount: number;
   } | null>(null);
-  const learnHref = firstLessonId
-    ? `/learn/${courseId}/${firstLessonId}`
-    : `/student/my-courses`;
+  const learnHref =
+    continueHref ||
+    (firstLessonId
+      ? `/learn/${courseId}/${firstLessonId}`
+      : `/student/my-courses`);
   const free = isFree || !(price > 0);
 
   if (!canEnroll) {

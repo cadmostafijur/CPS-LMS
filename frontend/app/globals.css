@@ -162,6 +162,13 @@ summary::marker {
   color: #0b1220 !important;
   font-size: 1.35rem !important;
 }
+.cps-swal-toast {
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 30px rgba(11, 18, 32, 0.12) !important;
+}
+.cps-swal-toast .swal2-title {
+  font-size: 1rem !important;
+}
 .cps-swal-confirm,
 .cps-swal-cancel {
   border-radius: 0.65rem !important;

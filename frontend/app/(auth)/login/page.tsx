@@ -54,9 +54,11 @@ export default function LoginPage() {
           <BrandLogo size={40} priority className="rounded-lg" />
           <span className="font-display text-lg font-bold text-navy">CPS Academy</span>
         </div>
-        <Suspense fallback={<Skeleton className="h-96 w-full max-w-md" />}>
-          <LoginForm />
-        </Suspense>
+        <div className="mx-auto w-full max-w-md rounded-2xl border border-border/80 bg-white p-6 shadow-sm sm:p-8 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+          <Suspense fallback={<Skeleton className="h-96 w-full max-w-md" />}>
+            <LoginForm />
+          </Suspense>
+        </div>
       </div>
     </div>
   );

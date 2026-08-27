@@ -7,13 +7,15 @@ const brand = {
   cancelButtonColor: "#64748b",
 };
 
-const toastOpts = {
+const cornerToast = {
+  toast: true,
+  position: "top-end" as const,
   showConfirmButton: false,
-  timer: 2200,
+  timer: 2400,
   timerProgressBar: true,
   ...brand,
   customClass: {
-    popup: "cps-swal",
+    popup: "cps-swal cps-swal-toast",
   },
 };
 
@@ -24,7 +26,7 @@ export const notify = {
       icon: "success",
       title,
       text: message,
-      ...toastOpts,
+      ...cornerToast,
     });
   },
 
@@ -33,9 +35,8 @@ export const notify = {
       icon: "error",
       title,
       text: message,
-      // Errors stay a bit longer so they can be read; still no OK click required
-      ...toastOpts,
-      timer: 3200,
+      ...cornerToast,
+      timer: 3600,
     });
   },
 
@@ -44,7 +45,7 @@ export const notify = {
       icon: "info",
       title,
       text: message,
-      ...toastOpts,
+      ...cornerToast,
     });
   },
 

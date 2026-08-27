@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, LogOut, LayoutDashboard, X, UserRound } from "lucide-react";
 import { useState } from "react";
-import { toast } from "@/lib/notify";
+import { toast, notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,7 +20,6 @@ import { logout } from "@/services/auth.service";
 import { dashboardPathForRole, getRoleName } from "@/lib/roles";
 import type { AuthUser } from "@/types";
 import { cn } from "@/lib/utils";
-import { notify } from "@/lib/notify";
 
 const links = [
   { href: "/courses", label: "Courses" },
@@ -111,56 +110,47 @@ export function Navbar({
 
         <div className="hidden items-center gap-2 md:flex">
           {user ? (
-            <>
-              <Button variant="outline" size="sm" asChild className="gap-1.5">
-                <Link href={dash}>
-                  <LayoutDashboard className="h-3.5 w-3.5" />
-                  Dashboard
-                </Link>
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2 px-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-orange/15 text-xs text-orange">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="hidden max-w-[100px] truncate text-sm text-navy lg:inline">
-                      {user.name || user.email}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2 border-border bg-white px-2.5">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-orange/15 text-xs text-orange">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden max-w-[120px] truncate text-sm text-navy sm:inline">
+                    {user.name || user.email}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span>{user.name || "Account"}</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {role} · {user.email}
                     </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col">
-                      <span>{user.name || "Account"}</span>
-                      <span className="text-xs font-normal text-muted-foreground">
-                        {role} · {user.email}
-                      </span>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push("/profile")}>
-                    <UserRound className="mr-2 h-4 w-4" />
-                    My profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push(dash)}>
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    Go to dashboard
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => void handleLogout()}
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                Sign out
-              </Button>
-            </>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push(dash)}>
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/profile")}>
+                  <UserRound className="mr-2 h-4 w-4" />
+                  My profile
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => void handleLogout()}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <>
               <Button variant="ghost" asChild>
@@ -185,14 +175,14 @@ export function Navbar({
       </div>
 
       {open ? (
-        <div className="border-t border-border px-4 py-4 md:hidden">
-          <div className="flex flex-col gap-3">
+        <div className="border-t border-border bg-white px-4 py-4 md:hidden">
+          <div className="flex flex-col gap-1">
             {!isDashboard
               ? links.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="text-sm font-medium text-navy"
+                    className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
                     onClick={() => setOpen(false)}
                   >
                     {link.label}
@@ -202,39 +192,42 @@ export function Navbar({
             {user ? (
               <>
                 <Link
-                  href="/profile"
-                  className="text-sm font-medium text-navy"
-                  onClick={() => setOpen(false)}
-                >
-                  My profile
-                </Link>
-                <Link
                   href={dash}
-                  className="text-sm font-medium text-navy"
+                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
                   onClick={() => setOpen(false)}
                 >
                   Dashboard
                 </Link>
+                <Link
+                  href="/profile"
+                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
+                  onClick={() => setOpen(false)}
+                >
+                  My profile
+                </Link>
                 <button
                   type="button"
-                  className="flex items-center gap-2 text-left text-sm font-semibold text-destructive"
+                  className="rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-destructive hover:bg-destructive/5"
                   onClick={() => {
                     setOpen(false);
                     void handleLogout();
                   }}
                 >
-                  <LogOut className="h-4 w-4" />
                   Sign out
                 </button>
               </>
             ) : (
               <>
-                <Link href="/login" onClick={() => setOpen(false)}>
+                <Link
+                  href="/login"
+                  className="rounded-lg px-3 py-2.5 text-sm font-medium"
+                  onClick={() => setOpen(false)}
+                >
                   Sign in
                 </Link>
                 <Link
                   href="/register"
-                  className="font-semibold text-orange"
+                  className="rounded-lg px-3 py-2.5 text-sm font-semibold text-orange"
                   onClick={() => setOpen(false)}
                 >
                   Create account

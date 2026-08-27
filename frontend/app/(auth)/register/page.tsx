@@ -54,7 +54,9 @@ export default function RegisterPage() {
           <BrandLogo size={40} priority className="rounded-lg" />
           <span className="font-display text-lg font-bold text-navy">CPS Academy</span>
         </div>
-        <RegisterForm />
+        <div className="mx-auto w-full max-w-md rounded-2xl border border-border/80 bg-white p-6 shadow-sm sm:p-8 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+          <RegisterForm />
+        </div>
       </div>
     </div>
   );

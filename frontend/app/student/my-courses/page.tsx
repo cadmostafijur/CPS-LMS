@@ -7,7 +7,8 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
-import { getMyCourses } from "@/services/courses.service";
+import { continueLessonHref } from "@/lib/continue-lesson";
+import { getMyCourses, getCourseProgress } from "@/services/courses.service";
 import type { Enrollment } from "@/types";
 
 export default async function MyCoursesPage() {
@@ -22,6 +23,27 @@ export default async function MyCoursesPage() {
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Could not load courses";
   }
+
+  const resumeByCourse = new Map<string, string>();
+  await Promise.all(
+    data.map(async (enrollment) => {
+      const course = enrollment.course;
+      if (!course) return;
+      const id = course.documentId || course.id;
+      const progress = await getCourseProgress(id, token).catch(() => null);
+      const completedIds = (progress?.data?.lessons || [])
+        .filter((lp) => lp.completed)
+        .map((lp) => lp.lesson?.documentId || lp.lesson?.id)
+        .filter((x): x is string | number => x != null);
+      const href = continueLessonHref(
+        id,
+        course.lessons,
+        completedIds,
+        progress?.data?.moduleGates || course.moduleGates
+      );
+      if (href) resumeByCourse.set(String(id), href);
+    })
+  );
 
   return (
     <DashboardShell user={user}>
@@ -55,11 +77,11 @@ export default async function MyCoursesPage() {
             const course = enrollment.course;
             if (!course) return null;
             const id = course.documentId || course.id;
-            const lessons = [...(course.lessons || [])].sort(
-              (a, b) => (a.order ?? 0) - (b.order ?? 0)
-            );
-            const first = lessons[0]?.documentId || lessons[0]?.id;
             const pct = enrollment.progress?.percentage ?? 0;
+            const href =
+              resumeByCourse.get(String(id)) ||
+              continueLessonHref(id, course.lessons) ||
+              `/courses/${course.slug}`;
             return (
               <Card key={String(enrollment.id)}>
                 <CardHeader>
@@ -72,10 +94,8 @@ export default async function MyCoursesPage() {
                     {enrollment.progress?.totalLessons ?? 0} lessons · {pct}%
                   </p>
                   <Button asChild className="w-full">
-                    <Link
-                      href={first ? `/learn/${id}/${first}` : `/courses/${course.slug}`}
-                    >
-                      Open course
+                    <Link href={href}>
+                      {pct >= 100 ? "Review course" : pct > 0 ? "Continue" : "Start"}
                     </Link>
                   </Button>
                   {enrollment.certificate ? (

@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
+import { continueLessonHref } from "@/lib/continue-lesson";
 import { getStudentDashboard } from "@/services/dashboard.service";
 import type { StudentDashboard } from "@/types";
 
@@ -93,10 +94,14 @@ export default async function StudentDashboardPage() {
               const course = item.enrollment?.course;
               if (!course) return null;
               const id = course.documentId || course.id;
-              const lessons = [...(course.lessons || [])].sort(
-                (a, b) => (a.order ?? 0) - (b.order ?? 0)
-              );
-              const first = lessons[0]?.documentId || lessons[0]?.id;
+              const href =
+                continueLessonHref(
+                  id,
+                  course.lessons,
+                  null,
+                  course.moduleGates
+                ) || "/student/my-courses";
+              const pct = item.progress?.percentage ?? 0;
               return (
                 <Card key={String(item.enrollment?.id ?? id)}>
                   <CardHeader>
@@ -105,20 +110,12 @@ export default async function StudentDashboardPage() {
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Progress</span>
-                      <span className="font-medium">
-                        {item.progress?.percentage ?? 0}%
-                      </span>
+                      <span className="font-medium">{pct}%</span>
                     </div>
-                    <Progress value={item.progress?.percentage ?? 0} />
+                    <Progress value={pct} />
                     <Button asChild size="sm" className="w-full">
-                      <Link
-                        href={
-                          first
-                            ? `/learn/${id}/${first}`
-                            : "/student/my-courses"
-                        }
-                      >
-                        Continue
+                      <Link href={href}>
+                        {pct > 0 ? "Continue" : "Start learning"}
                       </Link>
                     </Button>
                   </CardContent>
