@@ -455,6 +455,10 @@ export function createExtrasHandlers(strapi: Core.Strapi) {
           completedCount: completed,
           completionRate:
             enrollments > 0 ? Math.round((completed / enrollments) * 100) : 0,
+          dropOffRate:
+            enrollments > 0
+              ? Math.round(((enrollments - completed) / enrollments) * 100)
+              : 0,
         });
       }
 
@@ -471,11 +475,23 @@ export function createExtrasHandlers(strapi: Core.Strapi) {
                   attempts.length
               )
             : null;
+        const passPercent = Number(quiz.passPercent ?? 80);
+        const passRate =
+          attempts.length > 0
+            ? Math.round(
+                (attempts.filter((a: any) => Number(a.percentage || 0) >= passPercent).length /
+                  attempts.length) *
+                  100
+              )
+            : null;
         quizStats.push({
           quizId: quiz.documentId || quiz.id,
           title: quiz.title,
           attemptCount: attempts.length,
           averagePercent: avg,
+          passRate,
+          difficultyHint:
+            avg == null ? 'unknown' : avg >= 80 ? 'easy' : avg >= 60 ? 'medium' : 'hard',
         });
       }
 
@@ -486,7 +502,361 @@ export function createExtrasHandlers(strapi: Core.Strapi) {
           enrollmentCount: enrollments,
           lessonStats,
           quizStats,
+          difficultyHint:
+            quizStats.length === 0
+              ? null
+              : quizStats.some((q: any) => q.difficultyHint === 'hard')
+                ? 'Some quizzes average below 60% — review content or questions.'
+                : quizStats.every((q: any) => q.difficultyHint === 'easy')
+                  ? 'Quizzes look easy overall (avg ≥ 80%).'
+                  : 'Quiz difficulty looks mixed / medium.',
         },
+      };
+    },
+
+    // —— Messaging ——
+    async listMyMessages(ctx: Ctx) {
+      const user = await getAuthUser(ctx, strapi);
+      const withUser = ctx.query.withUser ? String(ctx.query.withUser) : null;
+      const where: any = {
+        $or: [{ sender: user.id }, { recipient: user.id }],
+      };
+      if (withUser) {
+        const other = await resolve(strapi, 'plugin::users-permissions.user', withUser);
+        if (other) {
+          where.$and = [
+            {
+              $or: [
+                { sender: user.id, recipient: other.id },
+                { sender: other.id, recipient: user.id },
+              ],
+            },
+          ];
+          delete where.$or;
+        }
+      }
+      const rows = await strapi.db.query('api::message.message').findMany({
+        where,
+        populate: { sender: true, recipient: true, course: true },
+        orderBy: { id: 'asc' },
+        limit: 200,
+      });
+      return {
+        data: rows.map((m: any) => ({
+          id: m.id,
+          documentId: m.documentId,
+          body: m.body,
+          isRead: m.isRead,
+          createdAt: m.createdAt,
+          courseId: m.course?.documentId || m.course?.id || null,
+          sender: sanitizeUser(m.sender),
+          recipient: sanitizeUser(m.recipient),
+        })),
+      };
+    },
+
+    async sendMessage(ctx: Ctx) {
+      const user = await getAuthUser(ctx, strapi);
+      const recipientId = ctx.request.body?.recipientId;
+      const body = String(ctx.request.body?.body || '').trim();
+      if (!recipientId || !body) throw new ValidationError('recipientId and body required');
+      const recipient = await resolve(
+        strapi,
+        'plugin::users-permissions.user',
+        String(recipientId)
+      );
+      if (!recipient) throw new NotFoundError('Recipient not found');
+
+      let courseId = null;
+      if (ctx.request.body?.courseId) {
+        const course = await findCourse(strapi, String(ctx.request.body.courseId));
+        courseId = course?.id || null;
+      }
+
+      const row = await strapi.db.query('api::message.message').create({
+        data: {
+          body,
+          isRead: false,
+          sender: user.id,
+          recipient: recipient.id,
+          course: courseId,
+        },
+        populate: { sender: true, recipient: true },
+      });
+
+      await notifyUser(strapi, recipient.id, {
+        title: 'New message',
+        body: `${user.name || user.email}: ${body.slice(0, 120)}`,
+        type: 'message',
+        linkUrl: '/student/messages',
+      });
+
+      return {
+        data: {
+          id: row.id,
+          documentId: row.documentId,
+          body: row.body,
+          createdAt: row.createdAt,
+          sender: sanitizeUser(row.sender || user),
+          recipient: sanitizeUser(row.recipient || recipient),
+        },
+      };
+    },
+
+    // —— Live attendance ——
+    async markLiveAttendance(ctx: Ctx) {
+      const user = await getAuthUser(ctx, strapi);
+      const session = await resolve(strapi, 'api::live-session.live-session', ctx.params.id);
+      if (!session) throw new NotFoundError('Live session not found');
+      const full = await strapi.db.query('api::live-session.live-session').findOne({
+        where: { id: session.id },
+        populate: { course: true },
+      });
+      if (!full?.course) throw new NotFoundError('Session course missing');
+      await requireEnrollment(strapi, user.id, full.course.id);
+      const ids = Array.isArray(full.attendeeIds) ? [...full.attendeeIds] : [];
+      if (!ids.map(String).includes(String(user.id))) ids.push(user.id);
+      const updated = await strapi.db.query('api::live-session.live-session').update({
+        where: { id: full.id },
+        data: { attendeeIds: ids },
+      });
+      return { data: { id: updated.id, attendeeCount: ids.length, attended: true } };
+    },
+
+    // —— Wishlist reminders ——
+    async runWishlistReminders(ctx: Ctx) {
+      const user = await getAuthUser(ctx, strapi);
+      assertStudent(user);
+      const rows = await strapi.db.query('api::wishlist.wishlist').findMany({
+        where: { student: user.id },
+        populate: { course: true },
+        limit: 50,
+      });
+      let sent = 0;
+      for (const w of rows) {
+        if (!w.course) continue;
+        await notifyUser(strapi, user.id, {
+          title: 'Wishlist reminder',
+          body: `Still interested in “${w.course.title}”? Enroll when you’re ready.`,
+          type: 'wishlist',
+          linkUrl: w.course.slug ? `/courses/${w.course.slug}` : '/student/wishlist',
+        });
+        sent += 1;
+      }
+      return { data: { reminded: sent } };
+    },
+
+    // —— Transcript / gradebook ——
+    async studentTranscript(ctx: Ctx) {
+      const user = await getAuthUser(ctx, strapi);
+      assertStudent(user);
+      const enrollments = await strapi.db.query('api::enrollment.enrollment').findMany({
+        where: { student: user.id },
+        populate: { course: { populate: { lessons: true, quizzes: true } } },
+      });
+      const rows = [];
+      for (const e of enrollments) {
+        if (!e.course) continue;
+        const completed = await strapi.db.query('api::lesson-progress.lesson-progress').count({
+          where: { student: user.id, course: e.course.id, completed: true },
+        });
+        const total = (e.course.lessons || []).length || 0;
+        const pct = total ? Math.round((completed / total) * 100) : 0;
+        const attempts = await strapi.db.query('api::quiz-attempt.quiz-attempt').findMany({
+          where: { student: user.id, quiz: { course: e.course.id } },
+          limit: 100,
+        });
+        const bestQuiz =
+          attempts.length > 0
+            ? Math.max(...attempts.map((a: any) => Number(a.percentage || 0)))
+            : null;
+        rows.push({
+          courseTitle: e.course.title,
+          courseSlug: e.course.slug,
+          progressPercent: pct,
+          completedLessons: completed,
+          totalLessons: total,
+          bestQuizPercent: bestQuiz,
+          completedAt: e.completedAt || null,
+        });
+      }
+      return {
+        data: {
+          student: sanitizeUser(user),
+          generatedAt: new Date().toISOString(),
+          courses: rows,
+        },
+      };
+    },
+
+    async exportCourseGradesCsv(ctx: Ctx) {
+      const user = await getAuthUser(ctx, strapi);
+      const course = await findCourse(strapi, ctx.params.courseId, {
+        instructor: true,
+        createdByUser: true,
+        lessons: true,
+        quizzes: true,
+      });
+      if (!course) throw new NotFoundError('Course not found');
+      assertCourseOwnerOrManager(user, course);
+
+      const enrollments = await strapi.db.query('api::enrollment.enrollment').findMany({
+        where: { course: course.id },
+        populate: { student: true },
+        limit: 1000,
+      });
+      const lines = ['student_name,student_email,progress_percent,best_quiz_percent,completed_at'];
+      for (const e of enrollments) {
+        const completed = await strapi.db.query('api::lesson-progress.lesson-progress').count({
+          where: { student: e.student?.id, course: course.id, completed: true },
+        });
+        const total = (course.lessons || []).length || 0;
+        const pct = total ? Math.round((completed / total) * 100) : 0;
+        const attempts = await strapi.db.query('api::quiz-attempt.quiz-attempt').findMany({
+          where: { student: e.student?.id, quiz: { course: course.id } },
+          limit: 50,
+        });
+        const best =
+          attempts.length > 0
+            ? Math.max(...attempts.map((a: any) => Number(a.percentage || 0)))
+            : '';
+        const name = (e.student?.name || '').replace(/,/g, ' ');
+        const email = e.student?.email || '';
+        lines.push(`${name},${email},${pct},${best},${e.completedAt || ''}`);
+      }
+      return {
+        data: {
+          filename: `grades-${course.slug || course.id}.csv`,
+          csv: lines.join('\n'),
+        },
+      };
+    },
+
+    // —— Clone course (CM/Admin/Instructor owner) ——
+    async cloneCourse(ctx: Ctx) {
+      const user = await getAuthUser(ctx, strapi);
+      const course = await findCourse(strapi, ctx.params.courseId, {
+        instructor: true,
+        createdByUser: true,
+        lessons: true,
+        modules: true,
+        category: true,
+      });
+      if (!course) throw new NotFoundError('Course not found');
+      assertCourseOwnerOrManager(user, course);
+
+      const title = `${course.title} (Copy)`;
+      const slugBase = `${course.slug || 'course'}-copy-${Date.now().toString(36)}`;
+      const created = await strapi.db.query('api::course.course').create({
+        data: {
+          title,
+          slug: slugBase,
+          description: course.description,
+          shortDescription: course.shortDescription,
+          thumbnailUrl: course.thumbnailUrl,
+          coverImageUrl: course.coverImageUrl,
+          status: 'DRAFT',
+          isFree: course.isFree,
+          price: course.price,
+          currency: course.currency,
+          difficulty: course.difficulty,
+          language: course.language,
+          requirements: course.requirements,
+          outcomes: course.outcomes,
+          tags: course.tags,
+          seoTitle: course.seoTitle,
+          seoDescription: course.seoDescription,
+          category: course.category?.id || null,
+          instructor: user.id,
+          createdByUser: user.id,
+        },
+      });
+
+      const moduleMap = new Map<string, number>();
+      for (const mod of [...(course.modules || [])].sort(
+        (a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)
+      )) {
+        const nm = await strapi.db.query('api::course-module.course-module').create({
+          data: {
+            title: mod.title,
+            order: mod.order ?? 0,
+            course: created.id,
+          },
+        });
+        moduleMap.set(String(mod.id), nm.id);
+      }
+
+      for (const lesson of [...(course.lessons || [])].sort(
+        (a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)
+      )) {
+        const mid = lesson.module?.id ? moduleMap.get(String(lesson.module.id)) : null;
+        await strapi.db.query('api::lesson.lesson').create({
+          data: {
+            title: lesson.title,
+            slug: `${lesson.slug || 'lesson'}-copy-${Date.now().toString(36)}-${lesson.order || 0}`,
+            content: lesson.content,
+            videoUrl: lesson.videoUrl,
+            captionsUrl: lesson.captionsUrl,
+            lessonType: lesson.lessonType,
+            documentUrl: lesson.documentUrl,
+            externalUrl: lesson.externalUrl,
+            isPreview: lesson.isPreview,
+            durationMinutes: lesson.durationMinutes,
+            order: lesson.order,
+            course: created.id,
+            module: mid || null,
+          },
+        });
+      }
+
+      return {
+        data: {
+          id: created.id,
+          documentId: created.documentId,
+          title: created.title,
+          slug: created.slug,
+        },
+      };
+    },
+
+    // —— Student live calendar (all enrolled courses) ——
+    async listMyLiveCalendar(ctx: Ctx) {
+      const user = await getAuthUser(ctx, strapi);
+      assertStudent(user);
+      const enrollments = await strapi.db.query('api::enrollment.enrollment').findMany({
+        where: { student: user.id },
+        populate: { course: true },
+        limit: 100,
+      });
+      const courseIds = enrollments.map((e: any) => e.course?.id).filter(Boolean);
+      if (!courseIds.length) return { data: [] };
+      const sessions = await strapi.db.query('api::live-session.live-session').findMany({
+        where: { course: { id: { $in: courseIds } } },
+        populate: { course: true },
+        orderBy: { startsAt: 'asc' },
+        limit: 200,
+      });
+      return {
+        data: sessions.map((s: any) => ({
+          id: s.id,
+          documentId: s.documentId,
+          title: s.title,
+          startsAt: s.startsAt,
+          endsAt: s.endsAt,
+          meetingUrl: s.meetingUrl,
+          attendeeIds: s.attendeeIds || [],
+          attended: Array.isArray(s.attendeeIds)
+            ? s.attendeeIds.map(String).includes(String(user.id))
+            : false,
+          course: s.course
+            ? {
+                id: s.course.id,
+                documentId: s.course.documentId,
+                title: s.course.title,
+                slug: s.course.slug,
+              }
+            : null,
+        })),
       };
     },
   };

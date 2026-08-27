@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
+import { WishlistRemindButton } from "@/features/student/wishlist-remind-button";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
@@ -25,9 +26,12 @@ export default async function StudentWishlistPage() {
         title="Wishlist"
         description="Courses you saved for later."
         actions={
-          <Button asChild variant="outline">
-            <Link href="/courses">Browse courses</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {items.length > 0 ? <WishlistRemindButton /> : null}
+            <Button asChild variant="outline">
+              <Link href="/courses">Browse courses</Link>
+            </Button>
+          </div>
         }
       />
       {items.length === 0 ? (

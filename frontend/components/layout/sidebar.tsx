@@ -31,6 +31,7 @@ import {
   CalendarCheck,
   Library,
   ChevronDown,
+  MessageSquare,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { cn } from "@/lib/utils";
@@ -145,6 +146,7 @@ function flatNavForRole(role: string | null | undefined): NavItem[] {
         { href: "/instructor/courses", label: "My courses", icon: BookOpen },
         { href: "/instructor/progress", label: "Progress", icon: BarChart3 },
         { href: "/instructor/assignments", label: "Assignments", icon: FileText },
+        { href: "/instructor/messages", label: "Messages", icon: MessageSquare },
         { href: "/profile", label: "Profile", icon: UserCheck },
       ];
     default:
@@ -154,6 +156,9 @@ function flatNavForRole(role: string | null | undefined): NavItem[] {
         { href: "/student/assignments", label: "Assignments", icon: FileText },
         { href: "/student/certificates", label: "Certificates", icon: Award },
         { href: "/student/wishlist", label: "Wishlist", icon: Star },
+        { href: "/student/calendar", label: "Live calendar", icon: CalendarCheck },
+        { href: "/student/messages", label: "Messages", icon: MessageSquare },
+        { href: "/student/transcript", label: "Transcript", icon: ScrollText },
         { href: "/student/notifications", label: "Notifications", icon: Bell },
         { href: "/student/tickets", label: "Support", icon: Ticket },
         { href: "/profile", label: "Profile", icon: UserCheck },

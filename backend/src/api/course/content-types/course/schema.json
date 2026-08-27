@@ -67,6 +67,15 @@
     "outcomes": {
       "type": "text"
     },
+    "tags": {
+      "type": "string"
+    },
+    "seoTitle": {
+      "type": "string"
+    },
+    "seoDescription": {
+      "type": "text"
+    },
     "publishedAt": {
       "type": "datetime"
     },
@@ -87,6 +96,11 @@
       "relation": "manyToOne",
       "target": "plugin::users-permissions.user",
       "inversedBy": "instructedCourses"
+    },
+    "coInstructors": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user"
     },
     "createdByUser": {
       "type": "relation",

@@ -530,6 +530,18 @@ export function LearningPlayer({
                         allowFullScreen
                       />
                     </div>
+                    {lesson.captionsUrl ? (
+                      <p className="mt-2 text-sm">
+                        <a
+                          href={lesson.captionsUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-orange underline-offset-2 hover:underline"
+                        >
+                          Download / open captions
+                        </a>
+                      </p>
+                    ) : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button
                         type="button"
@@ -562,7 +574,13 @@ export function LearningPlayer({
                     ) : null}
                   </div>
                 ) : lesson.lessonType === "AUDIO" && lesson.videoUrl ? (
-                  <audio className="mt-6 w-full max-w-3xl" controls src={lesson.videoUrl} />
+                  <div className="mt-6 w-full max-w-3xl">
+                    <audio className="w-full" controls src={lesson.videoUrl}>
+                      {lesson.captionsUrl ? (
+                        <track kind="captions" src={lesson.captionsUrl} default />
+                      ) : null}
+                    </audio>
+                  </div>
                 ) : lesson.videoUrl ? (
                   <div className="mt-6 max-w-3xl rounded-xl border border-border bg-surface p-4">
                     <div className="flex flex-wrap gap-2">

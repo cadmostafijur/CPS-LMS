@@ -14,6 +14,7 @@ import {
 } from "@/features/courses/course-discussions";
 import { CourseReviewsPanel } from "@/features/courses/course-reviews-panel";
 import { WishlistButton } from "@/features/courses/wishlist-button";
+import { LiveAttendButton } from "@/features/courses/live-attend-button";
 import {
   getCourseBySlug,
   getCourseProgress,
@@ -33,12 +34,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const course = await getCourseBySlug(slug).catch(() => null);
   if (!course) return { title: "Course" };
+  const seoTitle = (course as any).seoTitle || course.title;
+  const seoDesc =
+    (course as any).seoDescription ||
+    course.shortDescription ||
+    course.description ||
+    undefined;
   return {
-    title: course.title,
-    description: course.shortDescription || course.description || undefined,
+    title: seoTitle,
+    description: seoDesc,
     openGraph: {
-      title: course.title,
-      description: course.shortDescription || undefined,
+      title: seoTitle,
+      description: course.shortDescription || seoDesc,
       url: `${getSiteUrl()}/courses/${course.slug}`,
     },
   };
@@ -358,13 +365,21 @@ export default async function CourseDetailPage({ params }: Props) {
                           {s.startsAt
                             ? new Date(s.startsAt).toLocaleString()
                             : ""}
+                          {Array.isArray(s.attendeeIds)
+                            ? ` · ${s.attendeeIds.length} attended`
+                            : ""}
                         </p>
                       </div>
-                      <Button asChild size="sm">
-                        <a href={s.meetingUrl} target="_blank" rel="noreferrer">
-                          Join
-                        </a>
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button asChild size="sm">
+                          <a href={s.meetingUrl} target="_blank" rel="noreferrer">
+                            Join
+                          </a>
+                        </Button>
+                        {enrolled ? (
+                          <LiveAttendButton sessionId={s.documentId || s.id} />
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ul>

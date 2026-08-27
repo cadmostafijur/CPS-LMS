@@ -73,6 +73,9 @@ export function CourseForm({
       language: String(form.get("language") || "English"),
       requirements: String(form.get("requirements") || ""),
       outcomes: String(form.get("outcomes") || ""),
+      tags: String(form.get("tags") || ""),
+      seoTitle: String(form.get("seoTitle") || ""),
+      seoDescription: String(form.get("seoDescription") || ""),
       publishedAt: (() => {
         const raw = String(form.get("publishedAt") || "");
         if (!raw) return null;
@@ -275,6 +278,33 @@ export function CourseForm({
               defaultValue={course?.outcomes || ""}
               rows={3}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tags">Tags (comma-separated)</Label>
+            <Input
+              id="tags"
+              name="tags"
+              defaultValue={(course as any)?.tags || ""}
+              placeholder="javascript, beginner, contest"
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="seoTitle">SEO title</Label>
+              <Input
+                id="seoTitle"
+                name="seoTitle"
+                defaultValue={(course as any)?.seoTitle || ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="seoDescription">SEO description</Label>
+              <Input
+                id="seoDescription"
+                name="seoDescription"
+                defaultValue={(course as any)?.seoDescription || ""}
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label>Pricing</Label>

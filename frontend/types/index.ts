@@ -77,6 +77,7 @@ export interface Lesson {
   slug: string;
   content?: string | null;
   videoUrl?: string | null;
+  captionsUrl?: string | null;
   documentUrl?: string | null;
   externalUrl?: string | null;
   lessonType?: LessonType;
@@ -108,6 +109,7 @@ export interface Quiz {
   title: string;
   description?: string | null;
   passPercent?: number | null;
+  timeLimitMinutes?: number | null;
   course?: Course | null;
   module?: CourseModule | null;
   questions?: QuizQuestion[];

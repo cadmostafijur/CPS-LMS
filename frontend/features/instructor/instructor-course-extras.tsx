@@ -115,12 +115,61 @@ export function InstructorCourseExtras({
       </section>
 
       <section className="rounded-2xl border border-border bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="font-display text-lg font-semibold text-navy">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <h3 className="mr-auto font-display text-lg font-semibold text-navy">
             Course analytics
           </h3>
           <Button type="button" variant="outline" size="sm" onClick={loadAnalytics}>
             Refresh
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              startTransition(async () => {
+                try {
+                  const res = await bffFetch<{
+                    data: { filename: string; csv: string };
+                  }>(`/api/lms/courses/${courseId}/grades.csv`);
+                  const blob = new Blob([res.data.csv], {
+                    type: "text/csv;charset=utf-8",
+                  });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = res.data.filename || "grades.csv";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch (err) {
+                  toast.error(
+                    err instanceof ApiError ? err.message : "CSV export failed"
+                  );
+                }
+              });
+            }}
+          >
+            Export grades CSV
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              startTransition(async () => {
+                try {
+                  const res = await bffFetch<{
+                    data: { documentId?: string; id?: string | number };
+                  }>(`/api/lms/courses/${courseId}/clone`, { method: "POST" });
+                  toast.success("Course cloned as draft");
+                  window.location.href = `/instructor/courses/${res.data.documentId || res.data.id}/edit`;
+                } catch (err) {
+                  toast.error(err instanceof ApiError ? err.message : "Clone failed");
+                }
+              });
+            }}
+          >
+            Clone course
           </Button>
         </div>
         {analytics ? (
@@ -131,12 +180,16 @@ export function InstructorCourseExtras({
                 {analytics.enrollmentCount}
               </span>
             </p>
+            {analytics.difficultyHint ? (
+              <p className="text-muted-foreground">{analytics.difficultyHint}</p>
+            ) : null}
             <div>
-              <p className="font-medium text-navy">Lesson completion</p>
+              <p className="font-medium text-navy">Lesson completion / drop-off</p>
               <ul className="mt-2 space-y-1 text-muted-foreground">
                 {(analytics.lessonStats || []).map((l: any) => (
                   <li key={String(l.lessonId)}>
-                    {l.title}: {l.completionRate}% ({l.completedCount})
+                    {l.title}: {l.completionRate}% completed
+                    {l.dropOffRate != null ? ` · ${l.dropOffRate}% drop-off` : ""}
                   </li>
                 ))}
               </ul>
@@ -148,7 +201,8 @@ export function InstructorCourseExtras({
                   <li key={String(q.quizId)}>
                     {q.title}:{" "}
                     {q.averagePercent != null ? `${q.averagePercent}%` : "—"} (
-                    {q.attemptCount} attempts)
+                    {q.attemptCount} attempts
+                    {q.passRate != null ? ` · ${q.passRate}% pass` : ""})
                   </li>
                 ))}
               </ul>

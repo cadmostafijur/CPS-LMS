@@ -317,4 +317,28 @@ export default ({ strapi }: { strapi: any }) => ({
   async instructorCourseAnalytics(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').instructorCourseAnalytics(ctx);
   },
+  async listMyMessages(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listMyMessages(ctx);
+  },
+  async sendMessage(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').sendMessage(ctx);
+  },
+  async markLiveAttendance(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').markLiveAttendance(ctx);
+  },
+  async runWishlistReminders(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').runWishlistReminders(ctx);
+  },
+  async studentTranscript(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').studentTranscript(ctx);
+  },
+  async exportCourseGradesCsv(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').exportCourseGradesCsv(ctx);
+  },
+  async cloneCourse(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').cloneCourse(ctx);
+  },
+  async listMyLiveCalendar(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listMyLiveCalendar(ctx);
+  },
 });

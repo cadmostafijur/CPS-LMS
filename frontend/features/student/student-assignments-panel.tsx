@@ -36,6 +36,7 @@ export function StudentAssignmentsPanel() {
   const [pending, startTransition] = useTransition();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
+  const [fileInputs, setFileInputs] = useState<Record<string, File | null>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
   function load() {
@@ -57,20 +58,34 @@ export function StudentAssignmentsPanel() {
     const key = String(row.documentId || row.id);
     const content = drafts[key] ?? row.submission?.content ?? "";
     const fileUrl = fileDrafts[key] ?? row.submission?.fileUrl ?? "";
-    if (!content.trim() && !fileUrl.trim()) {
-      toast.error("Add text or a file URL before submitting");
+    const file = fileInputs[key];
+    if (!content.trim() && !fileUrl.trim() && !file) {
+      toast.error("Add text or upload a file before submitting");
       return;
     }
     setSavingId(key);
     try {
+      let fileBase64: string | undefined;
+      let fileName: string | undefined;
+      if (file) {
+        const buf = await file.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let binary = "";
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        fileBase64 = btoa(binary);
+        fileName = file.name;
+      }
       await bffFetch(`/api/lms/assignments/${key}/submit`, {
         method: "POST",
         body: JSON.stringify({
           content: content || undefined,
           fileUrl: fileUrl || undefined,
+          fileBase64,
+          fileName,
         }),
       });
       toast.success("Submitted");
+      setFileInputs((f) => ({ ...f, [key]: null }));
       load();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Submit failed");
@@ -136,7 +151,17 @@ export function StudentAssignmentsPanel() {
                     }
                   />
                   <Input
-                    placeholder="File URL (Drive, Dropbox, PDF link)…"
+                    type="file"
+                    accept=".pdf,.zip,.txt,.md,.doc,.docx,.png,.jpg,.jpeg"
+                    onChange={(e) =>
+                      setFileInputs((d) => ({
+                        ...d,
+                        [key]: e.target.files?.[0] || null,
+                      }))
+                    }
+                  />
+                  <Input
+                    placeholder="Or paste a file URL…"
                     value={fileDrafts[key] ?? sub?.fileUrl ?? ""}
                     onChange={(e) =>
                       setFileDrafts((d) => ({ ...d, [key]: e.target.value }))

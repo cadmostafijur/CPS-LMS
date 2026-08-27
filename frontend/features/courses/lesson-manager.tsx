@@ -36,6 +36,7 @@ export function LessonManager({
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
+  const [captionsUrl, setCaptionsUrl] = useState("");
   const [documentUrl, setDocumentUrl] = useState("");
   const [externalUrl, setExternalUrl] = useState("");
   const [order, setOrder] = useState(0);
@@ -50,6 +51,7 @@ export function LessonManager({
     setTitle("");
     setContent("");
     setVideoUrl("");
+    setCaptionsUrl("");
     setDocumentUrl("");
     setExternalUrl("");
     setOrder(nextOrder);
@@ -64,6 +66,7 @@ export function LessonManager({
     setTitle(lesson.title || "");
     setContent(lesson.content || "");
     setVideoUrl(lesson.videoUrl || "");
+    setCaptionsUrl((lesson as any).captionsUrl || "");
     setDocumentUrl(lesson.documentUrl || "");
     setExternalUrl(lesson.externalUrl || "");
     setOrder(lesson.order ?? 0);
@@ -87,6 +90,7 @@ export function LessonManager({
       title,
       content,
       videoUrl,
+      captionsUrl,
       documentUrl,
       externalUrl,
       durationMinutes,
@@ -286,6 +290,17 @@ export function LessonManager({
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
                 placeholder="https://…"
+              />
+            </div>
+          )}
+          {lessonType === "VIDEO" && (
+            <div className="space-y-2">
+              <Label htmlFor="captionsUrl">Captions / VTT URL</Label>
+              <Input
+                id="captionsUrl"
+                value={captionsUrl}
+                onChange={(e) => setCaptionsUrl(e.target.value)}
+                placeholder="https://…/captions.vtt"
               />
             </div>
           )}

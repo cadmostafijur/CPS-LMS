@@ -1,6 +1,7 @@
 import type { Core } from '@strapi/strapi';
+import { sendEmail } from './mail-upload';
 
-/** Create an in-app notification for a user (best-effort; never throws to callers). */
+/** Create an in-app notification (+ optional email) for a user. Never throws. */
 export async function notifyUser(
   strapi: Core.Strapi,
   userId: number | string,
@@ -22,6 +23,17 @@ export async function notifyUser(
         user: userId,
       },
     });
+
+    const user = await strapi.db.query('plugin::users-permissions.user').findOne({
+      where: { id: userId },
+    });
+    if (user?.email) {
+      await sendEmail({
+        to: user.email,
+        subject: `[CPS Academy] ${payload.title}`,
+        text: `${payload.body || payload.title}\n\n${payload.linkUrl || ''}`.trim(),
+      });
+    }
   } catch (err) {
     strapi.log.warn(`[notifyUser] failed for user ${userId}: ${String(err)}`);
   }

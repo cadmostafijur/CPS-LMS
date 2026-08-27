@@ -23,6 +23,12 @@
     "content": {
       "type": "text"
     },
+    "contentVersions": {
+      "type": "json"
+    },
+    "captionsUrl": {
+      "type": "string"
+    },
     "videoUrl": {
       "type": "string"
     },

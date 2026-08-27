@@ -29,6 +29,10 @@
       "type": "string",
       "required": true
     },
+    "attendeeIds": {
+      "type": "json",
+      "default": []
+    },
     "course": {
       "type": "relation",
       "relation": "manyToOne",

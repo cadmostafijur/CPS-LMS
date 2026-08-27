@@ -18,6 +18,7 @@ import {
 import { sanitizeUser } from '../../../utils/sanitize';
 import { ensureUniqueSlug } from '../../../utils/slug';
 import { notifyUser } from '../../../utils/notify-user';
+import { savePublicUpload } from '../../../utils/mail-upload';
 import { createOpsHandlers } from './ops';
 import { createExtrasHandlers } from './extras';
 
@@ -874,6 +875,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       data: {
         ...data,
         passPercent: Number(quiz.passPercent ?? DEFAULT_QUIZ_PASS_PERCENT),
+        timeLimitMinutes: Number(quiz.timeLimitMinutes || 0),
         module: quiz.module ? sanitizeModule(quiz.module) : null,
         course: quiz.course
           ? {
@@ -2022,6 +2024,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         language: language || 'English',
         requirements: requirements || null,
         outcomes: outcomes || null,
+        tags: body.tags || null,
+        seoTitle: body.seoTitle || null,
+        seoDescription: body.seoDescription || null,
         publishedAt: publishedAt || (status === 'PUBLISHED' ? new Date().toISOString() : null),
         category: category?.id || null,
         instructor: instructorUserId,
@@ -2060,6 +2065,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       'requirements',
       'outcomes',
       'publishedAt',
+      'tags',
+      'seoTitle',
+      'seoDescription',
     ]) {
       if (body[key] !== undefined) data[key] = body[key];
     }
@@ -2180,6 +2188,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         slug,
         content: body.content,
         videoUrl: body.videoUrl,
+        captionsUrl: body.captionsUrl || null,
         documentUrl: body.documentUrl || null,
         externalUrl: body.externalUrl || null,
         lessonType: body.lessonType || 'TEXT',
@@ -2217,6 +2226,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       'order',
       'isPreview',
       'durationMinutes',
+      'captionsUrl',
     ]) {
       if (body[key] !== undefined) data[key] = body[key];
     }
@@ -2235,6 +2245,19 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         if (!fullMod) throw new NotFoundError('Module not found');
         data.module = fullMod.id;
       }
+    }
+
+    // Snapshot previous content for lesson version history
+    if (body.content !== undefined && body.content !== lesson.content) {
+      const prev = Array.isArray(lesson.contentVersions) ? lesson.contentVersions : [];
+      data.contentVersions = [
+        ...prev.slice(-19),
+        {
+          at: new Date().toISOString(),
+          by: user.id,
+          content: lesson.content || '',
+        },
+      ];
     }
 
     const updated = await strapi.db.query('api::lesson.lesson').update({
@@ -2478,6 +2501,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         title: body.title,
         description: body.description,
         passPercent: Number(body.passPercent ?? DEFAULT_QUIZ_PASS_PERCENT),
+        timeLimitMinutes: Math.max(0, Number(body.timeLimitMinutes || 0)),
         course: course.id,
         module: moduleId,
         createdByUser: user.id,
@@ -2531,6 +2555,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     if (body.description !== undefined) data.description = body.description;
     if (body.passPercent !== undefined) {
       data.passPercent = Number(body.passPercent ?? DEFAULT_QUIZ_PASS_PERCENT);
+    }
+    if (body.timeLimitMinutes !== undefined) {
+      data.timeLimitMinutes = Math.max(0, Number(body.timeLimitMinutes || 0));
     }
     if (body.moduleId !== undefined) {
       if (!body.moduleId) {
@@ -3073,9 +3100,22 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     });
     if (!enrolled) throw new ForbiddenError('Enroll in the course first');
 
-    const { content, fileUrl } = ctx.request.body || {};
-    if (!content && !fileUrl) {
-      throw new ValidationError('Provide content or a file URL');
+    const { content, fileUrl, fileBase64, fileName } = ctx.request.body || {};
+    let resolvedFileUrl = fileUrl ? String(fileUrl) : null;
+    if (fileBase64 && typeof fileBase64 === 'string') {
+      const raw = fileBase64.includes(',') ? fileBase64.split(',').pop()! : fileBase64;
+      const buffer = Buffer.from(raw, 'base64');
+      if (buffer.length > 15 * 1024 * 1024) {
+        throw new ValidationError('File too large (max 15MB)');
+      }
+      resolvedFileUrl = await savePublicUpload(
+        strapi,
+        buffer,
+        String(fileName || 'assignment-file.bin')
+      );
+    }
+    if (!content && !resolvedFileUrl) {
+      throw new ValidationError('Provide content or a file upload');
     }
 
     const now = new Date();
@@ -3088,7 +3128,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
     const payload = {
       content: content ? String(content) : null,
-      fileUrl: fileUrl ? String(fileUrl) : null,
+      fileUrl: resolvedFileUrl,
       status: late ? 'LATE' : 'SUBMITTED',
       submittedAt: now.toISOString(),
       assignment: full.id,

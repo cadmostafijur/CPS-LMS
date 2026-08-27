@@ -639,5 +639,53 @@ export default {
       handler: 'lms.instructorCourseAnalytics',
       config: { auth: false, policies: ['global::is-instructor-or-above'] },
     },
+    {
+      method: 'GET',
+      path: '/lms/messages',
+      handler: 'lms.listMyMessages',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/messages',
+      handler: 'lms.sendMessage',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/live-sessions/:id/attend',
+      handler: 'lms.markLiveAttendance',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/wishlist/remind',
+      handler: 'lms.runWishlistReminders',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/transcript',
+      handler: 'lms.studentTranscript',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/courses/:courseId/grades.csv',
+      handler: 'lms.exportCourseGradesCsv',
+      config: { auth: false, policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/courses/:courseId/clone',
+      handler: 'lms.cloneCourse',
+      config: { auth: false, policies: ['global::is-instructor-or-above'] },
+    },
+    {
+      method: 'GET',
+      path: '/lms/live-calendar',
+      handler: 'lms.listMyLiveCalendar',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
   ],
 };

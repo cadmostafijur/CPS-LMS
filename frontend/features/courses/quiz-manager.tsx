@@ -65,6 +65,7 @@ export function QuizManager({
   const [description, setDescription] = useState("");
   const [moduleId, setModuleId] = useState<string>("");
   const [passPercent, setPassPercent] = useState("80");
+  const [timeLimitMinutes, setTimeLimitMinutes] = useState("0");
   const [questions, setQuestions] = useState<DraftQuestion[]>([emptyQuestion()]);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
 
@@ -74,6 +75,7 @@ export function QuizManager({
     setDescription("");
     setModuleId("");
     setPassPercent("80");
+    setTimeLimitMinutes("0");
     setQuestions([emptyQuestion()]);
   }
 
@@ -85,6 +87,7 @@ export function QuizManager({
     setQuestions(draft.questions);
     setModuleId(String(quiz.module?.documentId || quiz.module?.id || ""));
     setPassPercent(String(quiz.passPercent ?? 80));
+    setTimeLimitMinutes(String((quiz as any).timeLimitMinutes ?? 0));
   }
 
   async function saveQuiz(e: React.FormEvent) {
@@ -100,6 +103,7 @@ export function QuizManager({
       questions,
       moduleId: moduleId || null,
       passPercent: Number(passPercent) || 80,
+      timeLimitMinutes: Math.max(0, Number(timeLimitMinutes) || 0),
     };
     try {
       if (editing) {
@@ -270,6 +274,17 @@ export function QuizManager({
                 max={100}
                 value={passPercent}
                 onChange={(e) => setPassPercent(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quiz-time">Time limit (minutes, 0 = off)</Label>
+              <Input
+                id="quiz-time"
+                type="number"
+                min={0}
+                max={600}
+                value={timeLimitMinutes}
+                onChange={(e) => setTimeLimitMinutes(e.target.value)}
               />
             </div>
           </div>
