@@ -17,6 +17,7 @@ import {
 } from '../../../utils/roles';
 import { sanitizeUser } from '../../../utils/sanitize';
 import { ensureUniqueSlug } from '../../../utils/slug';
+import { notifyUser } from '../../../utils/notify-user';
 import { createOpsHandlers } from './ops';
 
 const { ApplicationError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } =
@@ -613,6 +614,13 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       });
     }
 
+    await notifyUser(strapi, user.id, {
+      title: 'Enrolled successfully',
+      body: `You are now enrolled in “${course.title}”. Start learning anytime.`,
+      type: 'enrollment',
+      linkUrl: `/student/my-courses`,
+    });
+
     return {
       data: {
         ...enrollment,
@@ -755,6 +763,14 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         lesson.course,
         enrollment
       );
+      if (certificate) {
+        await notifyUser(strapi, user.id, {
+          title: 'Certificate earned',
+          body: `You completed “${lesson.course.title}” and earned a certificate.`,
+          type: 'certificate',
+          linkUrl: `/certificates/${certificate.documentId || certificate.id}`,
+        });
+      }
     }
 
     return {
@@ -968,6 +984,15 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
     const passPercent = Number(quiz.passPercent ?? DEFAULT_QUIZ_PASS_PERCENT);
     const passed = Number(graded.percentage) >= passPercent;
+
+    await notifyUser(strapi, user.id, {
+      title: passed ? 'Quiz passed' : 'Quiz submitted',
+      body: passed
+        ? `You scored ${graded.percentage}% on “${quiz.title}” (pass: ${passPercent}%).`
+        : `You scored ${graded.percentage}% on “${quiz.title}”. Need ${passPercent}% to pass.`,
+      type: 'quiz',
+      linkUrl: `/quizzes/${quiz.documentId || quiz.id}/results`,
+    });
 
     return {
       data: {

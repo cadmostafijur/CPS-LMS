@@ -372,18 +372,63 @@ export function createOpsHandlers(strapi: Core.Strapi) {
         orderBy: { id: 'desc' },
         limit: 50,
       });
-      return { data: rows };
+      const unreadCount = await strapi.db.query('api::notification.notification').count({
+        where: { user: user.id, isRead: false },
+      });
+      return {
+        data: rows.map((n: any) => ({
+          id: n.id,
+          documentId: n.documentId,
+          title: n.title,
+          body: n.body,
+          type: n.type,
+          isRead: Boolean(n.isRead),
+          linkUrl: n.linkUrl || null,
+          createdAt: n.createdAt,
+        })),
+        meta: { unreadCount },
+      };
     },
 
     async markNotificationRead(ctx: Ctx) {
       const user = await getAuthUser(ctx, strapi);
       const n = await resolve(strapi, 'api::notification.notification', ctx.params.id);
       if (!n) throw new NotFoundError('Notification not found');
+
+      const owned = await strapi.db.query('api::notification.notification').findOne({
+        where: { id: n.id },
+        populate: { user: true },
+      });
+      if (!owned || String(owned.user?.id) !== String(user.id)) {
+        throw new ForbiddenError('Not your notification');
+      }
+
       const updated = await strapi.db.query('api::notification.notification').update({
         where: { id: n.id },
         data: { isRead: true },
       });
-      return { data: updated };
+      return {
+        data: {
+          id: updated.id,
+          documentId: updated.documentId,
+          isRead: true,
+        },
+      };
+    },
+
+    async markAllNotificationsRead(ctx: Ctx) {
+      const user = await getAuthUser(ctx, strapi);
+      const unread = await strapi.db.query('api::notification.notification').findMany({
+        where: { user: user.id, isRead: false },
+        limit: 200,
+      });
+      for (const n of unread) {
+        await strapi.db.query('api::notification.notification').update({
+          where: { id: n.id },
+          data: { isRead: true },
+        });
+      }
+      return { data: { marked: unread.length } };
     },
 
     async listAnnouncements(ctx: Ctx) {

@@ -461,6 +461,12 @@ export default {
     },
     {
       method: 'POST',
+      path: '/lms/notifications/read-all',
+      handler: 'lms.markAllNotificationsRead',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'POST',
       path: '/lms/notifications/:id/read',
       handler: 'lms.markNotificationRead',
       config: { auth: false, policies: ['global::is-authenticated'] },

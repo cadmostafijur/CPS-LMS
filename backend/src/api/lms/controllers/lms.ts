@@ -230,6 +230,9 @@ export default ({ strapi }: { strapi: any }) => ({
   async markNotificationRead(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').markNotificationRead(ctx);
   },
+  async markAllNotificationsRead(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').markAllNotificationsRead(ctx);
+  },
   async listAnnouncements(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').listAnnouncements(ctx);
   },
