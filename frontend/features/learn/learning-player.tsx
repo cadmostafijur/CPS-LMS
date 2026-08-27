@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Download,
   ExternalLink,
   List,
   Lock,
@@ -79,6 +80,43 @@ function renderLessonHtml(content: string) {
 function moduleKey(mod: { id?: string | number; documentId?: string } | null | undefined) {
   if (!mod) return "";
   return String(mod.documentId || mod.id);
+}
+
+function slugifyFilename(title: string) {
+  return (
+    title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 60) || "lesson-script"
+  );
+}
+
+/** Build a plain-text script/notes file students can download. */
+function downloadLessonScript(lesson: Lesson, courseTitle?: string) {
+  const lines = [
+    courseTitle ? `Course: ${courseTitle}` : null,
+    lesson.module?.title ? `Module: ${lesson.module.title}` : null,
+    `Lesson: ${lesson.title}`,
+    lesson.videoUrl ? `Video: ${lesson.videoUrl}` : null,
+    "",
+    "—— Script / notes ——",
+    "",
+    (lesson.content || "").trim() || "(No written script for this lesson yet.)",
+    "",
+  ].filter((line) => line != null) as string[];
+
+  const blob = new Blob([lines.join("\n")], {
+    type: "text/plain;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${slugifyFilename(lesson.title)}-script.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export function LearningPlayer({
@@ -492,31 +530,98 @@ export function LearningPlayer({
                         allowFullScreen
                       />
                     </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadLessonScript(lesson, course.title)}
+                        disabled={!lesson.content?.trim()}
+                      >
+                        <Download className="h-4 w-4" />
+                        Download script
+                      </Button>
+                      {lesson.documentUrl ? (
+                        <Button asChild variant="outline" size="sm">
+                          <a
+                            href={lesson.documentUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            download
+                          >
+                            <Download className="h-4 w-4" />
+                            Download resource
+                          </a>
+                        </Button>
+                      ) : null}
+                    </div>
+                    {!lesson.content?.trim() ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        No written script attached yet for this video.
+                      </p>
+                    ) : null}
                   </div>
                 ) : lesson.lessonType === "AUDIO" && lesson.videoUrl ? (
                   <audio className="mt-6 w-full max-w-3xl" controls src={lesson.videoUrl} />
                 ) : lesson.videoUrl ? (
                   <div className="mt-6 max-w-3xl rounded-xl border border-border bg-surface p-4">
-                    <Button asChild variant="outline">
-                      <a href={lesson.videoUrl} target="_blank" rel="noreferrer">
-                        Open media
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild variant="outline">
+                        <a href={lesson.videoUrl} target="_blank" rel="noreferrer">
+                          Open media
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => downloadLessonScript(lesson, course.title)}
+                        disabled={!lesson.content?.trim()}
+                      >
+                        <Download className="h-4 w-4" />
+                        Download script
+                      </Button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="mt-6 max-w-3xl rounded-xl border border-dashed border-border bg-surface/80 px-4 py-3 text-sm text-muted-foreground">
-                    No video attached yet for this topic. Text lesson is below.
+                  <div className="mt-6 max-w-3xl space-y-3">
+                    <div className="rounded-xl border border-dashed border-border bg-surface/80 px-4 py-3 text-sm text-muted-foreground">
+                      No video attached yet for this topic. Text lesson is below.
+                    </div>
+                    {lesson.content?.trim() ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadLessonScript(lesson, course.title)}
+                      >
+                        <Download className="h-4 w-4" />
+                        Download script
+                      </Button>
+                    ) : null}
                   </div>
                 )}
 
-                {lesson.documentUrl ? (
-                  <div className="mt-6 w-full max-w-3xl overflow-hidden rounded-xl border border-border">
-                    <iframe
-                      title={lesson.title}
-                      src={lesson.documentUrl}
-                      className="h-[min(70vh,32rem)] w-full bg-white"
-                    />
+                {lesson.documentUrl && !embedUrl ? (
+                  <div className="mt-6 w-full max-w-3xl space-y-3">
+                    <div className="overflow-hidden rounded-xl border border-border">
+                      <iframe
+                        title={lesson.title}
+                        src={lesson.documentUrl}
+                        className="h-[min(70vh,32rem)] w-full bg-white"
+                      />
+                    </div>
+                    <Button asChild variant="outline" size="sm">
+                      <a
+                        href={lesson.documentUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        download
+                      >
+                        <Download className="h-4 w-4" />
+                        Download resource
+                      </a>
+                    </Button>
                   </div>
                 ) : null}
 
