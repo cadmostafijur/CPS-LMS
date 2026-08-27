@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ROLE_COOKIE, TOKEN_COOKIE } from "@/lib/config";
-import { rolesAllowedForPath } from "@/lib/roles";
+import { normalizeRoleName, rolesAllowedForPath } from "@/lib/roles";
 
 const PROTECTED_PREFIXES = [
   "/admin",
@@ -31,15 +31,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const role = request.cookies.get(ROLE_COOKIE)?.value;
+  const role = normalizeRoleName(request.cookies.get(ROLE_COOKIE)?.value);
   const allowed = rolesAllowedForPath(pathname);
 
-  if (allowed && role && !allowed.includes(role as never)) {
-    return NextResponse.redirect(new URL("/forbidden", request.url));
+  if (allowed && role && !allowed.includes(role)) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   if (allowed && !role) {
-    return NextResponse.redirect(new URL("/forbidden", request.url));
+    if (pathname === "/dashboard" || pathname.startsWith("/profile")) {
+      return NextResponse.next();
+    }
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return NextResponse.next();

@@ -19,10 +19,34 @@ export type UserWithRole = {
   role?: RoleLike | RoleLike[];
 } | null | undefined;
 
+const ROLE_ALIASES: Record<string, RoleName> = {
+  admin: ROLE_NAMES.ADMIN,
+  "lms-admin": ROLE_NAMES.ADMIN,
+  "content manager": ROLE_NAMES.CONTENT_MANAGER,
+  "content-manager": ROLE_NAMES.CONTENT_MANAGER,
+  instructor: ROLE_NAMES.INSTRUCTOR,
+  student: ROLE_NAMES.STUDENT,
+  authenticated: ROLE_NAMES.STUDENT,
+};
+
+export function normalizeRoleName(raw: string | null | undefined): RoleName | null {
+  if (!raw) return null;
+  let value = raw.trim();
+  try {
+    value = decodeURIComponent(value).trim();
+  } catch {
+    /* keep raw */
+  }
+  if ((Object.values(ROLE_NAMES) as string[]).includes(value)) {
+    return value as RoleName;
+  }
+  return ROLE_ALIASES[value.toLowerCase()] ?? null;
+}
+
 export function getRoleName(user: UserWithRole): RoleName | string | null {
   if (!user?.role) return null;
   const role = Array.isArray(user.role) ? user.role[0] : user.role;
-  return role?.name ?? null;
+  return normalizeRoleName(role?.name || role?.type || null);
 }
 
 export function hasRole(user: UserWithRole, roles: string[]): boolean {
@@ -47,7 +71,7 @@ export function isStudent(user: UserWithRole) {
 }
 
 export function dashboardPathForRole(role: string | null | undefined): string {
-  switch (role) {
+  switch (normalizeRoleName(role)) {
     case ROLE_NAMES.ADMIN:
       return "/admin/dashboard";
     case ROLE_NAMES.CONTENT_MANAGER:
@@ -57,8 +81,18 @@ export function dashboardPathForRole(role: string | null | undefined): string {
     case ROLE_NAMES.STUDENT:
       return "/student/dashboard";
     default:
-      return "/student/dashboard";
+      return "/profile";
   }
+}
+
+export function pathAllowedForRole(
+  pathname: string,
+  role: string | null | undefined
+): boolean {
+  const allowed = rolesAllowedForPath(pathname);
+  if (!allowed) return true;
+  const normalized = normalizeRoleName(role);
+  return Boolean(normalized && allowed.includes(normalized));
 }
 
 export function rolesAllowedForPath(pathname: string): RoleName[] | null {

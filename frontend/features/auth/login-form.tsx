@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login } from "@/services/auth.service";
-import { dashboardPathForRole, getRoleName } from "@/lib/roles";
+import { dashboardPathForRole, getRoleName, pathAllowedForRole } from "@/lib/roles";
 import { ApiError } from "@/lib/api";
 
 const schema = z.object({
@@ -48,7 +48,11 @@ export function LoginForm() {
       const result = await login(parsed.data.identifier, parsed.data.password);
       toast.success("Welcome back to CPS Academy");
       const role = getRoleName(result.user);
-      router.push(next || dashboardPathForRole(role));
+      const dest =
+        next && next !== "/forbidden" && pathAllowedForRole(next, role)
+          ? next
+          : dashboardPathForRole(role);
+      router.push(dest);
       router.refresh();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Login failed");
