@@ -35,3 +35,4 @@ backend/public/uploads/*
 !backend/public/uploads/.gitkeep
 coverage/
 .turbo/
+VIDEO_WALKTHROUGH_SCRIPT.md
