@@ -289,6 +289,28 @@ async function buildModuleGates(
   return gates;
 }
 
+/** Block student writes / access when a prior module quiz has not been passed. */
+async function assertStudentModuleUnlocked(
+  strapi: Core.Strapi,
+  studentId: number | string,
+  courseId: number,
+  moduleRef: { id?: number | string } | number | string | null | undefined
+) {
+  if (moduleRef == null) return;
+  const moduleId = typeof moduleRef === 'object' ? moduleRef.id : moduleRef;
+  if (moduleId == null) return;
+
+  const gates = await buildModuleGates(strapi, studentId, courseId);
+  if (!gates.length) return;
+
+  const gate = gates.find((g) => String(g.moduleId) === String(moduleId));
+  if (gate && !gate.unlocked) {
+    throw new ForbiddenError(
+      'This module is locked. Score at least 80% on the previous module quiz to unlock it.'
+    );
+  }
+}
+
 function quizPublicFields(q: any) {
   return {
     id: q.id,
@@ -662,7 +684,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     assertStudentOnly(user);
     const { lessonId } = ctx.params;
 
-    const lesson = await findLesson(strapi, lessonId, { course: true });
+    const lesson = await findLesson(strapi, lessonId, { course: true, module: true });
     if (!lesson) throw new NotFoundError('Lesson not found');
     if (!lesson.course) throw new ValidationError('Lesson has no course');
 
@@ -676,6 +698,13 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     if (!enrollment) {
       throw new ForbiddenError('You must be enrolled to complete lessons');
     }
+
+    await assertStudentModuleUnlocked(
+      strapi,
+      user.id,
+      lesson.course.id,
+      lesson.module
+    );
 
     const existing = await strapi.db.query('api::lesson-progress.lesson-progress').findOne({
       where: {
@@ -811,6 +840,12 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       if (!enrollment) {
         throw new ForbiddenError('You must be enrolled to take this quiz');
       }
+      await assertStudentModuleUnlocked(
+        strapi,
+        user.id,
+        quiz.course.id,
+        quiz.module
+      );
     }
 
     if (Array.isArray(quiz.questions)) {
@@ -862,6 +897,12 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       if (!enrollment) {
         throw new ForbiddenError('You must be enrolled to submit this quiz');
       }
+      await assertStudentModuleUnlocked(
+        strapi,
+        user.id,
+        quiz.course.id,
+        quiz.module
+      );
     }
 
     const questions = (quiz.questions || []).map((q: any) => ({
@@ -2607,6 +2648,10 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       { staffBypass: canManage }
     );
 
+    const unlockedModuleIds = new Set(
+      moduleGates.filter((g) => g.unlocked).map((g) => String(g.moduleId))
+    );
+
     return {
       data: {
         id: course.id,
@@ -2622,9 +2667,14 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         ...courseBuilderFields(course),
         instructor: sanitizeUser(course.instructor),
         modules: modules.map(sanitizeModule),
-        lessons: lessons.map((lesson: any) =>
-          lessonPublicFields(lesson, fullAccess || Boolean(lesson.isPreview))
-        ),
+        lessons: lessons.map((lesson: any) => {
+          const mid = lesson.module?.id ?? lesson.module;
+          const moduleUnlocked =
+            canManage || mid == null || unlockedModuleIds.has(String(mid));
+          const showContent =
+            Boolean(lesson.isPreview) || (fullAccess && moduleUnlocked);
+          return lessonPublicFields(lesson, showContent);
+        }),
         quizzes: quizzes.map((q: any) => {
           const base = quizPublicFields(q);
           if (!canManage) return base;
