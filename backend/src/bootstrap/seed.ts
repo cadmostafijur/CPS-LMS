@@ -888,13 +888,16 @@ export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
       where: { title: def.quizTitle, course: course.id },
     });
     if (!quiz) {
-      quiz = coreQuiz;
+      quiz = await ensureModuleQuiz(def.quizTitle, introModule.id, def.questions);
     } else {
+      // Legacy course quiz gates the first module → unlocks Core skills
       quiz = await strapi.db.query('api::quiz.quiz').update({
         where: { id: quiz.id },
         data: {
-          module: coreModule.id,
+          module: introModule.id,
           passPercent: 80,
+          description:
+            quiz.description || 'Pass with 80% to unlock the next module.',
         },
       });
     }

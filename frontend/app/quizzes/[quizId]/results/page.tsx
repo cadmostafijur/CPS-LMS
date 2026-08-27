@@ -9,13 +9,129 @@ import { getTokenFromCookies } from "@/lib/auth";
 import { getQuizAttempts, takeQuiz } from "@/services/quizzes.service";
 import { getCourseById, getCourseProgress } from "@/services/courses.service";
 import { formatDate } from "@/lib/utils";
-import type { QuizAttempt } from "@/types";
+import type { Course, Lesson, ModuleGate, Quiz, QuizAttempt } from "@/types";
 
 type Props = { params: Promise<{ quizId: string }> };
 
 function moduleKey(mod: { id?: string | number; documentId?: string } | null | undefined) {
   if (!mod) return "";
   return String(mod.documentId || mod.id);
+}
+
+function lessonBelongsToModule(lesson: Lesson, modKey: string, modulesLen: number, modIndex: number) {
+  const lk = moduleKey(lesson.module);
+  if (lk && modKey) return lk === modKey;
+  // Fallback when lesson.module is missing: first half → module 0, rest → later
+  if (!lk && modulesLen > 0) {
+    const order = lesson.order ?? 0;
+    if (modIndex <= 0) return order < 2;
+    return order >= 2;
+  }
+  return false;
+}
+
+function resolveContinueTarget(
+  course: Course,
+  quiz: Quiz | undefined,
+  gates: ModuleGate[],
+  passed: boolean
+): { href: string; label: string; hasNextModule: boolean } | null {
+  const courseKey = course.documentId || course.id;
+  const modules = [...(course.modules || [])].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0)
+  );
+  const lessons = [...(course.lessons || [])].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0)
+  );
+  if (!lessons.length) {
+    return {
+      href: "/student/my-courses",
+      label: "Back to my courses",
+      hasNextModule: false,
+    };
+  }
+
+  const quizId = String(quiz?.documentId || quiz?.id || "");
+  let modIndex = modules.findIndex((m) => moduleKey(m) === moduleKey(quiz?.module));
+
+  if (modIndex < 0 && quizId) {
+    const gate = gates.find(
+      (g) =>
+        String(g.quizDocumentId || g.quizId || "") === quizId
+    );
+    if (gate) {
+      modIndex = modules.findIndex(
+        (m) =>
+          String(m.documentId || m.id) ===
+          String(gate.moduleDocumentId || gate.moduleId)
+      );
+    }
+  }
+
+  // Still unknown → treat as first module quiz when passed (unlocks second)
+  if (modIndex < 0 && modules.length > 1 && passed) {
+    modIndex = 0;
+  }
+
+  const learnUrl = (lesson: Lesson) =>
+    `/learn/${courseKey}/${lesson.documentId || lesson.id}`;
+
+  if (modIndex >= 0 && modIndex < modules.length - 1) {
+    const nextMod = modules[modIndex + 1];
+    const nextKey = moduleKey(nextMod);
+    const gate = gates.find(
+      (g) => String(g.moduleDocumentId || g.moduleId) === nextKey
+    );
+    // After a pass, force-allow next module even if gate cache is stale
+    const unlocked = passed || !gate || gate.unlocked;
+    if (unlocked) {
+      const firstLesson =
+        lessons.find((l) =>
+          lessonBelongsToModule(l, nextKey, modules.length, modIndex + 1)
+        ) || lessons.find((l) => (l.order ?? 0) >= 2) || lessons[Math.min(2, lessons.length - 1)];
+      if (firstLesson) {
+        return {
+          href: learnUrl(firstLesson),
+          label: `Go to next module: ${nextMod.title}`,
+          hasNextModule: true,
+        };
+      }
+    }
+  }
+
+  // Passed last module quiz, or only one module — still open course player
+  if (modIndex === modules.length - 1 && modules.length > 0) {
+    const last = modules[modIndex];
+    const firstInLast =
+      lessons.find((l) =>
+        lessonBelongsToModule(l, moduleKey(last), modules.length, modIndex)
+      ) || lessons[0];
+    return {
+      href: learnUrl(firstInLast),
+      label: "Continue in course player",
+      hasNextModule: false,
+    };
+  }
+
+  // Generic fallback: open first unlocked module's first lesson (prefer module index > 0 after pass)
+  if (passed && modules.length > 1) {
+    const second = modules[1];
+    const lesson =
+      lessons.find((l) =>
+        lessonBelongsToModule(l, moduleKey(second), modules.length, 1)
+      ) || lessons[Math.min(2, lessons.length - 1)];
+    return {
+      href: learnUrl(lesson),
+      label: `Go to next module: ${second.title}`,
+      hasNextModule: true,
+    };
+  }
+
+  return {
+    href: learnUrl(lessons[0]),
+    label: "Continue learning",
+    hasNextModule: false,
+  };
 }
 
 export default async function QuizResultsPage({ params }: Props) {
@@ -27,6 +143,7 @@ export default async function QuizResultsPage({ params }: Props) {
   let loadError: string | null = null;
   let continueHref: string | null = null;
   let continueLabel = "Continue learning";
+  let hasNextModule = false;
   let courseTitle: string | null = null;
   let passPercent = 80;
 
@@ -40,6 +157,13 @@ export default async function QuizResultsPage({ params }: Props) {
     passPercent = Number(quiz?.passPercent ?? 80);
     courseTitle = quiz?.course?.title || null;
 
+    const latestEarly = attempts[0];
+    const bestEarly = attempts.reduce(
+      (max, a) => Math.max(max, a.percentage ?? 0),
+      latestEarly?.percentage ?? 0
+    );
+    const passedEarly = bestEarly >= passPercent;
+
     const courseId = quiz?.course?.documentId || quiz?.course?.id;
     if (courseId) {
       const [course, progress] = await Promise.all([
@@ -48,51 +172,20 @@ export default async function QuizResultsPage({ params }: Props) {
       ]);
 
       if (course) {
-        const modules = [...(course.modules || [])].sort(
-          (a, b) => (a.order ?? 0) - (b.order ?? 0)
-        );
-        const lessons = [...(course.lessons || [])].sort(
-          (a, b) => (a.order ?? 0) - (b.order ?? 0)
-        );
         const gates = progress?.data?.moduleGates || course.moduleGates || [];
-        const quizModuleKey = moduleKey(quiz?.module);
-
-        const currentModIndex = modules.findIndex(
-          (m) => moduleKey(m) === quizModuleKey
-        );
-
-        if (currentModIndex >= 0 && currentModIndex < modules.length - 1) {
-          const nextMod = modules[currentModIndex + 1];
-          const gate = gates.find(
-            (g) =>
-              String(g.moduleDocumentId || g.moduleId) === moduleKey(nextMod)
-          );
-          const unlocked = gate ? gate.unlocked : true;
-          if (unlocked) {
-            const firstLesson = lessons.find(
-              (l) => moduleKey(l.module) === moduleKey(nextMod)
-            );
-            if (firstLesson) {
-              continueHref = `/learn/${course.documentId || course.id}/${firstLesson.documentId || firstLesson.id}`;
-              continueLabel = `Go to next module: ${nextMod.title}`;
-            }
-          }
-        } else if (currentModIndex === modules.length - 1) {
-          continueHref = `/student/my-courses`;
-          continueLabel = "Back to my courses";
-        }
-
-        if (!continueHref) {
-          const first = lessons[0];
-          if (first) {
-            continueHref = `/learn/${course.documentId || course.id}/${first.documentId || first.id}`;
-            continueLabel = "Back to course player";
-          } else if (course.slug) {
-            continueHref = `/courses/${course.slug}`;
-            continueLabel = "Back to course";
-          }
+        const target = resolveContinueTarget(course, quiz, gates, passedEarly);
+        if (target) {
+          continueHref = target.href;
+          continueLabel = target.label;
+          hasNextModule = target.hasNextModule;
         }
       }
+    }
+
+    // Last resort if quiz take failed but we have attempts only
+    if (!continueHref) {
+      continueHref = "/student/my-courses";
+      continueLabel = "Back to my courses";
     }
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Could not load results";
@@ -144,7 +237,9 @@ export default async function QuizResultsPage({ params }: Props) {
             </div>
             <Badge variant={passed ? "success" : "warning"}>
               {passed
-                ? `Passed (${passPercent}%+) — next module unlocked`
+                ? hasNextModule
+                  ? `Passed (${passPercent}%+) — next module unlocked`
+                  : `Passed (${passPercent}%+)`
                 : `Need ${passPercent}% to unlock next module`}
             </Badge>
           </CardContent>
@@ -155,10 +250,12 @@ export default async function QuizResultsPage({ params }: Props) {
         <div className="mb-8 flex flex-col gap-3 rounded-2xl border border-success/30 bg-success/5 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-display text-lg font-semibold text-navy">
-              Next module is unlocked
+              {hasNextModule ? "Next module is unlocked" : "Great work"}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Jump straight into the next lessons and videos.
+              {hasNextModule
+                ? "Open the next module lectures and videos now."
+                : "Continue in the course player to keep learning."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
