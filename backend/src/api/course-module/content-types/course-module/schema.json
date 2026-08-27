@@ -33,6 +33,12 @@
       "relation": "oneToMany",
       "target": "api::lesson.lesson",
       "mappedBy": "module"
+    },
+    "quizzes": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quiz.quiz",
+      "mappedBy": "module"
     }
   }
 }

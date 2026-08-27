@@ -35,6 +35,8 @@ export default async function LearnPage({ params }: Props) {
     .map((lp) => lp.lesson?.documentId || lp.lesson?.id)
     .filter((id): id is string | number => id != null);
 
+  const moduleGates = progress?.data?.moduleGates || course.moduleGates || [];
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar user={user} />
@@ -43,6 +45,7 @@ export default async function LearnPage({ params }: Props) {
         lesson={lesson}
         completedLessonIds={completedLessonIds}
         progressPercent={progress?.data?.percentage ?? 0}
+        moduleGates={moduleGates}
       />
     </div>
   );

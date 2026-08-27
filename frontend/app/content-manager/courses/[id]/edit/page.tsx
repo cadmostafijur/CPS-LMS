@@ -42,7 +42,11 @@ export default async function ContentManagerEditCoursePage({ params }: Props) {
             lessons={course.lessons || []}
             modules={course.modules || []}
           />
-          <QuizManager courseId={courseKey} quizzes={course.quizzes || []} />
+          <QuizManager
+            courseId={courseKey}
+            quizzes={course.quizzes || []}
+            modules={course.modules || []}
+          />
         </div>
       </div>
     </DashboardShell>

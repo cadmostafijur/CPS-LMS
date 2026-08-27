@@ -62,11 +62,22 @@ export default async function QuizResultsPage({ params }: Props) {
               </p>
               <p>{formatDate(latest.submittedAt)}</p>
             </div>
-            <Badge variant={latest.percentage >= 70 ? "success" : "warning"}>
-              {latest.percentage >= 70 ? "Passed" : "Needs practice"}
+            <Badge variant={latest.percentage >= 80 ? "success" : "warning"}>
+              {latest.percentage >= 80
+                ? "Passed (80%+) — next module unlocked"
+                : "Need 80% to unlock next module"}
             </Badge>
           </CardContent>
         </Card>
+      ) : null}
+
+      {latest && latest.percentage >= 80 ? (
+        <div className="mb-8 rounded-xl border border-success/30 bg-success/5 px-4 py-3 text-sm">
+          Great work — return to the course player to continue the next module.
+          <Button asChild variant="link" className="ml-1 h-auto p-0">
+            <Link href="/student/my-courses">My courses</Link>
+          </Button>
+        </div>
       ) : null}
 
       {attempts.length === 0 ? (

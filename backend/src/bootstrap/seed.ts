@@ -510,13 +510,15 @@ const COURSE_DEFS: CourseDef[] = [
     lessons: [
       {
         title: 'Contest Mindset',
-        lessonType: 'TEXT',
+        lessonType: 'VIDEO',
+        videoUrl: 'https://www.youtube.com/embed/8hly31xKli0',
         content:
-          '## Contests\n\nRead carefully, start with easier problems, and manage time. Wrong answers early waste penalties.',
+          '## Contests\n\nRead carefully, start with easier problems, and manage time. Wrong answers early waste penalties.\n\nWatch the video, then practice the mindset on a short contest set.',
       },
       {
         title: 'Input/Output Templates',
-        lessonType: 'TEXT',
+        lessonType: 'VIDEO',
+        videoUrl: 'https://www.youtube.com/embed/zQnAVpRiF7I',
         content:
           '## Templates\n\nHave a fast I/O snippet and a clear main structure so you spend time on the algorithm, not boilerplate.',
       },
@@ -529,13 +531,15 @@ const COURSE_DEFS: CourseDef[] = [
       },
       {
         title: 'Two Pointers & Prefix Sums',
-        lessonType: 'TEXT',
+        lessonType: 'VIDEO',
+        videoUrl: 'https://www.youtube.com/embed/tWVWeAqZ0WU',
         content:
           '## Patterns\n\nTwo pointers and prefix sums unlock many array contest problems efficiently.',
       },
       {
         title: 'Practice Plan',
-        lessonType: 'TEXT',
+        lessonType: 'VIDEO',
+        videoUrl: 'https://www.youtube.com/embed/Sklc_fQBmcs',
         content:
           '## Practice\n\nSolve mixed difficulties weekly. Review editorials and rewrite solutions cleanly.',
       },
@@ -799,51 +803,100 @@ export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
             module: moduleRef,
           },
         });
-      } else if (!lesson.module) {
+      } else {
         lesson = await strapi.db.query('api::lesson.lesson').update({
           where: { id: lesson.id },
           data: {
             module: moduleRef,
             isPreview: li === 0 || lesson.isPreview,
+            content: lessonDef.content,
+            videoUrl: lessonDef.videoUrl || lesson.videoUrl || null,
+            lessonType: lessonDef.videoUrl
+              ? 'VIDEO'
+              : lessonDef.lessonType || lesson.lessonType,
           },
         });
       }
       lessons.push(lesson);
     }
 
+    async function ensureModuleQuiz(
+      title: string,
+      moduleId: number,
+      questionSlice: QuizQ[]
+    ) {
+      let qz = await strapi.db.query('api::quiz.quiz').findOne({
+        where: { title, course: course.id },
+      });
+      if (!qz) {
+        qz = await strapi.db.query('api::quiz.quiz').create({
+          data: {
+            title,
+            description: 'Pass with 80% to unlock the next module.',
+            passPercent: 80,
+            course: course.id,
+            module: moduleId,
+            createdByUser: instructor.id,
+          },
+        });
+        for (let qi = 0; qi < questionSlice.length; qi++) {
+          const q = questionSlice[qi];
+          const question = await strapi.db.query('api::quiz-question.quiz-question').create({
+            data: {
+              question: q.question,
+              order: qi,
+              quiz: qz.id,
+            },
+          });
+          for (const opt of q.options) {
+            await strapi.db.query('api::quiz-option.quiz-option').create({
+              data: {
+                text: opt.text,
+                isCorrect: opt.isCorrect,
+                question: question.id,
+              },
+            });
+          }
+        }
+        strapi.log.info(`[LMS] Created module quiz: ${title}`);
+      } else {
+        qz = await strapi.db.query('api::quiz.quiz').update({
+          where: { id: qz.id },
+          data: {
+            module: moduleId,
+            passPercent: 80,
+            description: qz.description || 'Pass with 80% to unlock the next module.',
+          },
+        });
+      }
+      return qz;
+    }
+
+    const half = Math.max(1, Math.ceil(def.questions.length / 2));
+    await ensureModuleQuiz(
+      `${def.title} — Getting started quiz`,
+      introModule.id,
+      def.questions.slice(0, half)
+    );
+    const coreQuiz = await ensureModuleQuiz(
+      `${def.title} — Core skills quiz`,
+      coreModule.id,
+      def.questions.slice(half)
+    );
+
     let quiz = await strapi.db.query('api::quiz.quiz').findOne({
       where: { title: def.quizTitle, course: course.id },
     });
     if (!quiz) {
-      quiz = await strapi.db.query('api::quiz.quiz').create({
+      quiz = coreQuiz;
+    } else {
+      quiz = await strapi.db.query('api::quiz.quiz').update({
+        where: { id: quiz.id },
         data: {
-          title: def.quizTitle,
-          description: `Assessment for ${def.title}`,
-          course: course.id,
-          createdByUser: instructor.id,
+          module: coreModule.id,
+          passPercent: 80,
         },
       });
-
-      for (let qi = 0; qi < def.questions.length; qi++) {
-        const q = def.questions[qi];
-        const question = await strapi.db.query('api::quiz-question.quiz-question').create({
-          data: {
-            question: q.question,
-            order: qi,
-            quiz: quiz.id,
-          },
-        });
-        for (const opt of q.options) {
-          await strapi.db.query('api::quiz-option.quiz-option').create({
-            data: {
-              text: opt.text,
-              isCorrect: opt.isCorrect,
-              question: question.id,
-            },
-          });
-        }
-      }
-      strapi.log.info(`[LMS] Created quiz: ${def.quizTitle}`);
     }
 
     createdCourses.push({ ...course, lessons, quiz });

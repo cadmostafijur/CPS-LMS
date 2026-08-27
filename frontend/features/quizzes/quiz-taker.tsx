@@ -39,7 +39,7 @@ export function QuizTaker({ quiz }: { quiz: Quiz }) {
           method: "POST",
           body: JSON.stringify({ answers: payload }),
         });
-        toast.success("Quiz submitted");
+        toast.success("Quiz submitted — need 80% to unlock the next module");
         router.push(`/quizzes/${quizId}/results`);
         router.refresh();
       } catch (err) {

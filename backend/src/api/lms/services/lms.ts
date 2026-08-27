@@ -189,6 +189,117 @@ function sanitizeModule(mod: any) {
   };
 }
 
+const DEFAULT_QUIZ_PASS_PERCENT = 80;
+
+async function getBestQuizPercentage(
+  strapi: Core.Strapi,
+  studentId: number | string,
+  quizId: number
+) {
+  const attempts = await strapi.db.query('api::quiz-attempt.quiz-attempt').findMany({
+    where: { student: studentId, quiz: quizId },
+    orderBy: { percentage: 'desc' },
+    limit: 1,
+  });
+  if (!attempts?.length) return null;
+  return Number(attempts[0].percentage ?? 0);
+}
+
+/** Module 0 unlocked; module N unlocked only if previous module quiz passed (>= passPercent). */
+async function buildModuleGates(
+  strapi: Core.Strapi,
+  studentId: number | string | null,
+  courseId: number,
+  opts?: { staffBypass?: boolean }
+) {
+  const modules = await strapi.db.query('api::course-module.course-module').findMany({
+    where: { course: courseId },
+    orderBy: { order: 'asc' },
+  });
+  const quizzes = await strapi.db.query('api::quiz.quiz').findMany({
+    where: { course: courseId },
+    populate: { module: true },
+  });
+
+  const quizByModuleId = new Map<string, any>();
+  for (const q of quizzes) {
+    const mid = q.module?.id ?? q.module;
+    if (mid != null) quizByModuleId.set(String(mid), q);
+  }
+  // Fallback: assign unscoped quizzes to modules by order index
+  const unscoped = quizzes.filter((q: any) => !(q.module?.id ?? q.module));
+  for (let i = 0; i < modules.length && i < unscoped.length; i++) {
+    const mid = String(modules[i].id);
+    if (!quizByModuleId.has(mid)) quizByModuleId.set(mid, unscoped[i]);
+  }
+
+  const gates: any[] = [];
+  for (let i = 0; i < modules.length; i++) {
+    const mod = modules[i];
+    const quiz = quizByModuleId.get(String(mod.id)) || null;
+    const passPercent = Number(quiz?.passPercent ?? DEFAULT_QUIZ_PASS_PERCENT);
+    let bestScore: number | null = null;
+    let quizPassed = false;
+    if (studentId && quiz) {
+      bestScore = await getBestQuizPercentage(strapi, studentId, quiz.id);
+      quizPassed = bestScore != null && bestScore >= passPercent;
+    }
+
+    let unlocked = Boolean(opts?.staffBypass) || i === 0;
+    if (!unlocked && i > 0) {
+      const prev = gates[i - 1];
+      if (prev.quizId) {
+        unlocked = Boolean(prev.quizPassed);
+      } else {
+        // No quiz on previous module → unlock after its lessons are completed
+        const prevLessons = await strapi.db.query('api::lesson.lesson').findMany({
+          where: { course: courseId, module: modules[i - 1].id },
+        });
+        if (!studentId || prevLessons.length === 0) {
+          unlocked = true;
+        } else {
+          const done = await strapi.db.query('api::lesson-progress.lesson-progress').count({
+            where: {
+              student: studentId,
+              course: courseId,
+              completed: true,
+              lesson: { id: { $in: prevLessons.map((l: any) => l.id) } },
+            },
+          });
+          unlocked = done >= prevLessons.length;
+        }
+      }
+    }
+
+    gates.push({
+      moduleId: mod.id,
+      moduleDocumentId: mod.documentId,
+      moduleTitle: mod.title,
+      order: mod.order ?? i,
+      unlocked,
+      quizId: quiz?.id ?? null,
+      quizDocumentId: quiz?.documentId ?? null,
+      quizTitle: quiz?.title ?? null,
+      passPercent,
+      bestScore,
+      quizPassed,
+    });
+  }
+
+  return gates;
+}
+
+function quizPublicFields(q: any) {
+  return {
+    id: q.id,
+    documentId: q.documentId,
+    title: q.title,
+    description: q.description,
+    passPercent: Number(q.passPercent ?? DEFAULT_QUIZ_PASS_PERCENT),
+    module: q.module ? sanitizeModule(q.module) : null,
+  };
+}
+
 function courseBuilderFields(course: any) {
   return {
     coverImageUrl: course.coverImageUrl || null,
@@ -661,11 +772,19 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         populate: { lesson: true },
       });
 
+    const moduleGates = await buildModuleGates(strapi, targetStudentId, course.id);
+
     return {
       data: {
         course: { id: course.id, documentId: course.documentId, title: course.title },
         ...progress,
         lessons: lessonProgress,
+        moduleGates,
+        passRule: {
+          requiredPercent: DEFAULT_QUIZ_PASS_PERCENT,
+          description:
+            'Score at least 80% on a module quiz to unlock the next module.',
+        },
       },
     };
   },
@@ -677,6 +796,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
     const quiz = await findQuiz(strapi, quizId, {
       course: true,
+      module: true,
       questions: {
         populate: { options: true },
       },
@@ -697,8 +817,14 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       quiz.questions.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
     }
 
-    // Ensure isCorrect is never returned (private attr + explicit sanitize)
-    return { data: sanitizeQuizForTake(quiz) };
+    const data = sanitizeQuizForTake(quiz);
+    return {
+      data: {
+        ...data,
+        passPercent: Number(quiz.passPercent ?? DEFAULT_QUIZ_PASS_PERCENT),
+        module: quiz.module ? sanitizeModule(quiz.module) : null,
+      },
+    };
   },
 
   async submitQuiz(ctx: Ctx) {
@@ -713,6 +839,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
     const quiz = await findQuiz(strapi, quizId, {
       course: true,
+      module: true,
       questions: {
         populate: { options: true },
       },
@@ -790,7 +917,19 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       },
     });
 
-    return { data: fullAttempt };
+    const passPercent = Number(quiz.passPercent ?? DEFAULT_QUIZ_PASS_PERCENT);
+    const passed = Number(graded.percentage) >= passPercent;
+
+    return {
+      data: {
+        ...fullAttempt,
+        passPercent,
+        passed,
+        unlocksNextModule: passed && Boolean(quiz.module),
+        module: quiz.module ? sanitizeModule(quiz.module) : null,
+        courseId: quiz.course?.documentId || quiz.course?.id || null,
+      },
+    };
   },
 
   async quizAttempts(ctx: Ctx) {
@@ -2248,11 +2387,23 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     const body = ctx.request.body?.data || ctx.request.body || {};
     if (!body.title) throw new ValidationError('title is required');
 
+    let moduleId = null;
+    if (body.moduleId) {
+      const mod = await resolveByIdOrDocumentId(
+        strapi,
+        'api::course-module.course-module',
+        String(body.moduleId)
+      );
+      if (mod) moduleId = mod.id;
+    }
+
     const quiz = await strapi.db.query('api::quiz.quiz').create({
       data: {
         title: body.title,
         description: body.description,
+        passPercent: Number(body.passPercent ?? DEFAULT_QUIZ_PASS_PERCENT),
         course: course.id,
+        module: moduleId,
         createdByUser: user.id,
       },
     });
@@ -2302,6 +2453,21 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     const data: any = {};
     if (body.title !== undefined) data.title = body.title;
     if (body.description !== undefined) data.description = body.description;
+    if (body.passPercent !== undefined) {
+      data.passPercent = Number(body.passPercent ?? DEFAULT_QUIZ_PASS_PERCENT);
+    }
+    if (body.moduleId !== undefined) {
+      if (!body.moduleId) {
+        data.module = null;
+      } else {
+        const mod = await resolveByIdOrDocumentId(
+          strapi,
+          'api::course-module.course-module',
+          String(body.moduleId)
+        );
+        data.module = mod?.id ?? null;
+      }
+    }
 
     await strapi.db.query('api::quiz.quiz').update({
       where: { id: quiz.id },
@@ -2421,9 +2587,16 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     const quizzes = await strapi.db.query('api::quiz.quiz').findMany({
       where: { course: course.id },
       populate: canManage
-        ? { questions: { populate: { options: true } } }
-        : undefined,
+        ? { questions: { populate: { options: true } }, module: true }
+        : { module: true },
     });
+
+    const moduleGates = await buildModuleGates(
+      strapi,
+      enrollment ? user.id : null,
+      course.id,
+      { staffBypass: canManage }
+    );
 
     return {
       data: {
@@ -2444,22 +2617,13 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           lessonPublicFields(lesson, fullAccess || Boolean(lesson.isPreview))
         ),
         quizzes: quizzes.map((q: any) => {
-          if (!canManage) {
-            return {
-              id: q.id,
-              documentId: q.documentId,
-              title: q.title,
-              description: q.description,
-            };
-          }
+          const base = quizPublicFields(q);
+          if (!canManage) return base;
           const questions = [...(q.questions || [])].sort(
             (a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)
           );
           return {
-            id: q.id,
-            documentId: q.documentId,
-            title: q.title,
-            description: q.description,
+            ...base,
             questions: questions.map((qq: any) => ({
               id: qq.id,
               documentId: qq.documentId,
@@ -2474,6 +2638,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
             })),
           };
         }),
+        moduleGates,
         enrolled: Boolean(enrollment),
       },
     };

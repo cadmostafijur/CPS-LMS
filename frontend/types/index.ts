@@ -62,6 +62,7 @@ export interface Course {
   lessons?: Lesson[];
   quizzes?: Quiz[];
   enrollments?: Enrollment[];
+  moduleGates?: ModuleGate[];
   lessonCount?: number;
   quizCount?: number;
   enrolled?: boolean;
@@ -106,7 +107,9 @@ export interface Quiz {
   documentId?: string;
   title: string;
   description?: string | null;
+  passPercent?: number | null;
   course?: Course | null;
+  module?: CourseModule | null;
   questions?: QuizQuestion[];
   createdByUser?: User | null;
 }
@@ -152,12 +155,28 @@ export interface LessonProgress {
   lesson?: Lesson | null;
 }
 
+export interface ModuleGate {
+  moduleId: number | string;
+  moduleDocumentId?: string;
+  moduleTitle?: string;
+  order?: number;
+  unlocked: boolean;
+  quizId?: number | string | null;
+  quizDocumentId?: string | null;
+  quizTitle?: string | null;
+  passPercent?: number;
+  bestScore?: number | null;
+  quizPassed?: boolean;
+}
+
 export interface CourseProgress {
   course: { id: number | string; documentId?: string; title: string };
   totalLessons: number;
   completedCount: number;
   percentage: number;
   lessons: LessonProgress[];
+  moduleGates?: ModuleGate[];
+  passRule?: { requiredPercent: number; description: string };
 }
 
 export interface QuizAttempt {

@@ -52,15 +52,19 @@ function quizToDraft(quiz: Quiz): {
 export function QuizManager({
   courseId,
   quizzes,
+  modules = [],
 }: {
   courseId: string | number;
   quizzes: Quiz[];
+  modules?: Array<{ id: number | string; documentId?: string; title: string }>;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<Quiz | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [moduleId, setModuleId] = useState<string>("");
+  const [passPercent, setPassPercent] = useState("80");
   const [questions, setQuestions] = useState<DraftQuestion[]>([emptyQuestion()]);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
 
@@ -68,6 +72,8 @@ export function QuizManager({
     setEditing(null);
     setTitle("");
     setDescription("");
+    setModuleId("");
+    setPassPercent("80");
     setQuestions([emptyQuestion()]);
   }
 
@@ -77,6 +83,8 @@ export function QuizManager({
     setTitle(draft.title);
     setDescription(draft.description);
     setQuestions(draft.questions);
+    setModuleId(String(quiz.module?.documentId || quiz.module?.id || ""));
+    setPassPercent(String(quiz.passPercent ?? 80));
   }
 
   async function saveQuiz(e: React.FormEvent) {
@@ -86,18 +94,25 @@ export function QuizManager({
       return;
     }
     setLoading(true);
+    const body = {
+      title,
+      description,
+      questions,
+      moduleId: moduleId || null,
+      passPercent: Number(passPercent) || 80,
+    };
     try {
       if (editing) {
         const id = editing.documentId || editing.id;
         await bffFetch(`/api/lms/quizzes/${id}`, {
           method: "PUT",
-          body: JSON.stringify({ title, description, questions }),
+          body: JSON.stringify(body),
         });
         toast.success("Quiz updated");
       } else {
         await bffFetch(`/api/lms/courses/${courseId}/quizzes`, {
           method: "POST",
-          body: JSON.stringify({ title, description, questions }),
+          body: JSON.stringify(body),
         });
         toast.success("Quiz created");
       }
@@ -140,7 +155,8 @@ export function QuizManager({
               <span>
                 {quiz.title}
                 <span className="ml-2 text-muted-foreground">
-                  ({quiz.questions?.length ?? 0} questions)
+                  ({quiz.questions?.length ?? 0} q · pass {quiz.passPercent ?? 80}%
+                  {quiz.module?.title ? ` · ${quiz.module.title}` : ""})
                 </span>
               </span>
               <div className="flex gap-1">
@@ -191,6 +207,38 @@ export function QuizManager({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="quiz-module">Module (gate)</Label>
+              <select
+                id="quiz-module"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={moduleId}
+                onChange={(e) => setModuleId(e.target.value)}
+              >
+                <option value="">No module link</option>
+                {modules.map((m) => (
+                  <option key={String(m.documentId || m.id)} value={String(m.documentId || m.id)}>
+                    {m.title}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Students must pass this quiz to unlock the next module.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quiz-pass">Pass percent</Label>
+              <Input
+                id="quiz-pass"
+                type="number"
+                min={1}
+                max={100}
+                value={passPercent}
+                onChange={(e) => setPassPercent(e.target.value)}
+              />
+            </div>
           </div>
 
           {questions.map((q, qi) => (

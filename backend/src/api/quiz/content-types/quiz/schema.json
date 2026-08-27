@@ -18,10 +18,22 @@
     "description": {
       "type": "text"
     },
+    "passPercent": {
+      "type": "integer",
+      "default": 80,
+      "min": 1,
+      "max": 100
+    },
     "course": {
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::course.course",
+      "inversedBy": "quizzes"
+    },
+    "module": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course-module.course-module",
       "inversedBy": "quizzes"
     },
     "createdByUser": {
