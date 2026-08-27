@@ -266,4 +266,13 @@ export default ({ strapi }: { strapi: any }) => ({
   async staffGradeSubmission(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').staffGradeSubmission(ctx);
   },
+  async listCourseDiscussions(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listCourseDiscussions(ctx);
+  },
+  async createCourseDiscussion(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').createCourseDiscussion(ctx);
+  },
+  async replyCourseDiscussion(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').replyCourseDiscussion(ctx);
+  },
 });

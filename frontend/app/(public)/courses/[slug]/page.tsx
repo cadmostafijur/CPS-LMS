@@ -9,6 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { EnrollButton } from "@/features/courses/enroll-button";
 import {
+  CourseDiscussions,
+  type DiscussionThread,
+} from "@/features/courses/course-discussions";
+import {
   getCourseBySlug,
   getCourseProgress,
   getMyCourses,
@@ -17,7 +21,8 @@ import { getCurrentUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/config";
 import { continueLessonHref } from "@/lib/continue-lesson";
-import { isStudent } from "@/lib/roles";
+import { apiFetch } from "@/lib/api";
+import { isAdmin, isContentManager, isInstructor, isStudent } from "@/lib/roles";
 import { BookOpen } from "lucide-react";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -77,6 +82,22 @@ export default async function CourseDetailPage({ params }: Props) {
         completedIds,
         progress?.data?.moduleGates || course.moduleGates
       );
+    }
+  }
+
+  const staff =
+    isAdmin(user) || isContentManager(user) || isInstructor(user);
+  const canDiscuss = Boolean(enrolled || staff);
+  let threads: DiscussionThread[] = [];
+  if (user && token && canDiscuss) {
+    try {
+      const res = await apiFetch<{ data: DiscussionThread[] }>(
+        `/lms/courses/${courseKey}/discussions`,
+        { token }
+      );
+      threads = res.data || [];
+    } catch {
+      threads = [];
     }
   }
 
@@ -233,6 +254,22 @@ export default async function CourseDetailPage({ params }: Props) {
                 </ul>
               )}
             </div>
+            {canDiscuss ? (
+              <CourseDiscussions
+                courseId={courseKey}
+                canPost={canDiscuss}
+                initialThreads={threads}
+              />
+            ) : (
+              <section id="discussions" className="mt-10 scroll-mt-24">
+                <h2 className="font-display text-xl font-semibold text-navy">
+                  Course discussion
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Enroll as a student to ask questions and join the Q&amp;A.
+                </p>
+              </section>
+            )}
           </div>
 
           <Card className="hidden h-fit rounded-2xl border-border/80 bg-white shadow-sm lg:block lg:sticky lg:top-24">

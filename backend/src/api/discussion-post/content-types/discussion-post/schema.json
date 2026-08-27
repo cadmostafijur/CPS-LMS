@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "discussion_posts",
+  "info": {
+    "singularName": "discussion-post",
+    "pluralName": "discussion-posts",
+    "displayName": "Discussion Post",
+    "description": "Course Q&A / discussion thread post"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "text",
+      "required": true
+    },
+    "isHidden": {
+      "type": "boolean",
+      "default": false
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course"
+    },
+    "author": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "parent": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::discussion-post.discussion-post",
+      "inversedBy": "replies"
+    },
+    "replies": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::discussion-post.discussion-post",
+      "mappedBy": "parent"
+    }
+  }
+}

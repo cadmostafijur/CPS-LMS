@@ -537,5 +537,23 @@ export default {
       handler: 'lms.staffGradeSubmission',
       config: { auth: false, policies: ['global::is-instructor-or-above'] },
     },
+    {
+      method: 'GET',
+      path: '/lms/courses/:courseId/discussions',
+      handler: 'lms.listCourseDiscussions',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/courses/:courseId/discussions',
+      handler: 'lms.createCourseDiscussion',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/discussions/:id/replies',
+      handler: 'lms.replyCourseDiscussion',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
   ],
 };

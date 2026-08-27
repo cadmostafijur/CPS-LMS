@@ -3272,5 +3272,179 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     };
   },
 
+  async listCourseDiscussions(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    const course = await findCourse(strapi, ctx.params.courseId, {
+      instructor: true,
+      createdByUser: true,
+    });
+    if (!course) throw new NotFoundError('Course not found');
+
+    const canManage = canManageCourse(user, course);
+    if (!canManage) {
+      assertStudentOnly(user);
+      const enrollment = await strapi.db.query('api::enrollment.enrollment').findOne({
+        where: { student: user.id, course: course.id },
+      });
+      if (!enrollment) {
+        throw new ForbiddenError('Enroll in this course to view discussions');
+      }
+    }
+
+    const threads = await strapi.db.query('api::discussion-post.discussion-post').findMany({
+      where: {
+        course: course.id,
+        parent: null,
+        isHidden: false,
+      },
+      populate: {
+        author: true,
+        replies: { populate: { author: true } },
+      },
+      orderBy: { id: 'desc' },
+      limit: 50,
+    });
+
+    const mapPost = (p: any) => ({
+      id: p.id,
+      documentId: p.documentId,
+      title: p.title || null,
+      body: p.body,
+      createdAt: p.createdAt,
+      author: sanitizeUser(p.author),
+      replies: [...(p.replies || [])]
+        .filter((r: any) => !r.isHidden)
+        .sort(
+          (a: any, b: any) =>
+            new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+        )
+        .map((r: any) => ({
+          id: r.id,
+          documentId: r.documentId,
+          body: r.body,
+          createdAt: r.createdAt,
+          author: sanitizeUser(r.author),
+        })),
+    });
+
+    return { data: threads.map(mapPost) };
+  },
+
+  async createCourseDiscussion(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    const course = await findCourse(strapi, ctx.params.courseId, {
+      instructor: true,
+      createdByUser: true,
+    });
+    if (!course) throw new NotFoundError('Course not found');
+
+    const canManage = canManageCourse(user, course);
+    if (!canManage) {
+      assertStudentOnly(user);
+      const enrollment = await strapi.db.query('api::enrollment.enrollment').findOne({
+        where: { student: user.id, course: course.id },
+      });
+      if (!enrollment) {
+        throw new ForbiddenError('Enroll in this course to post in discussions');
+      }
+    }
+
+    const body = ctx.request.body || {};
+    const text = String(body.body || '').trim();
+    const title = String(body.title || '').trim();
+    if (!text) throw new ValidationError('body is required');
+
+    const post = await strapi.db.query('api::discussion-post.discussion-post').create({
+      data: {
+        title: title || null,
+        body: text,
+        isHidden: false,
+        course: course.id,
+        author: user.id,
+        parent: null,
+      },
+      populate: { author: true },
+    });
+
+    return {
+      data: {
+        id: post.id,
+        documentId: post.documentId,
+        title: post.title,
+        body: post.body,
+        createdAt: post.createdAt,
+        author: sanitizeUser(post.author || user),
+        replies: [],
+      },
+    };
+  },
+
+  async replyCourseDiscussion(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    const parent = await resolveByIdOrDocumentId(
+      strapi,
+      'api::discussion-post.discussion-post',
+      ctx.params.id
+    );
+    if (!parent) throw new NotFoundError('Discussion not found');
+
+    const full = await strapi.db.query('api::discussion-post.discussion-post').findOne({
+      where: { id: parent.id },
+      populate: {
+        course: { populate: { instructor: true, createdByUser: true } },
+        author: true,
+      },
+    });
+    if (!full?.course) throw new NotFoundError('Discussion course missing');
+    if (full.parent) {
+      throw new ValidationError('Reply only to top-level posts');
+    }
+
+    const canManage = canManageCourse(user, full.course);
+    if (!canManage) {
+      assertStudentOnly(user);
+      const enrollment = await strapi.db.query('api::enrollment.enrollment').findOne({
+        where: { student: user.id, course: full.course.id },
+      });
+      if (!enrollment) {
+        throw new ForbiddenError('Enroll in this course to reply');
+      }
+    }
+
+    const text = String(ctx.request.body?.body || '').trim();
+    if (!text) throw new ValidationError('body is required');
+
+    const reply = await strapi.db.query('api::discussion-post.discussion-post').create({
+      data: {
+        body: text,
+        isHidden: false,
+        course: full.course.id,
+        author: user.id,
+        parent: full.id,
+      },
+      populate: { author: true },
+    });
+
+    // Notify thread author (if someone else replied)
+    if (full.author?.id && String(full.author.id) !== String(user.id)) {
+      await notifyUser(strapi, full.author.id, {
+        title: 'New reply on your discussion',
+        body: `${user.name || user.email} replied in “${full.course.title}”.`,
+        type: 'discussion',
+        linkUrl: `/courses/${full.course.slug}#discussions`,
+      });
+    }
+
+    return {
+      data: {
+        id: reply.id,
+        documentId: reply.documentId,
+        body: reply.body,
+        createdAt: reply.createdAt,
+        author: sanitizeUser(reply.author || user),
+      },
+    };
+  },
+
   ...createOpsHandlers(strapi),
 });
