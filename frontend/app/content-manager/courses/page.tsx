@@ -5,8 +5,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import {
   StaffCoursesBoard,
-  coursesToStaffItems,
 } from "@/features/courses/staff-courses-board";
+import { coursesToStaffItems } from "@/features/courses/staff-courses-utils";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
@@ -14,21 +14,20 @@ import type { Course } from "@/types";
 
 async function listStaffCourses(token: string | null) {
   const res = await apiFetch<{ data: Course[] }>("/lms/staff/courses", { token });
-  return res.data || [];
+  return Array.isArray(res.data) ? res.data : [];
 }
 
 export default async function ContentManagerCoursesPage() {
   const user = await requireUser("/content-manager/courses");
   const token = await getTokenFromCookies();
-  let courses: Course[] = [];
+  let items: ReturnType<typeof coursesToStaffItems> = [];
   let loadError: string | null = null;
   try {
-    courses = await listStaffCourses(token);
+    const courses = await listStaffCourses(token);
+    items = coursesToStaffItems(courses, "/content-manager/courses");
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Failed to load courses";
   }
-
-  const items = coursesToStaffItems(courses, "/content-manager/courses");
 
   return (
     <DashboardShell user={user}>

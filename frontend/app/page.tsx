@@ -101,7 +101,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar user={user} overHero={heroBanners.length > 0} />
+      <Navbar user={user} />
 
       <HomeHero banners={heroBanners} user={user} />
 

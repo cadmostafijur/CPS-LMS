@@ -21,8 +21,8 @@ export default async function InstructorCoursesPage() {
     const { data } = await getInstructorDashboard(token);
     items = (data?.courses || []).map((course) => ({
       id: String(course.documentId || course.id),
-      title: course.title,
-      status: course.status,
+        title: course.title?.trim() || "Untitled course",
+        status: course.status || "DRAFT",
       lessonCount: course.lessonCount,
       quizCount: course.quizCount,
       editHref: `/instructor/courses/${course.documentId || course.id}/edit`,

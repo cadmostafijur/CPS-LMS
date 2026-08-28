@@ -7,6 +7,41 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AuthUser, Banner } from "@/types";
 
+function DotGrid({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "pointer-events-none absolute grid grid-cols-5 gap-2 opacity-30",
+        className
+      )}
+      aria-hidden
+    >
+      {Array.from({ length: 25 }).map((_, i) => (
+        <span key={i} className="h-1.5 w-1.5 rounded-full bg-white/50" />
+      ))}
+    </div>
+  );
+}
+
+function HeroTitle({ title }: { title: string }) {
+  if (title.includes("|")) {
+    const [line1, line2] = title.split("|").map((s) => s.trim());
+    return (
+      <>
+        <span className="block text-white">{line1}</span>
+        <span className="block text-orange">{line2}</span>
+      </>
+    );
+  }
+  return <span className="text-white">{title}</span>;
+}
+
+function watermarkWord(title: string) {
+  const first = title.split("|")[0]?.trim() || title;
+  const word = first.split(/\s+/)[0] || "LEARN";
+  return word.length > 12 ? word.slice(0, 12) : word;
+}
+
 function HeroSlide({
   banner,
   user,
@@ -23,91 +58,117 @@ function HeroSlide({
   const showBrowse = banner.showBrowseCourses !== false;
   const showAuth = banner.showAuthButton !== false;
   const hasButtons = showCta || showBrowse || showAuth;
-  const hasOverlay = showTitle || showSubtitle || hasButtons;
-  const imageOnly = Boolean(banner.imageUrl) && !hasOverlay;
+  const hasText = showTitle || showSubtitle || hasButtons;
+  const watermark = watermarkWord(banner.title || "CPS");
 
   return (
     <div
       className={cn(
-        "absolute inset-0 transition-opacity duration-700 ease-in-out",
-        active ? "opacity-100" : "pointer-events-none opacity-0"
+        "absolute inset-0 transition-all duration-700 ease-out",
+        active
+          ? "z-10 opacity-100"
+          : "pointer-events-none z-0 opacity-0"
       )}
       aria-hidden={!active}
     >
-      {banner.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={banner.imageUrl}
-          alt={banner.title || "Hero banner"}
+      <div className="relative flex h-full min-h-[inherit] flex-col lg:flex-row">
+        <div
           className={cn(
-            "absolute inset-0 h-full w-full",
-            imageOnly
-              ? "object-contain object-center"
-              : "object-cover object-center"
+            "relative z-10 flex flex-1 flex-col justify-center px-6 py-10 sm:px-10 sm:py-12 lg:max-w-[55%] lg:px-12 lg:py-14",
+            !hasText && "lg:max-w-full"
           )}
-          sizes="100vw"
-        />
-      ) : (
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(249,115,22,0.35),transparent_45%)]" />
-      )}
+        >
+          <p
+            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 select-none font-display text-[clamp(3.5rem,14vw,9rem)] font-bold uppercase leading-none tracking-tighter text-transparent [-webkit-text-stroke:1px_rgba(255,255,255,0.07)] sm:left-6 lg:left-10"
+            aria-hidden
+          >
+            {watermark}
+          </p>
 
-      {imageOnly ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-navy/60 to-transparent sm:h-24" />
-      ) : (
-        <>
-          <div className="absolute inset-0 bg-gradient-to-r from-navy/85 via-navy/50 to-navy/15" />
-          <div className="absolute inset-0 bg-gradient-to-t from-navy/55 via-transparent to-navy/10" />
-        </>
-      )}
+          <div className="relative z-10">
+            {banner.eyebrow?.trim() ? (
+              <span className="inline-flex rounded-full border border-orange/30 bg-orange/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-orange">
+                {banner.eyebrow}
+              </span>
+            ) : null}
 
-      {hasOverlay ? (
-        <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-center px-4 py-8 sm:px-6 sm:py-10 md:py-12">
-          {banner.eyebrow?.trim() ? (
-            <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-orange sm:text-sm">
-              {banner.eyebrow}
-            </p>
-          ) : null}
-          {showTitle ? (
-            <h2 className="mt-2 max-w-3xl font-display text-2xl font-bold leading-tight tracking-tight text-white sm:mt-3 sm:text-4xl lg:text-5xl">
-              {banner.title}
-            </h2>
-          ) : null}
-          {showSubtitle ? (
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/90 sm:mt-4 sm:text-base md:text-lg">
-              {banner.subtitle}
-            </p>
-          ) : null}
-          {hasButtons ? (
-            <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-8 sm:gap-3">
-              {showCta ? (
-                <Button size="lg" className="h-10 px-4 text-sm sm:h-11 sm:px-6" asChild>
-                  <Link href={banner.linkUrl!}>
-                    {banner.ctaLabel || "Learn more"}
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              ) : null}
-              {showBrowse ? (
-                <Button size="lg" variant="secondary" className="h-10 text-sm sm:h-11" asChild>
-                  <Link href="/courses">Browse courses</Link>
-                </Button>
-              ) : null}
-              {showAuth ? (
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-10 border-white/30 bg-white/10 text-sm text-white hover:bg-white/20 sm:h-11"
-                  asChild
-                >
-                  <Link href={user ? "/dashboard" : "/login"}>
-                    {user ? "Dashboard" : "Sign in"}
-                  </Link>
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
+            {showTitle ? (
+              <h2 className="mt-4 font-display text-[clamp(1.75rem,4.5vw,3.25rem)] font-bold leading-[1.08] tracking-tight">
+                <HeroTitle title={banner.title} />
+              </h2>
+            ) : null}
+
+            {showSubtitle ? (
+              <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/75 sm:text-base md:text-lg">
+                {banner.subtitle}
+              </p>
+            ) : null}
+
+            {hasButtons ? (
+              <div className="mt-6 flex flex-wrap items-center gap-2 sm:mt-8 sm:gap-3">
+                {showCta ? (
+                  <Button
+                    size="lg"
+                    className="h-11 rounded-full px-6 text-sm font-semibold shadow-lg shadow-orange/25"
+                    asChild
+                  >
+                    <Link href={banner.linkUrl!}>
+                      {banner.ctaLabel || "Learn more"}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                ) : null}
+                {showBrowse ? (
+                  <Button
+                    size="lg"
+                    className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-navy hover:bg-white/90"
+                    asChild
+                  >
+                    <Link href="/courses">Browse courses</Link>
+                  </Button>
+                ) : null}
+                {showAuth ? (
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-11 rounded-full border-white/25 bg-white/5 px-6 text-sm text-white hover:bg-white/15"
+                    asChild
+                  >
+                    <Link href={user ? "/dashboard" : "/login"}>
+                      {user ? "Dashboard" : "Sign in"}
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
-      ) : null}
+
+        {banner.imageUrl ? (
+          <div
+            className={cn(
+              "relative flex min-h-[220px] flex-1 items-end justify-center px-4 pb-0 pt-4 sm:min-h-[260px] lg:min-h-0 lg:items-center lg:justify-end lg:px-8 lg:pb-0 lg:pt-0",
+              !hasText && "lg:flex-[1.2]"
+            )}
+          >
+            <div className="pointer-events-none absolute inset-y-8 right-0 w-2/3 rounded-full bg-orange/20 blur-3xl lg:inset-y-12" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={banner.imageUrl}
+              alt={banner.title || "Hero"}
+              className={cn(
+                "relative z-10 w-full max-w-[min(100%,520px)] object-contain object-bottom drop-shadow-[0_24px_48px_rgba(0,0,0,0.45)] lg:max-h-[min(92%,480px)] lg:object-center lg:translate-x-2",
+                hasText ? "max-h-[280px] sm:max-h-[320px]" : "max-h-[360px] sm:max-h-[420px]"
+              )}
+              sizes="(max-width: 1024px) 90vw, 520px"
+            />
+          </div>
+        ) : (
+          <div className="relative hidden flex-1 items-center justify-center lg:flex">
+            <div className="h-56 w-56 rounded-full bg-orange/15 blur-3xl" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -141,23 +202,45 @@ export function HomeHeroCarousel({
   if (!count) return null;
 
   return (
-    <section className="relative w-full overflow-hidden bg-navy">
-      <div className="relative mx-auto w-full max-w-[1920px]">
-        <div className="relative w-full h-[clamp(180px,42vw,680px)] min-h-[180px] max-h-[min(75vh,680px)]">
-          {banners.map((banner, i) => (
-            <HeroSlide
-              key={String(banner.documentId || banner.id)}
-              banner={banner}
-              user={user}
-              active={i === index}
-            />
-          ))}
+    <section className="bg-surface/80 px-4 pb-2 pt-4 sm:px-6 sm:pb-4 sm:pt-6">
+      <div className="relative mx-auto max-w-6xl">
+        <div
+          className={cn(
+            "relative overflow-hidden rounded-[1.75rem] border border-navy/20 bg-navy shadow-[0_24px_60px_-20px_rgba(11,18,32,0.55)] sm:rounded-[2rem]",
+            "min-h-[clamp(420px,68vw,540px)]"
+          )}
+        >
+          <div
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_0%_0%,rgba(249,115,22,0.18),transparent_50%),radial-gradient(ellipse_at_100%_100%,rgba(21,29,46,0.9),transparent_55%)]"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(-12deg, transparent, transparent 18px, rgba(255,255,255,0.5) 18px, rgba(255,255,255,0.5) 19px)",
+            }}
+            aria-hidden
+          />
+          <DotGrid className="left-4 top-4 sm:left-6 sm:top-6" />
+          <DotGrid className="bottom-4 left-4 sm:bottom-6 sm:left-6" />
+
+          <div className="relative min-h-[inherit]">
+            {banners.map((banner, i) => (
+              <HeroSlide
+                key={String(banner.documentId || banner.id)}
+                banner={banner}
+                user={user}
+                active={i === index}
+              />
+            ))}
+          </div>
 
           {count > 1 ? (
             <>
               <button
                 type="button"
-                className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm transition hover:bg-black/55 sm:left-4 sm:h-10 sm:w-10"
+                className="absolute left-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-navy/70 text-white backdrop-blur-sm transition hover:bg-navy sm:left-4 sm:h-10 sm:w-10"
                 onClick={() => go(index - 1)}
                 aria-label="Previous slide"
               >
@@ -165,20 +248,22 @@ export function HomeHeroCarousel({
               </button>
               <button
                 type="button"
-                className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm transition hover:bg-black/55 sm:right-4 sm:h-10 sm:w-10"
+                className="absolute right-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-navy/70 text-white backdrop-blur-sm transition hover:bg-navy sm:right-4 sm:h-10 sm:w-10"
                 onClick={() => go(index + 1)}
                 aria-label="Next slide"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
-              <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-1.5 sm:bottom-4 sm:gap-2">
+              <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-1.5">
                 {banners.map((banner, i) => (
                   <button
                     key={String(banner.documentId || banner.id)}
                     type="button"
                     className={cn(
-                      "h-1.5 rounded-full transition-all sm:h-2",
-                      i === index ? "w-6 bg-orange sm:w-8" : "w-1.5 bg-white/60 hover:bg-white/90 sm:w-2"
+                      "h-1.5 rounded-full transition-all",
+                      i === index
+                        ? "w-7 bg-orange"
+                        : "w-1.5 bg-white/40 hover:bg-white/70"
                     )}
                     onClick={() => setIndex(i)}
                     aria-label={`Go to slide ${i + 1}`}

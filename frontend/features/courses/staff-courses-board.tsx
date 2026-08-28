@@ -16,45 +16,9 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { Course, CourseStatus } from "@/types";
+import type { StaffCourseItem } from "@/features/courses/staff-courses-utils";
 
-export type StaffCourseItem = {
-  id: string;
-  title: string;
-  status: CourseStatus | string;
-  lessonCount: number;
-  quizCount?: number;
-  thumbnailUrl?: string | null;
-  shortDescription?: string | null;
-  difficulty?: string | null;
-  isFree?: boolean;
-  instructorName?: string | null;
-  categoryName?: string | null;
-  editHref: string;
-};
-
-export function coursesToStaffItems(
-  courses: Course[],
-  editBase: string
-): StaffCourseItem[] {
-  return courses.map((course) => {
-    const id = String(course.documentId || course.id);
-    return {
-      id,
-      title: course.title,
-      status: course.status,
-      lessonCount: course.lessonCount ?? course.lessons?.length ?? 0,
-      quizCount: course.quizCount ?? course.quizzes?.length ?? 0,
-      thumbnailUrl: course.thumbnailUrl,
-      shortDescription: course.shortDescription || course.description,
-      difficulty: course.difficulty,
-      isFree: course.isFree !== false && !(Number(course.price) > 0),
-      instructorName: course.instructor?.name,
-      categoryName: course.category?.name,
-      editHref: `${editBase}/${id}/edit`,
-    };
-  });
-}
+export type { StaffCourseItem } from "@/features/courses/staff-courses-utils";
 
 function statusBadge(status: string) {
   const value = status.toUpperCase();
@@ -240,7 +204,9 @@ export function StaffCoursesBoard({
                     <span>{course.lessonCount} lessons</span>
                     {course.quizCount != null ? <span>· {course.quizCount} quizzes</span> : null}
                     {course.difficulty ? (
-                      <span className="capitalize">· {course.difficulty.toLowerCase()}</span>
+                      <span className="capitalize">
+                        · {String(course.difficulty).toLowerCase()}
+                      </span>
                     ) : null}
                     {course.instructorName ? <span>· {course.instructorName}</span> : null}
                   </div>
