@@ -170,6 +170,11 @@ export default async function CourseDetailPage({ params }: Props) {
     lessons[0]?.documentId ||
     lessons[0]?.id;
 
+  function previewHref(lessonKey: string | number) {
+    const path = `/learn/${courseKey}/${lessonKey}`;
+    return user ? path : `/login?next=${encodeURIComponent(path)}`;
+  }
+
   const enrollBlock = (
     <EnrollButton
       courseId={courseKey}
@@ -259,12 +264,9 @@ export default async function CourseDetailPage({ params }: Props) {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   {preview ? (
-                                    <Badge variant="gold">Preview</Badge>
-                                  ) : null}
-                                  {preview && user ? (
                                     <Button asChild size="sm" variant="outline">
-                                      <Link href={`/learn/${courseKey}/${lessonKey}`}>
-                                        Preview
+                                      <Link href={previewHref(lessonKey)}>
+                                        Watch preview
                                       </Link>
                                     </Button>
                                   ) : null}
@@ -301,12 +303,9 @@ export default async function CourseDetailPage({ params }: Props) {
                           {lesson.title}
                         </div>
                         <div className="flex items-center gap-2">
-                          {preview ? <Badge variant="gold">Preview</Badge> : null}
-                          {preview && user ? (
+                          {preview ? (
                             <Button asChild size="sm" variant="outline">
-                              <Link href={`/learn/${courseKey}/${lessonKey}`}>
-                                Preview
-                              </Link>
+                              <Link href={previewHref(lessonKey)}>Watch preview</Link>
                             </Button>
                           ) : null}
                         </div>

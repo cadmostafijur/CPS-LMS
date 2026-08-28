@@ -2669,18 +2669,21 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     });
 
     const canManage = canManageCourse(user, course);
-    // Students need enrollment; staff managers can open for authoring.
-    if (!enrollment && !canManage) {
-      throw new ForbiddenError('You must be enrolled to access this course player');
-    }
-
-    const fullAccess = Boolean(enrollment) || canManage;
 
     const lessons = await strapi.db.query('api::lesson.lesson').findMany({
       where: { course: course.id },
       populate: { module: true },
       orderBy: { order: 'asc' },
     });
+
+    const hasPreviewLessons = lessons.some((lesson: any) => Boolean(lesson.isPreview));
+
+    // Students need enrollment unless the course offers free preview lessons.
+    if (!enrollment && !canManage && !hasPreviewLessons) {
+      throw new ForbiddenError('You must be enrolled to access this course player');
+    }
+
+    const fullAccess = Boolean(enrollment) || canManage;
 
     const modules = await strapi.db.query('api::course-module.course-module').findMany({
       where: { course: course.id },

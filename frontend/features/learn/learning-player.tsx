@@ -211,11 +211,15 @@ export function LearningPlayer({
     ? isModuleUnlocked(currentModule)
     : true;
 
-  const unlockedLessons = lessons.filter((l) => {
-    if (!l.module) return true;
-    const mod = modules.find((m) => moduleKey(m) === moduleKey(l.module));
+  function lessonAccessible(item: Lesson) {
+    if (item.isPreview) return true;
+    if (!course.enrolled) return false;
+    if (!item.module) return true;
+    const mod = modules.find((m) => moduleKey(m) === moduleKey(item.module));
     return mod ? isModuleUnlocked(mod) : true;
-  });
+  }
+
+  const unlockedLessons = lessons.filter(lessonAccessible);
 
   const index = unlockedLessons.findIndex(
     (l) => String(l.documentId || l.id) === String(currentId)
@@ -231,11 +235,12 @@ export function LearningPlayer({
   );
   const embedUrl = lesson.videoUrl ? toYouTubeEmbed(lesson.videoUrl) : null;
   const contentLocked =
+    !lesson.isPreview &&
+    !course.enrolled &&
     !lesson.content &&
     !lesson.videoUrl &&
     !lesson.documentUrl &&
-    !lesson.externalUrl &&
-    !course.enrolled;
+    !lesson.externalUrl;
 
   const moduleLessons = currentModule
     ? lessons.filter((l) => moduleKey(l.module) === moduleKey(currentModule))
@@ -248,8 +253,12 @@ export function LearningPlayer({
   const moduleQuiz = currentModule ? quizForModule(currentModule) : null;
 
   function go(target: Lesson) {
-    if (target.module && !isModuleUnlocked(target.module)) {
-      toast.error("Pass the previous module quiz with 80% to unlock this lesson");
+    if (!lessonAccessible(target)) {
+      toast.error(
+        target.isPreview
+          ? "This preview is unavailable"
+          : "Pass the previous module quiz with 80% to unlock this lesson"
+      );
       return;
     }
     setCurriculumOpen(false);
@@ -365,7 +374,8 @@ export function LearningPlayer({
                           const done = completedLessonIds.some(
                             (x) => String(x) === String(id)
                           );
-                          if (!unlocked) {
+                          const accessible = lessonAccessible(item);
+                          if (!accessible) {
                             return (
                               <div
                                 key={String(id)}
@@ -505,6 +515,17 @@ export function LearningPlayer({
             <h2 className="font-display text-2xl font-bold text-navy md:text-3xl">
               {lesson.title}
             </h2>
+
+            {!course.enrolled && lesson.isPreview ? (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-orange/25 bg-orange/5 px-4 py-3 text-sm">
+                <p className="text-navy">
+                  Free preview — enroll to unlock the full course.
+                </p>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/courses/${course.slug}`}>Enroll now</Link>
+                </Button>
+              </div>
+            ) : null}
 
             {contentLocked ? (
               <div className="mt-6 rounded-xl border border-border bg-surface p-6">

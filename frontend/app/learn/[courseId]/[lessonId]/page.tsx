@@ -25,6 +25,10 @@ export default async function LearnPage({ params }: Props) {
   );
   if (!lesson) notFound();
 
+  if (!course.enrolled && !lesson.isPreview) {
+    notFound();
+  }
+
   const progress = await getCourseProgress(
     course.documentId || course.id,
     token
