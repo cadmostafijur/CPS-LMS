@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
+  Bot,
   ClipboardCheck,
   LineChart,
   Minus,
@@ -17,52 +18,14 @@ import { CourseCard } from "@/features/courses/course-card";
 import { HomeHero } from "@/features/marketing/home-hero";
 import { PromoBanners } from "@/features/marketing/promo-banners";
 import { SuccessStories } from "@/features/marketing/success-stories";
+import { PlacementShowcase } from "@/features/marketing/placement-showcase";
 import { getCurrentUser } from "@/lib/session";
 import { listPublishedCourses } from "@/services/courses.service";
 import { apiFetch } from "@/lib/api";
+import { copy } from "@/lib/site-copy";
 import type { Banner } from "@/types";
 
-const features = [
-  {
-    icon: LineChart,
-    title: "Progress tracking",
-    text: "Mark lessons complete and watch your course percentage update across sessions.",
-  },
-  {
-    icon: ClipboardCheck,
-    title: "Auto-graded quizzes",
-    text: "Submit answers and get server-side scoring with attempt history.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Role-based learning",
-    text: "Students, instructors, content managers, and admins each get the right workspace.",
-  },
-  {
-    icon: BookOpen,
-    title: "Expert-led courses",
-    text: "Structured lessons with text and video content built for real skill growth.",
-  },
-];
-
-const faqs = [
-  {
-    q: "Who is CPS Academy for?",
-    a: "Students who want structured software engineering courses, plus instructors and admins who manage content and enrollments.",
-  },
-  {
-    q: "How do quizzes work?",
-    a: "Quizzes are graded on the server. You can review attempt history and keep learning from your results.",
-  },
-  {
-    q: "Can I track my progress?",
-    a: "Yes. Mark lessons complete as you go and your course progress percentage stays in sync across devices.",
-  },
-  {
-    q: "Do I need an account to browse courses?",
-    a: "You can browse the public catalog freely. Sign in to enroll, take quizzes, and save progress.",
-  },
-];
+const featureIcons = [Bot, LineChart, ClipboardCheck, BookOpen, ShieldCheck];
 
 async function listHomeBanners() {
   try {
@@ -120,26 +83,25 @@ export default async function HomePage() {
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
           <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
             <SectionHeader
-              eyebrow="Catalog"
-              title="Featured courses"
-              description="Start with published tracks designed for focused, hands-on learning."
+              eyebrow={copy.home.catalogEyebrow}
+              title={copy.home.featuredTitle}
+              description={copy.home.featuredDesc}
             />
             <Button variant="outline" size="pill" asChild>
               <Link href="/courses">
-                View all
+                {copy.home.viewAll}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
           </div>
           {catalogError ? (
             <p className="rounded-2xl border border-dashed border-destructive/30 bg-white px-6 py-12 text-center text-muted-foreground shadow-sm">
-              <span className="font-medium text-navy">Courses unavailable.</span>{" "}
+              <span className="font-medium text-navy">{copy.home.coursesUnavailable}</span>{" "}
               {catalogError}
             </p>
           ) : featured.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-border bg-white px-6 py-12 text-center text-muted-foreground shadow-sm">
-              No published courses yet. Check back soon, or browse the full catalog
-              once instructors publish their tracks.
+              {copy.home.noCourses}
             </p>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -153,23 +115,27 @@ export default async function HomePage() {
           )}
         </section>
 
+        <PlacementShowcase />
+
         <section className="border-y border-border bg-white py-16 sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <SectionHeader
               align="center"
-              eyebrow="Platform"
-              title="Why CPS Academy"
-              description="Everything you need to learn, practice, and track growth in one place."
+              eyebrow={copy.home.platformEyebrow}
+              title={copy.home.whyTitle}
+              description={copy.home.whyDesc}
               className="mb-12"
             />
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {features.map((item) => (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {copy.home.features.map((item, index) => {
+                const Icon = featureIcons[index];
+                return (
                 <div
                   key={item.title}
                   className="group rounded-2xl border border-border/80 bg-[#f6f8fb] p-6 transition hover:border-orange/30 hover:bg-white hover:shadow-md"
                 >
                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange/10 text-orange transition group-hover:bg-orange group-hover:text-white">
-                    <item.icon className="h-5 w-5" />
+                    <Icon className="h-5 w-5" />
                   </div>
                   <h3 className="font-display text-lg font-semibold text-navy">
                     {item.title}
@@ -178,7 +144,8 @@ export default async function HomePage() {
                     {item.text}
                   </p>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
         </section>
@@ -189,12 +156,12 @@ export default async function HomePage() {
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
             <SectionHeader
               align="center"
-              title="Frequently asked questions"
-              description="Quick answers about learning on CPS Academy."
+              title={copy.home.faqTitle}
+              description={copy.home.faqDesc}
               className="mb-10"
             />
             <div className="space-y-3">
-              {faqs.map((item) => (
+              {copy.home.faqs.map((item) => (
                 <details
                   key={item.q}
                   className="group rounded-2xl border border-border bg-white px-5 py-4 shadow-sm open:border-orange/20 open:shadow-md"
@@ -218,21 +185,21 @@ export default async function HomePage() {
         <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20">
           <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-navy via-navy-2 to-navy px-6 py-10 text-center sm:px-10 sm:py-12">
             <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">
-              Ready to start learning?
+              {copy.home.ctaTitle}
             </h2>
             <p className="mx-auto mt-2 max-w-lg text-sm text-white/70 sm:text-base">
-              Browse the catalog, enroll for free, and track your progress from day one.
+              {copy.home.ctaDesc}
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Button size="pill" asChild>
                 <Link href="/courses">
-                  Browse courses
+                  {copy.home.browseCourses}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
               <Button size="pill" variant="onDark" asChild>
                 <Link href={user ? "/dashboard" : "/register"}>
-                  {user ? "Go to dashboard" : "Create free account"}
+                  {user ? copy.home.goDashboard : copy.home.createFreeAccount}
                 </Link>
               </Button>
             </div>

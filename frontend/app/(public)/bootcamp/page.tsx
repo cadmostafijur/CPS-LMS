@@ -3,36 +3,19 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { PageHeader } from "@/components/shared/page-header";
 import { CourseCatalog } from "@/features/courses/course-catalog";
-import { PromoBanners } from "@/features/marketing/promo-banners";
 import { listPublishedCourses } from "@/services/courses.service";
 import { getCurrentUser } from "@/lib/session";
-import { apiFetch } from "@/lib/api";
 import { copy } from "@/lib/site-copy";
-import type { Banner } from "@/types";
 
 export const metadata: Metadata = {
-  title: "Courses",
-  description: "Browse published courses at CPS Academy.",
+  title: "Bootcamp",
+  description: "Free intensive bootcamp tracks at CPS Academy.",
 };
 
-async function listCatalogBanners() {
-  try {
-    const res = await apiFetch<{ data: Banner[] }>("/lms/banners", {
-      searchParams: { placement: "CATALOG" },
-    });
-    return res.data || [];
-  } catch {
-    return [];
-  }
-}
-
-export default async function CoursesPage() {
+export default async function BootcampPage() {
   const user = await getCurrentUser();
   let courses: Awaited<ReturnType<typeof listPublishedCourses>> = [];
   let loadError: string | null = null;
-  const banners = (await listCatalogBanners()).filter(
-    (b) => (b.style || "STRIP") === "STRIP"
-  );
 
   try {
     courses = await listPublishedCourses();
@@ -47,12 +30,10 @@ export default async function CoursesPage() {
     <div className="min-h-screen bg-background">
       <Navbar user={user} />
       <main className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
-        <PageHeader title="Courses" description={copy.courses.allDesc} />
-        {banners.length > 0 ? (
-          <div className="mb-8">
-            <PromoBanners banners={banners} />
-          </div>
-        ) : null}
+        <PageHeader
+          title="Free bootcamp"
+          description={copy.courses.bootcampDesc}
+        />
         {loadError ? (
           <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-10 text-center">
             <p className="font-display text-lg font-semibold text-navy">
@@ -66,7 +47,7 @@ export default async function CoursesPage() {
             </p>
           </div>
         ) : (
-          <CourseCatalog courses={courses} />
+          <CourseCatalog courses={courses} freeOnly />
         )}
       </main>
       <Footer />

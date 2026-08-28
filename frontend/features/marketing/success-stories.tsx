@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionHeader } from "@/components/marketing/section-header";
+import { copy } from "@/lib/site-copy";
 import type { Banner } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -16,13 +17,13 @@ export function SuccessStories({ stories }: { stories: Banner[] }) {
         : "grid gap-6 sm:grid-cols-2 lg:grid-cols-3";
 
   return (
-    <section className="border-t border-border bg-white py-20">
+    <section id="success-stories" className="border-t border-border bg-white py-20 scroll-mt-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeader
           align="center"
-          eyebrow="Success stories"
-          title="Learners who grew with CPS Academy"
-          description="Real students, real progress — structured learning that helps them level up."
+          eyebrow={copy.success.eyebrow}
+          title={copy.success.title}
+          description={copy.success.desc}
           className="mb-12"
         />
 
@@ -54,7 +55,7 @@ export function SuccessStories({ stories }: { stories: Banner[] }) {
                   />
                 ) : (
                   <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-muted-foreground">
-                    No photo
+                    {copy.success.noPhoto}
                   </div>
                 )}
               </div>
@@ -66,7 +67,7 @@ export function SuccessStories({ stories }: { stories: Banner[] }) {
                   </p>
                 ) : (
                   <p className="mt-3 flex-1 text-sm italic text-muted-foreground">
-                    A CPS Academy learner
+                    {copy.success.defaultLearner}
                   </p>
                 )}
                 <div className="mt-5 border-t border-border pt-4">
@@ -79,7 +80,7 @@ export function SuccessStories({ stories }: { stories: Banner[] }) {
                 </div>
                 {story.showCta !== false && story.linkUrl ? (
                   <Button asChild variant="outline" size="sm" className="mt-4 w-fit">
-                    <Link href={story.linkUrl}>{story.ctaLabel || "Read their story"}</Link>
+                    <Link href={story.linkUrl}>{story.ctaLabel || copy.success.readStory}</Link>
                   </Button>
                 ) : null}
               </div>

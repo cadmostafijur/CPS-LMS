@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, LayoutDashboard, X, UserRound, LogOut } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,14 +23,23 @@ import {
   notificationsPathForRole,
 } from "@/lib/roles";
 import type { AuthUser } from "@/types";
+import { MAIN_NAV_LINKS, isMainNavLinkActive } from "@/lib/site-nav";
+import { copy } from "@/lib/site-copy";
 import { cn } from "@/lib/utils";
 
-const links = [
-  { href: "/courses", label: "Courses" },
-  { href: "/blog", label: "Blog" },
-];
+export function Navbar(props: {
+  user?: AuthUser | null;
+  overHero?: boolean;
+  variant?: "light" | "dark";
+}) {
+  return (
+    <Suspense>
+      <NavbarInner {...props} />
+    </Suspense>
+  );
+}
 
-export function Navbar({
+function NavbarInner({
   user,
   overHero = false,
 }: {
@@ -100,24 +109,27 @@ export function Navbar({
 
         {!isDashboard ? (
           <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 md:flex">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  pathname.startsWith(link.href)
-                    ? overHero
-                      ? "bg-white/15 text-white"
-                      : "bg-orange/10 text-navy"
-                    : overHero
-                      ? "text-white/80 hover:bg-white/10 hover:text-white"
-                      : "text-muted-foreground hover:bg-navy/5 hover:text-navy"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {MAIN_NAV_LINKS.map((link) => {
+              const active = isMainNavLinkActive(link.href, pathname);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    active
+                      ? overHero
+                        ? "bg-white/15 text-white"
+                        : "bg-orange/10 text-navy"
+                      : overHero
+                        ? "text-white/80 hover:bg-white/10 hover:text-white"
+                        : "text-muted-foreground hover:bg-navy/5 hover:text-navy"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </nav>
         ) : null}
 
@@ -159,7 +171,7 @@ export function Navbar({
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>
                       <div className="flex flex-col">
-                        <span>{user.name || "Account"}</span>
+                        <span>{user.name || copy.nav.account}</span>
                         <span className="text-xs font-normal text-muted-foreground">
                           {role} · {user.email}
                         </span>
@@ -168,11 +180,11 @@ export function Navbar({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => router.push(dash)}>
                       <LayoutDashboard className="mr-2 h-4 w-4" />
-                      Dashboard
+                      {copy.nav.dashboard}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => router.push("/profile")}>
                       <UserRound className="mr-2 h-4 w-4" />
-                      My profile
+                      {copy.nav.profile}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -180,7 +192,7 @@ export function Navbar({
                       onClick={() => void handleSignOut()}
                     >
                       <LogOut className="mr-2 h-4 w-4" />
-                      Sign out
+                      {copy.nav.signOut}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -196,10 +208,10 @@ export function Navbar({
                 asChild
                 className={overHero ? "text-white hover:bg-white/10 hover:text-white" : undefined}
               >
-                <Link href="/login">Sign in</Link>
+                <Link href="/login">{copy.nav.signIn}</Link>
               </Button>
               <Button asChild>
-                <Link href="/register">Create account</Link>
+                <Link href="/register">{copy.nav.createAccount}</Link>
               </Button>
             </div>
           )}
@@ -220,7 +232,7 @@ export function Navbar({
         <div className="border-t border-border bg-white px-4 py-4 md:hidden">
           <div className="flex flex-col gap-1">
             {!isDashboard
-              ? links.map((link) => (
+              ? MAIN_NAV_LINKS.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
@@ -239,7 +251,7 @@ export function Navbar({
                     className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
                     onClick={() => setOpen(false)}
                   >
-                    Notifications
+                    {copy.nav.notifications}
                   </Link>
                 ) : null}
                 <Link
@@ -247,14 +259,14 @@ export function Navbar({
                   className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
                   onClick={() => setOpen(false)}
                 >
-                  Dashboard
+                  {copy.nav.dashboard}
                 </Link>
                 <Link
                   href="/profile"
                   className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
                   onClick={() => setOpen(false)}
                 >
-                  My profile
+                  {copy.nav.profile}
                 </Link>
                 <SignOutButton
                   variant="menu"
@@ -269,14 +281,14 @@ export function Navbar({
                   className="rounded-lg px-3 py-2.5 text-sm font-medium"
                   onClick={() => setOpen(false)}
                 >
-                  Sign in
+                  {copy.nav.signIn}
                 </Link>
                 <Link
                   href="/register"
                   className="rounded-lg px-3 py-2.5 text-sm font-semibold text-orange"
                   onClick={() => setOpen(false)}
                 >
-                  Create account
+                  {copy.nav.createAccount}
                 </Link>
               </>
             )}

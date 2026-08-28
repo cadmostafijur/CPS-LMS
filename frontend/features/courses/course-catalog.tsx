@@ -7,10 +7,21 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { useDebounce } from "@/hooks/use-debounce";
 import { apiFetch } from "@/lib/api";
+import { copy } from "@/lib/site-copy";
 import type { Course, CourseCategory } from "@/types";
 import { cn } from "@/lib/utils";
 
-export function CourseCatalog({ courses }: { courses: Course[] }) {
+function isFreeCourse(course: Course) {
+  return course.isFree !== false && !(Number(course.price) > 0);
+}
+
+export function CourseCatalog({
+  courses,
+  freeOnly = false,
+}: {
+  courses: Course[];
+  freeOnly?: boolean;
+}) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [categories, setCategories] = useState<CourseCategory[]>([]);
@@ -31,9 +42,10 @@ export function CourseCatalog({ courses }: { courses: Course[] }) {
         category === "all" ||
         c.category?.slug === category ||
         String(c.category?.id) === category;
-      return matchesQuery && matchesCategory;
+      const matchesFree = !freeOnly || isFreeCourse(c);
+      return matchesQuery && matchesCategory && matchesFree;
     });
-  }, [courses, debounced, category]);
+  }, [courses, debounced, category, freeOnly]);
 
   return (
     <div className="space-y-6">
@@ -41,7 +53,7 @@ export function CourseCatalog({ courses }: { courses: Course[] }) {
         <SearchInput
           value={query}
           onChange={setQuery}
-          placeholder="Search courses…"
+          placeholder={copy.courses.search}
           className="max-w-md"
         />
       </div>
@@ -52,7 +64,7 @@ export function CourseCatalog({ courses }: { courses: Course[] }) {
             variant={category === "all" ? "default" : "outline"}
             onClick={() => setCategory("all")}
           >
-            All
+            {copy.courses.allCategories}
           </Button>
           {categories.map((cat) => (
             <Button
@@ -69,8 +81,8 @@ export function CourseCatalog({ courses }: { courses: Course[] }) {
       ) : null}
       {filtered.length === 0 ? (
         <EmptyState
-          title="No courses found"
-          description="Try a different search term or category."
+          title={copy.courses.noResults}
+          description={copy.courses.noResultsDesc}
         />
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

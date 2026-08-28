@@ -1,11 +1,12 @@
 import { Award, BookOpen, Users } from "lucide-react";
 import { BrandLogo } from "@/components/shared/brand-logo";
+import { copy } from "@/lib/site-copy";
 
 export function TrustStrip({ courseCount = 0 }: { courseCount?: number }) {
   const stats = [
-    { icon: BookOpen, label: courseCount > 0 ? `${courseCount} courses` : "Courses catalog" },
-    { icon: Users, label: "Learner-first platform" },
-    { icon: Award, label: "Progress & certificates" },
+    { icon: BookOpen, label: copy.trust.courses(courseCount) },
+    { icon: Users, label: copy.trust.learnerFirst },
+    { icon: Award, label: copy.trust.progress },
   ];
 
   return (
@@ -14,9 +15,7 @@ export function TrustStrip({ courseCount = 0 }: { courseCount?: number }) {
         <div className="flex items-center gap-3 text-center sm:text-left">
           <BrandLogo size={32} className="shrink-0 rounded-lg ring-1 ring-navy/10" />
           <p className="text-sm leading-snug text-muted-foreground">
-            Trusted by learners preparing for{" "}
-            <span className="font-medium text-navy">software engineering</span> interviews
-            and contests
+            <span className="font-medium text-navy">{copy.trust.text}</span>
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">

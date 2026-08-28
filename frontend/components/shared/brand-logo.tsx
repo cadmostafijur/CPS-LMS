@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-/** CPS Academy mark — logo already includes navy ground; don't double-frame it. */
+/** CPS Academy logo mark. */
 export function BrandLogo({
   size = 36,
   className,

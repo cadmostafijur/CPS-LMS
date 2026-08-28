@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     template: "%s | CPS Academy",
   },
   description:
-    "CPS Academy is a modern SaaS learning platform for courses, quizzes, and progress tracking.",
+    "CPS Academy is a modern learning platform for courses, quizzes, progress tracking, and Sage AI assistance.",
   icons: {
     icon: "/favicon.png",
     apple: "/apple-touch-icon.png",

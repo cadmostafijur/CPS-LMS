@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { copy } from "@/lib/site-copy";
 import { toast } from "@/lib/notify";
 
 export function BlogNewsletter() {
@@ -14,10 +15,10 @@ export function BlogNewsletter() {
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) {
-      toast.error("Please enter your email address.");
+      toast.error(copy.blog.emailRequired);
       return;
     }
-    toast.success("Thanks! Create a free account to get course updates and blog alerts.");
+    toast.success(copy.blog.subscribeThanks);
     setName("");
     setEmail("");
   }
@@ -28,10 +29,10 @@ export function BlogNewsletter() {
         <Mail className="h-6 w-6" />
       </div>
       <h2 className="mt-4 font-display text-2xl font-bold text-navy sm:text-3xl">
-        Stay up to date
+        {copy.blog.newsletterTitle}
       </h2>
       <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
-        Get new blog posts, course launches, and learning tips from CPS Academy.
+        {copy.blog.newsletterDesc}
       </p>
       <form
         onSubmit={onSubmit}
@@ -40,14 +41,14 @@ export function BlogNewsletter() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <Input
             type="text"
-            placeholder="Your name"
+            placeholder={copy.blog.yourName}
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="h-11 flex-1 rounded-xl border-border bg-white"
           />
           <Input
             type="email"
-            placeholder="Email address"
+            placeholder={copy.blog.email}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="h-11 flex-1 rounded-xl border-border bg-white"
@@ -56,10 +57,10 @@ export function BlogNewsletter() {
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button type="submit" size="lg" className="h-11 flex-1 rounded-xl">
-            Subscribe
+            {copy.blog.subscribe}
           </Button>
           <Button type="button" variant="outline" className="h-11 flex-1 rounded-xl" asChild>
-            <Link href="/register">Create free account</Link>
+            <Link href="/register">{copy.blog.createFree}</Link>
           </Button>
         </div>
       </form>

@@ -5,6 +5,7 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast, notify } from "@/lib/notify";
 import { logout } from "@/services/auth.service";
+import { copy } from "@/lib/site-copy";
 import { cn } from "@/lib/utils";
 
 type SignOutOptions = {
@@ -16,9 +17,9 @@ export function useSignOut({ onSignedOut }: SignOutOptions = {}) {
 
   return async function handleLogout() {
     const ok = await notify.confirm({
-      title: "Sign out?",
+      title: copy.nav.signOutConfirm,
       text: "You will need to sign in again to access your dashboard.",
-      confirmLabel: "Sign out",
+      confirmLabel: copy.nav.signOut,
       cancelLabel: "Stay signed in",
       destructive: true,
     });
@@ -57,7 +58,7 @@ export function SignOutButton({
         )}
         onClick={() => void handleLogout()}
       >
-        Sign out
+        {copy.nav.signOut}
       </button>
     );
   }
@@ -73,7 +74,7 @@ export function SignOutButton({
         onClick={() => void handleLogout()}
       >
         <LogOut className="h-4 w-4 shrink-0" />
-        <span>Sign out</span>
+        <span>{copy.nav.signOut}</span>
       </button>
     );
   }
@@ -88,8 +89,8 @@ export function SignOutButton({
         className
       )}
       onClick={() => void handleLogout()}
-      aria-label="Sign out"
-      title="Sign out"
+      aria-label={copy.nav.signOut}
+      title={copy.nav.signOut}
     >
       <LogOut className="h-5 w-5" strokeWidth={2} />
     </Button>

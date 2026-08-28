@@ -10,6 +10,7 @@ import { BlogFeaturedHero } from "@/features/blog/blog-featured-hero";
 import { BlogNewsletter } from "@/features/blog/blog-newsletter";
 import { listPublishedBlog } from "@/services/blog.service";
 import { getCurrentUser } from "@/lib/session";
+import { copy } from "@/lib/site-copy";
 
 export const metadata: Metadata = {
   title: "Blog",
@@ -32,13 +33,13 @@ export default async function BlogPage() {
         <div className="border-b border-border/60 bg-gradient-to-b from-rose-50/60 via-white to-transparent">
           <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange">
-              CPS Academy Blog
+              {copy.blog.eyebrow}
             </p>
             <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-navy sm:text-4xl">
-              Learn, grow, and stay inspired
+              {copy.blog.title}
             </h1>
             <p className="mt-3 max-w-2xl text-muted-foreground">
-              Guides, career tips, and platform updates for aspiring software engineers.
+              {copy.blog.desc}
             </p>
           </div>
         </div>
@@ -46,8 +47,8 @@ export default async function BlogPage() {
         <div className="mx-auto max-w-6xl space-y-14 px-4 py-10 sm:px-6 sm:py-14">
           {posts.length === 0 ? (
             <EmptyState
-              title="No posts yet"
-              description="Published articles will appear here."
+              title={copy.blog.noPosts}
+              description={copy.blog.noPostsDesc}
             />
           ) : (
             <>
@@ -58,17 +59,17 @@ export default async function BlogPage() {
                   <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
                     <div>
                       <h2 className="font-display text-2xl font-bold text-navy">
-                        Latest articles
+                        {copy.blog.latest}
                       </h2>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Fresh reads from the CPS Academy team
+                        {copy.blog.latestDesc}
                       </p>
                     </div>
                     <Link
                       href="/courses"
                       className="inline-flex items-center gap-1 text-sm font-semibold text-orange hover:underline"
                     >
-                      Explore courses
+                      {copy.blog.exploreCourses}
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </div>
