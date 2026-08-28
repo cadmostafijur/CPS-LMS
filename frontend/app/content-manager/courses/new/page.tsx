@@ -19,7 +19,9 @@ export default async function ContentManagerNewCoursePage() {
         title="Create course"
         description="Start with a draft. Add lessons and quizzes after saving."
       />
-      <CourseForm redirectBase="/content-manager/courses" />
+      <div className="max-w-4xl">
+        <CourseForm redirectBase="/content-manager/courses" />
+      </div>
     </DashboardShell>
   );
 }

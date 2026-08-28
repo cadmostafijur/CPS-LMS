@@ -2,6 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  BookOpen,
+  ChevronDown,
+  DollarSign,
+  Globe,
+  ImageIcon,
+  Settings2,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,16 +23,59 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageUrlField } from "@/components/shared/image-url-field";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { bffFetch, ApiError } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import type {
   Course,
   CourseCategory,
   CourseDifficulty,
   CourseStatus,
 } from "@/types";
+
+function FormSection({
+  title,
+  description,
+  children,
+  defaultOpen = true,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-start justify-between gap-3 px-4 py-4 text-left sm:px-5"
+      >
+        <div>
+          <h3 className="font-display text-sm font-semibold text-navy">{title}</h3>
+          {description ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+          ) : null}
+        </div>
+        <ChevronDown
+          className={cn(
+            "mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition",
+            open && "rotate-180"
+          )}
+        />
+      </button>
+      {open ? (
+        <div className="space-y-4 border-t border-border px-4 pb-5 pt-4 sm:px-5">
+          {children}
+        </div>
+      ) : null}
+    </section>
+  );
+}
 
 export function CourseForm({
   course,
@@ -149,216 +201,29 @@ export function CourseForm({
     : "";
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{course ? "Edit course" : "New course"}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-4" onSubmit={onSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
-            <Input id="title" name="title" defaultValue={course?.title || ""} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="shortDescription">Short description</Label>
-            <Input
-              id="shortDescription"
-              name="shortDescription"
-              defaultValue={course?.shortDescription || ""}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              name="description"
-              defaultValue={course?.description || ""}
-              rows={5}
-            />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <ImageUrlField
-              name="thumbnailUrl"
-              label="Course thumbnail"
-              value={thumbnailUrl}
-              onChange={setThumbnailUrl}
-              hint="Shown on course cards. Upload or paste a URL."
-            />
-            <ImageUrlField
-              name="coverImageUrl"
-              label="Cover image"
-              value={coverImageUrl}
-              onChange={setCoverImageUrl}
-              hint="Large banner on the course detail page."
-            />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Category</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Uncategorized</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem
-                      key={String(cat.documentId || cat.id)}
-                      value={String(cat.documentId || cat.id)}
-                    >
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Difficulty</Label>
-              <Select
-                value={difficulty}
-                onValueChange={(v) => setDifficulty(v as CourseDifficulty)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BEGINNER">Beginner</SelectItem>
-                  <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
-                  <SelectItem value="ADVANCED">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-orange/20 bg-gradient-to-r from-orange/10 via-white to-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange/15 text-orange">
+              <BookOpen className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-orange">
+                {course ? "Course editor" : "New course"}
+              </p>
+              <h2 className="font-display text-xl font-semibold text-navy">
+                {course ? course.title : "Build your course in clear steps"}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {course
+                  ? "Update details here, then manage lessons and quizzes in the editor."
+                  : "Start with the basics. You can add lessons and quizzes after saving."}
+              </p>
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="language">Language</Label>
-              <Input
-                id="language"
-                name="language"
-                defaultValue={course?.language || "English"}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as CourseStatus)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="DRAFT">Draft</SelectItem>
-                  <SelectItem value="PUBLISHED">Published</SelectItem>
-                  <SelectItem value="ARCHIVED">Archived</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="publishedAt">Publish at (optional schedule)</Label>
-            <Input
-              id="publishedAt"
-              name="publishedAt"
-              type="datetime-local"
-              defaultValue={publishedLocal}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="requirements">Requirements</Label>
-            <Textarea
-              id="requirements"
-              name="requirements"
-              defaultValue={course?.requirements || ""}
-              rows={3}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="outcomes">Learning outcomes</Label>
-            <Textarea
-              id="outcomes"
-              name="outcomes"
-              defaultValue={course?.outcomes || ""}
-              rows={3}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="tags">Tags (comma-separated)</Label>
-            <Input
-              id="tags"
-              name="tags"
-              defaultValue={(course as any)?.tags || ""}
-              placeholder="javascript, beginner, contest"
-            />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="seoTitle">SEO title</Label>
-              <Input
-                id="seoTitle"
-                name="seoTitle"
-                defaultValue={(course as any)?.seoTitle || ""}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="seoDescription">SEO description</Label>
-              <Input
-                id="seoDescription"
-                name="seoDescription"
-                defaultValue={(course as any)?.seoDescription || ""}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Pricing</Label>
-            <Select value={isFree ? "free" : "paid"} onValueChange={(v) => setIsFree(v === "free")}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="free">Free</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {!isFree ? (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="price">Price</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="discountPrice">Discount price</Label>
-                <Input
-                  id="discountPrice"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={discountPrice}
-                  onChange={(e) => setDiscountPrice(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Currency</Label>
-                <Select value={currency} onValueChange={setCurrency}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="BDT">BDT</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" disabled={loading || deleting}>
+            <Button type="submit" form="course-form" disabled={loading || deleting}>
               {loading ? "Saving…" : course ? "Save changes" : "Create course"}
             </Button>
             {course ? (
@@ -368,12 +233,299 @@ export function CourseForm({
                 disabled={loading || deleting}
                 onClick={() => setConfirmDelete(true)}
               >
-                Delete course
+                Delete
               </Button>
             ) : null}
           </div>
-        </form>
-      </CardContent>
+        </div>
+      </div>
+
+      <form id="course-form" onSubmit={onSubmit}>
+        <Tabs defaultValue="basics" className="space-y-5">
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-2xl border border-border bg-white p-1.5 shadow-sm">
+            <TabsTrigger value="basics" className="gap-1.5 rounded-xl px-3 py-2">
+              <Sparkles className="h-3.5 w-3.5" />
+              Basics
+            </TabsTrigger>
+            <TabsTrigger value="media" className="gap-1.5 rounded-xl px-3 py-2">
+              <ImageIcon className="h-3.5 w-3.5" />
+              Media
+            </TabsTrigger>
+            <TabsTrigger value="details" className="gap-1.5 rounded-xl px-3 py-2">
+              <Settings2 className="h-3.5 w-3.5" />
+              Details
+            </TabsTrigger>
+            <TabsTrigger value="pricing" className="gap-1.5 rounded-xl px-3 py-2">
+              <DollarSign className="h-3.5 w-3.5" />
+              Pricing
+            </TabsTrigger>
+            <TabsTrigger value="seo" className="gap-1.5 rounded-xl px-3 py-2">
+              <Globe className="h-3.5 w-3.5" />
+              SEO
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="basics" className="mt-0 space-y-4">
+            <FormSection title="Course identity" description="What students see first in the catalog.">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input id="title" name="title" defaultValue={course?.title || ""} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="shortDescription">Short description</Label>
+                <Input
+                  id="shortDescription"
+                  name="shortDescription"
+                  defaultValue={course?.shortDescription || ""}
+                  placeholder="One line summary for cards and search"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Full description</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  defaultValue={course?.description || ""}
+                  rows={6}
+                  placeholder="What will students learn? Who is this course for?"
+                />
+              </div>
+            </FormSection>
+
+            <FormSection title="Classification" description="Category, difficulty, and language.">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={categoryId} onValueChange={setCategoryId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Uncategorized</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem
+                          key={String(cat.documentId || cat.id)}
+                          value={String(cat.documentId || cat.id)}
+                        >
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Difficulty</Label>
+                  <Select
+                    value={difficulty}
+                    onValueChange={(v) => setDifficulty(v as CourseDifficulty)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BEGINNER">Beginner</SelectItem>
+                      <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
+                      <SelectItem value="ADVANCED">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="language">Language</Label>
+                  <Input
+                    id="language"
+                    name="language"
+                    defaultValue={course?.language || "English"}
+                  />
+                </div>
+              </div>
+            </FormSection>
+          </TabsContent>
+
+          <TabsContent value="media" className="mt-0 space-y-4">
+            <FormSection
+              title="Visual assets"
+              description="Thumbnail appears on cards. Cover image appears on the course page."
+            >
+              <div className="grid gap-4 lg:grid-cols-2">
+                <ImageUrlField
+                  name="thumbnailUrl"
+                  label="Course thumbnail"
+                  value={thumbnailUrl}
+                  onChange={setThumbnailUrl}
+                  hint="Recommended for catalog cards. Upload or paste a URL."
+                />
+                <ImageUrlField
+                  name="coverImageUrl"
+                  label="Cover image"
+                  value={coverImageUrl}
+                  onChange={setCoverImageUrl}
+                  hint="Large banner on the course detail page."
+                />
+              </div>
+            </FormSection>
+          </TabsContent>
+
+          <TabsContent value="details" className="mt-0 space-y-4">
+            <FormSection title="Publishing" description="Control visibility and schedule.">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={status} onValueChange={(v) => setStatus(v as CourseStatus)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DRAFT">Draft</SelectItem>
+                      <SelectItem value="PUBLISHED">Published</SelectItem>
+                      <SelectItem value="ARCHIVED">Archived</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="publishedAt">Publish at (optional)</Label>
+                  <Input
+                    id="publishedAt"
+                    name="publishedAt"
+                    type="datetime-local"
+                    defaultValue={publishedLocal}
+                  />
+                </div>
+              </div>
+            </FormSection>
+
+            <FormSection title="Learning details" description="Requirements, outcomes, and tags.">
+              <div className="space-y-2">
+                <Label htmlFor="requirements">Requirements</Label>
+                <Textarea
+                  id="requirements"
+                  name="requirements"
+                  defaultValue={course?.requirements || ""}
+                  rows={3}
+                  placeholder="What should students know before starting?"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="outcomes">Learning outcomes</Label>
+                <Textarea
+                  id="outcomes"
+                  name="outcomes"
+                  defaultValue={course?.outcomes || ""}
+                  rows={3}
+                  placeholder="What will students be able to do after finishing?"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tags">Tags</Label>
+                <Input
+                  id="tags"
+                  name="tags"
+                  defaultValue={(course as any)?.tags || ""}
+                  placeholder="javascript, beginner, contest"
+                />
+              </div>
+            </FormSection>
+          </TabsContent>
+
+          <TabsContent value="pricing" className="mt-0 space-y-4">
+            <FormSection title="Pricing model" description="Free courses enroll instantly. Paid courses need a price.">
+              <div className="space-y-2">
+                <Label>Pricing</Label>
+                <Select value={isFree ? "free" : "paid"} onValueChange={(v) => setIsFree(v === "free")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">Free</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {!isFree ? (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Price</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="discountPrice">Discount price</Label>
+                    <Input
+                      id="discountPrice"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={discountPrice}
+                      onChange={(e) => setDiscountPrice(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Currency</Label>
+                    <Select value={currency} onValueChange={setCurrency}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="BDT">BDT</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : null}
+            </FormSection>
+          </TabsContent>
+
+          <TabsContent value="seo" className="mt-0 space-y-4">
+            <FormSection title="Search & sharing" description="Optional metadata for search engines and social previews.">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="seoTitle">SEO title</Label>
+                  <Input
+                    id="seoTitle"
+                    name="seoTitle"
+                    defaultValue={(course as any)?.seoTitle || ""}
+                    placeholder="Custom title for Google and social cards"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="seoDescription">SEO description</Label>
+                  <Textarea
+                    id="seoDescription"
+                    name="seoDescription"
+                    defaultValue={(course as any)?.seoDescription || ""}
+                    rows={3}
+                    placeholder="Short summary for search results"
+                  />
+                </div>
+              </div>
+            </FormSection>
+          </TabsContent>
+        </Tabs>
+
+        <div className="mt-6 flex flex-wrap gap-2 rounded-2xl border border-border bg-white p-4 shadow-sm">
+          <Button type="submit" disabled={loading || deleting}>
+            {loading ? "Saving…" : course ? "Save changes" : "Create course"}
+          </Button>
+          {course ? (
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={loading || deleting}
+              onClick={() => setConfirmDelete(true)}
+            >
+              Delete course
+            </Button>
+          ) : null}
+        </div>
+      </form>
+
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
@@ -383,6 +535,6 @@ export function CourseForm({
         destructive
         onConfirm={removeCourse}
       />
-    </Card>
+    </div>
   );
 }

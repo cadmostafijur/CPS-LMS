@@ -111,8 +111,6 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      <SuccessStories stories={storyBanners} />
-
       <section className="border-y border-border bg-surface/80">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-8 text-center sm:flex-row sm:justify-center sm:gap-8">
           <BrandLogo size={28} className="opacity-90" />
@@ -189,6 +187,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <SuccessStories stories={storyBanners} />
 
       {courseCount > 0 ? (
         <section className="border-y border-border bg-navy text-white">

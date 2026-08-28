@@ -35,6 +35,9 @@ export default ({ strapi }: { strapi: any }) => ({
   async studentDashboard(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').studentDashboard(ctx);
   },
+  async studentAnalytics(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').studentAnalytics(ctx);
+  },
   async instructorDashboard(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').instructorDashboard(ctx);
   },

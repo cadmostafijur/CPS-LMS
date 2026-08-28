@@ -76,6 +76,12 @@ export default {
     },
     {
       method: 'GET',
+      path: '/lms/student/analytics',
+      handler: 'lms.studentAnalytics',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
       path: '/lms/dashboard/instructor',
       handler: 'lms.instructorDashboard',
       config: { auth: false, policies: ['global::is-instructor-or-above'] },

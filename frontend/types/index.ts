@@ -245,6 +245,26 @@ export interface StudentDashboard {
   }>;
 }
 
+export interface StudentAnalytics {
+  healthCheck: number;
+  moduleProgress: number;
+  avgQuizMark: number;
+  avgAssignmentMark: number;
+  quiz: {
+    completed: number;
+    attempted: number;
+    incomplete: number;
+    total: number;
+  };
+  calendarMonth: string;
+  completedDays: number[];
+  videoMinutesTotal: number;
+  videoByDay: Array<{ label: string; minutes: number }>;
+  assignmentSeries: Array<{ label: string; score: number }>;
+  rewardPoints: number;
+  lessonsCompleted: number;
+}
+
 export interface InstructorDashboard {
   user: User | null;
   courseCount: number;

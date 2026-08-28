@@ -19,7 +19,9 @@ export default async function NewCoursePage() {
         title="Create course"
         description="Start with a draft. Add lessons and quizzes after saving."
       />
-      <CourseForm />
+      <div className="max-w-4xl">
+        <CourseForm redirectBase="/instructor/courses" />
+      </div>
     </DashboardShell>
   );
 }

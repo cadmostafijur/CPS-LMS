@@ -27,13 +27,15 @@ export function SuccessStories({ stories }: { stories: Banner[] }) {
               key={String(story.documentId || story.id)}
               className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
             >
-              <div className="relative aspect-[4/3] bg-navy/5">
+              <div className="relative w-full overflow-hidden bg-navy/5 aspect-square sm:aspect-[4/5] lg:aspect-square">
                 {story.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={story.imageUrl}
-                    alt={story.title}
-                    className="h-full w-full object-cover"
+                    alt={story.title || "Success story"}
+                    className="h-full w-full object-cover object-center"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-muted-foreground">

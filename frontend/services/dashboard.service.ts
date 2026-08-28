@@ -4,11 +4,18 @@ import type {
   ApiDataResponse,
   ContentManagerDashboard,
   InstructorDashboard,
+  StudentAnalytics,
   StudentDashboard,
 } from "@/types";
 
 export async function getStudentDashboard(token?: string | null) {
   return apiFetch<ApiDataResponse<StudentDashboard>>(`/lms/dashboard/student`, {
+    token,
+  });
+}
+
+export async function getStudentAnalytics(token?: string | null) {
+  return apiFetch<ApiDataResponse<StudentAnalytics>>(`/lms/student/analytics`, {
     token,
   });
 }

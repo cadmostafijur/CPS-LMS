@@ -46,11 +46,11 @@ const emptyForm = {
   imageUrl: "",
   placement: "BOTH" as Banner["placement"],
   style: "STRIP" as NonNullable<Banner["style"]>,
-  showTitle: true,
-  showSubtitle: true,
+  showTitle: false,
+  showSubtitle: false,
   showCta: true,
-  showBrowseCourses: true,
-  showAuthButton: true,
+  showBrowseCourses: false,
+  showAuthButton: false,
   isActive: true,
   sortOrder: 0,
 };
@@ -153,21 +153,25 @@ export function BannersAdminManager() {
   }
 
   async function save() {
-    if (!form.title.trim()) {
-      toast.error("Title is required");
+    if (!form.imageUrl.trim() && !form.title.trim()) {
+      toast.error("Add a banner image or title");
       return;
     }
+    const payload = {
+      ...form,
+      title: form.title.trim() || "Banner",
+    };
     try {
       if (editing) {
         await bffFetch(`/api/lms/admin/banners/${editing.documentId || editing.id}`, {
           method: "PUT",
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
         toast.success("Banner updated");
       } else {
         await bffFetch("/api/lms/admin/banners", {
           method: "POST",
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
         toast.success("Banner created");
       }
@@ -240,7 +244,11 @@ export function BannersAdminManager() {
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="font-medium text-navy">{banner.title}</TableCell>
+                <TableCell className="font-medium text-navy">
+                  {banner.title?.trim() || (
+                    <span className="text-muted-foreground">Image only</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge
                     variant={
@@ -329,7 +337,10 @@ export function BannersAdminManager() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>{form.style === "STORY" ? "Learner name" : "Title"}</Label>
+              <Label>
+                {form.style === "STORY" ? "Learner name" : "Title"}{" "}
+                <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
               <Input
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
@@ -346,7 +357,10 @@ export function BannersAdminManager() {
               </div>
             ) : null}
             <div className="space-y-1.5">
-              <Label>{form.style === "STORY" ? "Quote / story" : "Subtitle"}</Label>
+              <Label>
+                {form.style === "STORY" ? "Quote / story" : "Subtitle"}{" "}
+                <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
               <Input
                 value={form.subtitle}
                 onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))}

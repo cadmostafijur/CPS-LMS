@@ -1084,6 +1084,170 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     };
   },
 
+  async studentAnalytics(ctx: Ctx) {
+    const user = await getAuthUser(ctx, strapi);
+    assertStudentOnly(user);
+    const studentId = user.id;
+
+    const [lessonProgress, quizAttempts, assignments, enrollments] = await Promise.all([
+      strapi.db.query('api::lesson-progress.lesson-progress').findMany({
+        where: { student: studentId, completed: true },
+        populate: { lesson: true },
+      }),
+      strapi.db.query('api::quiz-attempt.quiz-attempt').findMany({
+        where: { student: studentId },
+        populate: { quiz: true },
+        orderBy: { submittedAt: 'desc' },
+      }),
+      strapi.db.query('api::assignment-submission.assignment-submission').findMany({
+        where: { student: studentId },
+        populate: { assignment: true },
+        orderBy: { submittedAt: 'asc' },
+      }),
+      strapi.db.query('api::enrollment.enrollment').findMany({
+        where: { student: studentId },
+        populate: { course: { populate: { quizzes: true } } },
+      }),
+    ]);
+
+    const progressRows = await Promise.all(
+      enrollments
+        .filter((e: any) => e.course?.id)
+        .map(async (e: any) =>
+          getCourseProgressForStudent(strapi, studentId, e.course.id)
+        )
+    );
+    const moduleProgress =
+      progressRows.length > 0
+        ? progressRows.reduce((sum, p) => sum + Number(p?.percentage ?? 0), 0) /
+          progressRows.length
+        : 0;
+
+    const quizPctValues: number[] = [];
+    const attemptedQuizIds = new Set<string>();
+    const passedQuizIds = new Set<string>();
+    for (const attempt of quizAttempts) {
+      const qid = attempt.quiz?.id;
+      if (qid != null) attemptedQuizIds.add(String(qid));
+      const pct = Number(attempt.percentage ?? 0);
+      if (pct > 0) quizPctValues.push(pct);
+      if (pct >= 80 && qid != null) passedQuizIds.add(String(qid));
+    }
+    const avgQuizMark =
+      quizPctValues.length > 0
+        ? Math.round(
+            quizPctValues.reduce((a, b) => a + b, 0) / quizPctValues.length
+          )
+        : 0;
+
+    const totalQuizIds = new Set<string>();
+    for (const e of enrollments) {
+      for (const q of e.course?.quizzes || []) {
+        if (q?.id != null) totalQuizIds.add(String(q.id));
+      }
+    }
+
+    const gradedAssignments = assignments.filter((a: any) => a.score != null);
+    const avgAssignmentMark =
+      gradedAssignments.length > 0
+        ? Math.round(
+            (gradedAssignments.reduce((s: number, a: any) => s + Number(a.score), 0) /
+              gradedAssignments.length) *
+              100
+          ) / 100
+        : 0;
+
+    let videoMinutes = 0;
+    for (const lp of lessonProgress) {
+      const lesson = lp.lesson;
+      if (!lesson) continue;
+      const isVideo =
+        lesson.lessonType === 'VIDEO' ||
+        lesson.lessonType === 'AUDIO' ||
+        Boolean(lesson.videoUrl);
+      if (isVideo) videoMinutes += Number(lesson.durationMinutes ?? 10);
+    }
+
+    const healthCheck = Math.min(
+      100,
+      Math.round(
+        moduleProgress * 0.35 +
+          avgQuizMark * 0.25 +
+          avgAssignmentMark * 0.25 +
+          Math.min(100, lessonProgress.length * 4) * 0.15
+      )
+    );
+
+    const now = new Date();
+    const calendarMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const completedDays: number[] = [];
+    for (const lp of lessonProgress) {
+      if (!lp.completedAt) continue;
+      const d = new Date(lp.completedAt);
+      if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) {
+        const day = d.getDate();
+        if (!completedDays.includes(day)) completedDays.push(day);
+      }
+    }
+    completedDays.sort((a, b) => a - b);
+
+    const videoByDay: { label: string; minutes: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      let minutes = 0;
+      for (const lp of lessonProgress) {
+        if (!lp.completedAt) continue;
+        const completedKey = new Date(lp.completedAt).toISOString().slice(0, 10);
+        if (completedKey !== key) continue;
+        const lesson = lp.lesson;
+        if (!lesson) continue;
+        const isVideo =
+          lesson.lessonType === 'VIDEO' ||
+          lesson.lessonType === 'AUDIO' ||
+          Boolean(lesson.videoUrl);
+        if (isVideo) minutes += Number(lesson.durationMinutes ?? 10);
+      }
+      videoByDay.push({
+        label: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+        minutes,
+      });
+    }
+
+    const assignmentSeries = assignments.slice(0, 6).map((a: any, index: number) => ({
+      label: `A${index + 1}`,
+      score: a.score != null ? Number(a.score) : 0,
+    }));
+
+    const rewardPoints =
+      lessonProgress.length * 10 +
+      Math.round(avgQuizMark * 0.6) +
+      gradedAssignments.length * 15;
+
+    return {
+      data: {
+        healthCheck,
+        moduleProgress: Math.round(moduleProgress),
+        avgQuizMark,
+        avgAssignmentMark,
+        quiz: {
+          completed: passedQuizIds.size,
+          attempted: attemptedQuizIds.size,
+          incomplete: Math.max(0, totalQuizIds.size - attemptedQuizIds.size),
+          total: totalQuizIds.size,
+        },
+        calendarMonth,
+        completedDays,
+        videoMinutesTotal: videoMinutes,
+        videoByDay,
+        assignmentSeries,
+        rewardPoints,
+        lessonsCompleted: lessonProgress.length,
+      },
+    };
+  },
+
   async instructorDashboard(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
 
@@ -1806,10 +1970,14 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       throw new ForbiddenError('Content Manager or Admin required');
     }
     const body = ctx.request.body || {};
-    if (!body.title) throw new ValidationError('title is required');
+    const title = String(body.title || '').trim();
+    const imageUrl = body.imageUrl ? String(body.imageUrl).trim() : '';
+    if (!title && !imageUrl) {
+      throw new ValidationError('Add a banner image or a title');
+    }
     const created = await strapi.db.query('api::banner.banner').create({
       data: {
-        title: String(body.title).trim(),
+        title: title || 'Banner',
         subtitle: body.subtitle || null,
         eyebrow: body.eyebrow || null,
         personRole: body.personRole || null,
