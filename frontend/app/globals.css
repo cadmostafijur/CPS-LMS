@@ -141,6 +141,24 @@ body {
   list-style: disc;
 }
 
+.prose-lms h3 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #0b1220;
+}
+
+.prose-lms ol {
+  margin: 0.5rem 0 0.75rem 1.1rem;
+  list-style: decimal;
+}
+
+.prose-lms li {
+  margin-bottom: 0.35rem;
+}
+
 /* Hide native <details> disclosure markers (avoids stray bars next to custom icons) */
 summary {
   list-style: none;
