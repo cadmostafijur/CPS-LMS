@@ -42,11 +42,8 @@ export default function RegisterPage() {
             ))}
           </ul>
         </div>
-        <p className="relative z-10 text-sm text-white/50">
-          Already learning with us?{" "}
-          <Link href="/login" className="text-orange hover:underline">
-            Sign in
-          </Link>
+        <p className="relative z-10 pb-2 text-sm text-white/50">
+          © {new Date().getFullYear()} CPS Academy
         </p>
       </aside>
       <div className="flex flex-col justify-center bg-gradient-to-b from-surface to-white px-4 py-12 sm:px-8">
