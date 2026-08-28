@@ -640,6 +640,12 @@ export default {
       config: { auth: false, policies: ['global::is-instructor-or-above'] },
     },
     {
+      method: 'POST',
+      path: '/lms/ai/assistant',
+      handler: 'lms.aiAssistant',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
+    {
       method: 'GET',
       path: '/lms/helpdesk/posts',
       handler: 'lms.listHelpDeskPosts',

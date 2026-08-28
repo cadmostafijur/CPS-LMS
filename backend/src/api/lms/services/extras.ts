@@ -13,6 +13,7 @@ import {
 } from '../../../utils/roles';
 import { sanitizeUser } from '../../../utils/sanitize';
 import { notifyUser } from '../../../utils/notify-user';
+import { generateSageReply } from '../../../utils/sage-ai';
 
 const { ForbiddenError, NotFoundError, ValidationError, ApplicationError } = errors;
 
@@ -1083,6 +1084,52 @@ export function createExtrasHandlers(strapi: Core.Strapi) {
           replies: [],
         },
       };
+    },
+
+    // —— Sage AI assistant ——
+    async aiAssistant(ctx: Ctx) {
+      const user = await getAuthUser(ctx, strapi);
+      assertStudent(user);
+
+      const body = ctx.request.body || {};
+      const rawMessages = Array.isArray(body.messages) ? body.messages : [];
+      const messages = rawMessages
+        .filter(
+          (m: any) =>
+            m &&
+            (m.role === 'user' || m.role === 'assistant') &&
+            typeof m.content === 'string' &&
+            m.content.trim()
+        )
+        .slice(-20)
+        .map((m: any) => ({ role: m.role, content: m.content.trim() }));
+
+      if (!messages.length || messages[messages.length - 1]?.role !== 'user') {
+        throw new ValidationError('Send at least one user message');
+      }
+
+      const context = {
+        studentName: user.name || user.username,
+        enrolledCourses: Array.isArray(body.context?.enrolledCourses)
+          ? body.context.enrolledCourses
+          : undefined,
+      };
+
+      try {
+        const result = await generateSageReply(messages, context);
+        return {
+          data: {
+            role: 'assistant',
+            content: result.reply,
+            provider: result.provider,
+            assistantName: result.assistantName,
+          },
+        };
+      } catch (err: any) {
+        throw new ApplicationError(
+          err?.message || 'Sage AI is unavailable. Check AGENTROUTER_API_KEY on the server.'
+        );
+      }
     },
   };
 }

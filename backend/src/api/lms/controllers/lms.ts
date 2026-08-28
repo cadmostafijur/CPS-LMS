@@ -347,4 +347,7 @@ export default ({ strapi }: { strapi: any }) => ({
   async createHelpDeskPost(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').createHelpDeskPost(ctx);
   },
+  async aiAssistant(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').aiAssistant(ctx);
+  },
 });
