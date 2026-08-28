@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "placehold.co" },
       { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "www.google.com" },
+      { protocol: "https", hostname: "logo.clearbit.com" },
     ],
   },
 };
