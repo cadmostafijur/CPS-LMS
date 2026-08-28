@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, LayoutDashboard, X, UserRound, LogOut } from "lucide-react";
-import { Suspense, useState } from "react";
+import { LayoutDashboard, Menu, X, UserRound } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import { NotificationMenu } from "@/components/layout/notification-menu";
-import { SignOutButton, useSignOut } from "@/components/layout/sign-out-button";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 import {
   dashboardPathForRole,
   getRoleName,
@@ -52,10 +52,17 @@ function NavbarInner({
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [hash, setHash] = useState("");
+
+  useEffect(() => {
+    const syncHash = () => setHash(window.location.hash);
+    syncHash();
+    window.addEventListener("hashchange", syncHash);
+    return () => window.removeEventListener("hashchange", syncHash);
+  }, [pathname]);
   const role = getRoleName(user);
   const dash = dashboardPathForRole(role);
   const notificationsHref = notificationsPathForRole(role);
-  const handleSignOut = useSignOut({ onSignedOut: () => setOpen(false) });
   const isDashboard =
     pathname.startsWith("/admin") ||
     pathname.startsWith("/student") ||
@@ -69,6 +76,9 @@ function NavbarInner({
       .join("")
       .slice(0, 2)
       .toUpperCase() || "U";
+
+  const centerNavLinks = !isDashboard ? MAIN_NAV_LINKS : [];
+  const isDashActive = pathname === dash || pathname.startsWith(`${dash}/`);
 
   return (
     <header
@@ -109,11 +119,11 @@ function NavbarInner({
 
         {!isDashboard ? (
           <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 md:flex">
-            {MAIN_NAV_LINKS.map((link) => {
-              const active = isMainNavLinkActive(link.href, pathname);
+            {centerNavLinks.map((link) => {
+              const active = isMainNavLinkActive(link.href, pathname, hash);
               return (
                 <Link
-                  key={link.href}
+                  key={link.href + link.label}
                   href={link.href}
                   className={cn(
                     "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -143,6 +153,26 @@ function NavbarInner({
                     className={overHero ? "text-white hover:bg-white/10" : undefined}
                   />
                 ) : null}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className={cn(
+                    "h-10 shrink-0 gap-2 px-3 font-medium",
+                    isDashActive
+                      ? overHero
+                        ? "bg-white/15 text-white hover:bg-white/20"
+                        : "bg-orange/10 text-navy hover:bg-orange/15"
+                      : overHero
+                        ? "text-white hover:bg-white/10"
+                        : "text-navy hover:bg-navy/5"
+                  )}
+                >
+                  <Link href={dash}>
+                    <LayoutDashboard className="h-4 w-4 shrink-0" strokeWidth={2} />
+                    <span>{copy.nav.dashboard}</span>
+                  </Link>
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -178,21 +208,9 @@ function NavbarInner({
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => router.push(dash)}>
-                      <LayoutDashboard className="mr-2 h-4 w-4" />
-                      {copy.nav.dashboard}
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => router.push("/profile")}>
                       <UserRound className="mr-2 h-4 w-4" />
                       {copy.nav.profile}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => void handleSignOut()}
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      {copy.nav.signOut}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -232,9 +250,9 @@ function NavbarInner({
         <div className="border-t border-border bg-white px-4 py-4 md:hidden">
           <div className="flex flex-col gap-1">
             {!isDashboard
-              ? MAIN_NAV_LINKS.map((link) => (
+              ? centerNavLinks.map((link) => (
                   <Link
-                    key={link.href}
+                    key={link.href + link.label}
                     href={link.href}
                     className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
                     onClick={() => setOpen(false)}
@@ -245,6 +263,13 @@ function NavbarInner({
               : null}
             {user ? (
               <>
+                <Link
+                  href={dash}
+                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
+                  onClick={() => setOpen(false)}
+                >
+                  {copy.nav.dashboard}
+                </Link>
                 {notificationsHref ? (
                   <Link
                     href={notificationsHref}
@@ -254,13 +279,6 @@ function NavbarInner({
                     {copy.nav.notifications}
                   </Link>
                 ) : null}
-                <Link
-                  href={dash}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
-                  onClick={() => setOpen(false)}
-                >
-                  {copy.nav.dashboard}
-                </Link>
                 <Link
                   href="/profile"
                   className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"

@@ -35,7 +35,11 @@ export const FOOTER_LINKS = [
   { href: "/terms", label: "Terms & conditions" },
 ] as const;
 
-export function isMainNavLinkActive(href: string, pathname: string): boolean {
+export function isMainNavLinkActive(
+  href: string,
+  pathname: string,
+  hash = ""
+): boolean {
   if (href === "/courses") {
     return pathname === "/courses" || pathname.startsWith("/courses/");
   }
@@ -43,7 +47,7 @@ export function isMainNavLinkActive(href: string, pathname: string): boolean {
     return pathname === "/bootcamp" || pathname.startsWith("/bootcamp/");
   }
   if (href === "/#success-stories") {
-    return pathname === "/";
+    return pathname === "/" && hash === "#success-stories";
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
