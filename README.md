@@ -1,65 +1,95 @@
 # CPS Academy LMS
 
-Production-oriented Learning Management System for a technical hiring contest.
+Production-oriented Learning Management System — **Junior Software Engineer Project Round** submission.
 
-**Stack:** Next.js (Vercel) → Strapi REST API (Railway) → PostgreSQL (Neon / Railway)
+**Stack (mandatory):** Next.js (Vercel) → Strapi REST API (Railway) → PostgreSQL
+
+---
+
+## Contest Requirements Checklist
+
+| Requirement | Status | Notes |
+|-------------|--------|-------|
+| **Tech stack** — Next.js + Strapi + PostgreSQL only | ✅ Done | `frontend/` (Vercel), `backend/` (Railway) |
+| **4 roles** — Admin, Content Manager, Instructor, Student | ✅ Done | `backend/src/utils/roles.ts`, `frontend/lib/roles.ts` |
+| **Permission matrix** enforced on **backend** | ✅ Done | LMS services + policies; not UI-only |
+| **Auth** — sign up, login, logout, JWT session | ✅ Done | httpOnly cookie via Next BFF |
+| **Course CRUD** per matrix | ✅ Done | Admin/CM any; Instructor own courses |
+| **Lessons** — text + video URL, ordered | ✅ Done | Learning player + staff course editor |
+| **Student enrollment** + My Courses | ✅ Done | `/api/lms/enroll`, `/student/my-courses` |
+| **Lesson viewing** for enrolled students | ✅ Done | `/learn/[courseId]/[lessonId]` |
+| **Progress tracking** — mark complete, % persists | ✅ Done | `lesson-progress`, server-side calculation |
+| **Quiz + auto-grading** — MCQ, score on submit, stored | ✅ Done | Server grades; no `isCorrect` leak on take |
+| **Admin panel** — users, roles, courses, stats | ✅ Done | `/admin/*` dashboard + users CRUD |
+| **Blog** — draft/publish, public list + single post | ✅ Done | CM/Admin write; public `/blog` |
+| **README** — local run + features completed | ✅ Done | This file |
+| **Deployed app** (Vercel + Railway) | ⚠️ You submit | Set URLs in submission form |
+| **10-min video walkthrough** | ⚠️ You record | Demo all roles + explain your code |
+
+### Permission matrix (implemented)
+
+| Action | Admin | Content Manager | Instructor | Student |
+|--------|:-----:|:---------------:|:----------:|:-------:|
+| Manage users & roles | ✅ | ❌ | ❌ | ❌ |
+| Create / edit / delete any course | ✅ | ✅ | Own only | ❌ |
+| Add / edit / delete lessons | ✅ | ✅ | Own courses | ❌ |
+| Create quizzes | ✅ | ✅ | Own courses | ❌ |
+| View student progress | ✅ | ✅ | Own courses | Own only |
+| Write / manage blog | ✅ | ✅ | ❌ | ❌ |
+| Enroll in a course | ❌ | ❌ | ❌ | ✅ |
+| Take quizzes | ❌ | ❌ | ❌ | ✅ |
+
+Backend enforcement examples: `assertStudentOnly`, `assertCourseOwnerOrManager`, `canManageCourse`, `ForbiddenError` in `backend/src/api/lms/services/lms.ts`.
+
+---
+
+## Extra Features (beyond contest spec)
+
+These were added to make the product production-ready and stand out:
+
+### AI & learning
+- **Sage AI assistant** — text-based student tutor (`/student/assistant`)
+- **Certificates** — auto-issue on course completion, print, public verify (`/verify/[code]`)
+- **Assignments** — publish, submit (file upload), instructor grading
+- **Question bank** — import questions into quizzes
+- **Student transcript** — downloadable grade summary
+- **Timed quizzes** — optional time limit with auto-submit behavior
+- **Course preview lessons** — browse sample lesson without enrollment
+
+### Live & community
+- **Live class calendar** + attendance (`/student/calendar`)
+- **Course discussions** — threaded Q&A on course pages
+- **Reviews & ratings** — student reviews, admin moderation
+- **Course announcements** — notify enrolled students
+- **Help desk / messaging** — student ↔ instructor chat
+- **Support tickets** — student tickets, admin triage
+
+### Commerce (simulated)
+- **Paid enrollment** — orders, coupons, checkout flow
+- **Plans & subscriptions**, payments admin, inventory (demo data)
+
+### Marketing & UX
+- **Admin-managed homepage banners** — hero carousel, promo strips, success stories
+- **Redesigned marketing homepage** — sections, FAQ, CTA blocks
+- **Blog redesign** — featured hero, card grid, sidebar TOC, share, related posts
+- **Wishlist** + reminder notifications
+- **Course categories** + public catalog with filters
+- **Student analytics dashboard** — real progress/quiz/assignment charts
+- **In-app notifications** — bell dropdown + full inbox (enrollment, quiz, assignment, course cancel, announcements)
+- **Unified button design system** — consistent orange/navy CTAs
+
+### Admin / staff tooling
+- **Content Manager workspace** — separate dashboard for courses/blog/banners
+- **Staff courses board** — catalog-first course management UI
+- **Batches / cohorts**, attendance records, audit logs, reports
+- **Bulk grade CSV export**, course clone, SEO fields on courses
+- **Email notifications** (SMTP) alongside in-app alerts
 
 ---
 
 ## Project Overview
 
-CPS Academy is a role-based LMS with courses, ordered lessons, enrollment, persistent progress, server-graded quizzes, admin user management, and a public blog. Authorization is enforced on the Strapi backend — UI gating alone is never trusted.
-
-Brand mark: curly-brace `{ }` logo with gold and orange accents on deep navy.
-
----
-
-## Features
-
-- Four application roles: **Admin**, **Content Manager**, **Instructor**, **Student**
-- Registration (always Student), login, logout, persistent JWT session (httpOnly cookie)
-- Course CRUD with draft / published / archived lifecycle
-- Ordered text & video lessons and learning player
-- Student enrollment with duplicate prevention
-- Per-student lesson progress with capped percentage
-- MCQ quizzes with **server-side grading** (no `isCorrect` leakage before submit)
-- Role dashboards with live statistics
-- Admin user & role management
-- Public blog with draft / publish controls
-- Responsive UI, loading / empty / error / forbidden states
-
----
-
-## Architecture
-
-```text
-                         ┌──────────────────────┐
-                         │      Next.js         │
-                         │      Frontend        │
-                         │      Vercel          │
-                         └──────────┬───────────┘
-                                    │
-                              HTTPS / REST
-                                    │
-                         ┌──────────▼───────────┐
-                         │       Strapi         │
-                         │      Backend/CMS     │
-                         │      Railway         │
-                         └──────────┬───────────┘
-                                    │
-                         ┌──────────▼───────────┐
-                         │     PostgreSQL       │
-                         │   Neon / Railway     │
-                         └──────────────────────┘
-```
-
-| Layer | Responsibility |
-|-------|----------------|
-| Next.js | UI, BFF auth cookies, protected routes, forms, dashboards |
-| Strapi | Auth, RBAC, ownership, courses, lessons, enroll, progress, quiz grading, blog, users |
-| PostgreSQL | Persistent relational data |
-
-**Prisma:** Not used as a second competing model layer. All application domain data lives in Strapi’s PostgreSQL schema. Use Neon/Railway Postgres via Strapi’s `DATABASE_URL`.
+CPS Academy is a role-based LMS with courses, ordered lessons, enrollment, persistent progress, server-graded quizzes, admin user management, and a public blog. **Authorization is enforced on the Strapi backend** — UI gating alone is never trusted.
 
 ---
 
@@ -67,106 +97,10 @@ Brand mark: curly-brace `{ }` logo with gold and orange accents on deep navy.
 
 | Area | Technology |
 |------|------------|
-| Frontend | Next.js 15, TypeScript, App Router, Tailwind CSS v4, Radix/shadcn-style UI |
+| Frontend | Next.js 15, TypeScript, App Router, Tailwind CSS v4 |
 | Backend | Strapi 5, TypeScript, REST |
-| Database | PostgreSQL (production), SQLite (local default) |
+| Database | PostgreSQL (production), SQLite (local optional) |
 | Deploy | Vercel + Railway |
-
----
-
-## Folder Structure
-
-```text
-lms/
-├── frontend/          # Next.js app (independently deployable)
-│   ├── app/
-│   ├── components/
-│   ├── features/
-│   ├── lib/
-│   ├── services/
-│   ├── middleware.ts
-│   └── ...
-├── backend/           # Strapi app (independently deployable)
-│   ├── config/
-│   ├── src/api/
-│   ├── src/policies/
-│   ├── src/utils/
-│   └── ...
-├── README.md
-└── package.json
-```
-
----
-
-## Database Schema (core entities)
-
-`User`, `Course`, `Lesson`, `Enrollment`, `LessonProgress`, `Quiz`, `QuizQuestion`, `QuizOption`, `QuizAttempt`, `QuizAnswer`, `BlogPost`
-
-Key constraints / rules:
-
-- Unique enrollment per `(student, course)` (enforced in service)
-- Unique progress per `(student, lesson)` (enforced in service)
-- Course status: `DRAFT | PUBLISHED | ARCHIVED`
-- Blog status: `DRAFT | PUBLISHED`
-- Quiz options’ `isCorrect` never returned on student “take” endpoints
-
----
-
-## Roles & Permissions
-
-| Action | Admin | Content Manager | Instructor | Student |
-|--------|:-----:|:---------------:|:----------:|:-------:|
-| Manage users / roles | YES | NO | NO | NO |
-| Create courses | YES | YES | YES | NO |
-| Edit any course | YES | YES | NO | NO |
-| Edit own course | YES | YES | YES | NO |
-| Lessons / quizzes on own courses | YES | YES | YES | NO |
-| Enroll / take quizzes | NO | NO | NO | YES |
-| View progress | All | All | Own courses | Own only |
-| Manage / publish blog | YES | YES | NO | NO |
-
-Backend policies + LMS controllers verify authentication, role, and ownership on every protected action.
-
----
-
-## Database Schema
-
-- **Prisma (visible model):** [`prisma/schema.prisma`](./prisma/schema.prisma)
-- **Strapi content-types:** `backend/src/api/*/content-types/*/schema.json`
-- Full map: [`docs/DATABASE_SCHEMA.md`](./docs/DATABASE_SCHEMA.md)
-
----
-
-## Environment Variables
-
-### Backend (`backend/.env`)
-
-```env
-HOST=0.0.0.0
-PORT=1337
-APP_KEYS=...
-API_TOKEN_SALT=...
-ADMIN_JWT_SECRET=...
-TRANSFER_TOKEN_SALT=...
-JWT_SECRET=...
-CORS_ORIGIN=http://localhost:3000
-DATABASE_CLIENT=postgres
-DATABASE_URL=postgresql://USER:PASSWORD@ep-XXXX.REGION.aws.neon.tech/neondb?sslmode=require
-DATABASE_SSL=true
-DATABASE_SSL_REJECT_UNAUTHORIZED=false
-SEED_ON_BOOTSTRAP=true
-SEED_ADMIN_EMAIL=admin@lms-demo.com
-SEED_ADMIN_PASSWORD=DemoAdmin123!
-```
-
-### Frontend (`frontend/.env.local`)
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:1337/api
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-```
-
-Never commit real secrets. Only `NEXT_PUBLIC_*` values are browser-safe.
 
 ---
 
@@ -176,9 +110,8 @@ Never commit real secrets. Only `NEXT_PUBLIC_*` values are browser-safe.
 
 - Node.js 20+
 - npm 10+
-- (Optional) PostgreSQL for production-like local DB
 
-### 1. Clone & install
+### 1. Install
 
 ```bash
 cd backend && npm install
@@ -192,102 +125,57 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
 ```
 
-### 3. Database (Neon PostgreSQL)
-
-1. Create a project at [https://console.neon.tech](https://console.neon.tech)
-2. Copy the **pooled** connection string (ends with `?sslmode=require`)
-3. Put it in `backend/.env`:
+Edit `backend/.env` — at minimum set `APP_KEYS`, `JWT_SECRET`, and database URL.  
+Edit `frontend/.env.local`:
 
 ```env
-DATABASE_CLIENT=postgres
-DATABASE_URL=postgresql://USER:PASSWORD@ep-XXXX.REGION.aws.neon.tech/neondb?sslmode=require
-DATABASE_SSL=true
-DATABASE_SSL_REJECT_UNAUTHORIZED=false
+NEXT_PUBLIC_API_URL=http://localhost:1337/api
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-4. Restart Strapi — tables are created automatically; seed runs when `SEED_ON_BOOTSTRAP=true`
-
-(SQLite remains available only as a local fallback via `DATABASE_CLIENT=sqlite`.)
-
-### 4. Run everything (one command)
-
-From the repo root:
+### 3. Run (from repo root)
 
 ```bash
 npm run dev
 ```
 
-This starts Strapi on [http://localhost:1337](http://localhost:1337) and Next.js on [http://localhost:3000](http://localhost:3000).
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- Strapi: [http://localhost:1337](http://localhost:1337)
 
-First backend boot seeds roles, demo users, courses, quizzes, and blog posts when the DB is empty / seed flag is on.
-
-Or run them separately:
-
-```bash
-npm run dev:backend
-npm run dev:frontend
-```
+First boot with `SEED_ON_BOOTSTRAP=true` creates roles, demo users, courses, quizzes, and blog posts.
 
 ---
 
-## Seed Data & Demo Accounts
+## Demo Accounts
 
-With `SEED_ON_BOOTSTRAP=true`, the first Strapi boot creates roles, sample courses, and these **real login accounts** (use them on [http://localhost:3000/login](http://localhost:3000/login)):
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@lms-demo.com` | `DemoAdmin123!` |
+| Content Manager | `content@lms-demo.com` | `DemoContent123!` |
+| Instructor | `instructor@lms-demo.com` | `DemoInstructor123!` |
+| Student | `student@lms-demo.com` | `DemoStudent123!` |
 
-| Role | Email | Password | Username |
-|------|-------|----------|----------|
-| **Admin** | `admin@lms-demo.com` | `DemoAdmin123!` | `admin` |
-| Content Manager | `content@lms-demo.com` | `DemoContent123!` | `content` |
-| Content Manager | `content2@lms-demo.com` | `DemoContent123!` | `content2` |
-| Instructor | `instructor@lms-demo.com` | `DemoInstructor123!` | `instructor` |
-| Instructor | `instructor2@lms-demo.com` | `DemoInstructor123!` | `instructor2` |
-| Instructor | `instructor3@lms-demo.com` | `DemoInstructor123!` | `instructor3` |
-| Student | `student@lms-demo.com` | `DemoStudent123!` | `student` |
-| Student | `student2@lms-demo.com` … `student8@lms-demo.com` | `DemoStudent123!` | `student2` … `student8` |
-
-**Admin override (optional):** set in `backend/.env`:
-
-```env
-SEED_ADMIN_EMAIL=admin@lms-demo.com
-SEED_ADMIN_PASSWORD=DemoAdmin123!
-```
-
-- Dashboards: Admin → `/admin`, Content Manager → `/content-manager`, Instructor → `/instructor`, Student → `/student`
-- Public registration always creates a **Student**. Admins can create other roles under **Admin → Users → Create user**.
-- Seeded sample courses and blog posts appear for catalog demos. Set `SEED_ON_BOOTSTRAP=false` after initial setup if you want to stop re-seeding on boot.
-
-> These are **demo credentials only** — change them before any shared or production deploy.
+Public registration always creates a **Student**. Admins create other roles under **Admin → Users**.
 
 ---
 
-## Certificates
+## Key Routes
 
-When a student completes every lesson in a course, the LMS issues a certificate automatically. Students view them under **Certificates**; print/save as PDF from the certificate page. Admins can audit all certificates under **Admin → Certificates**.
+| Role | Dashboard |
+|------|-----------|
+| Student | `/student/dashboard` |
+| Instructor | `/instructor/dashboard` |
+| Content Manager | `/content-manager/dashboard` |
+| Admin | `/admin/dashboard` |
 
----
-
-## Admin panel
-
-Admins can:
-
-- Create users for any role
-- Ban / unban users
-- Permanently delete users (and related enrollments/progress/certificates)
-- Manage courses, enrollments, certificates, and blog
+Public: `/courses`, `/blog`, `/login`, `/register`
 
 ---
 
-## API Surface (custom LMS)
+## API
 
-Primary secure API lives under `/api/lms/*` (see `backend/src/api/lms/routes/lms.ts`):
-
-- Auth: Strapi `/api/auth/local`, `/api/auth/local/register` (forced Student)
-- Enroll, my-courses, lesson complete, progress, certificates
-- Quiz take / submit / attempts
-- Course / lesson / quiz / blog management
-- Role dashboards & admin users (create / ban / delete)
-
-Frontend BFF routes: `/api/auth/*`, `/api/lms/[...path]` (JWT in httpOnly `cps_token`).
+Custom secure API: `/api/lms/*` — see `backend/src/api/lms/routes/lms.ts`  
+Frontend BFF: `/api/auth/*`, `/api/lms/[...path]` (JWT in httpOnly `cps_token` cookie)
 
 ---
 
@@ -297,68 +185,44 @@ Frontend BFF routes: `/api/auth/*`, `/api/lms/[...path]` (JWT in httpOnly `cps_t
 cd backend && npm test
 ```
 
-Covers progress calculation, role helpers, and quiz grading helpers.
-
-### Manual security checks
-
-As Student, direct API calls to create courses, manage users, or read another student’s progress must fail. Instructors must not edit another instructor’s course. Content Managers must not manage users.
+Covers progress calculation, role helpers, and quiz grading.
 
 ---
 
 ## Deployment
 
-### Database (Neon)
-
-1. Create a Neon Postgres project
-2. Copy the **pooled** connection string
-3. On Railway Strapi set:
-   - `DATABASE_CLIENT=postgres`
-   - `DATABASE_URL=<neon pooled url>`
-   - `DATABASE_SSL=true`
-   - `DATABASE_SSL_REJECT_UNAUTHORIZED=false`
-
 ### Backend (Railway)
 
-1. New Railway project from `backend/` (or monorepo root with `railway.toml`)
-2. Set env vars from `.env.example` (strong secrets)
-3. Generate a public domain in Railway → Networking
-4. Set `PUBLIC_URL=https://<your-railway-domain>` (or rely on auto `RAILWAY_PUBLIC_DOMAIN`)
-5. Set `CORS_ORIGIN` = your Vercel URL
-6. Deploy; healthcheck hits `/_health`
-
-> Important: keep `HOST=0.0.0.0` for binding, but never use `0.0.0.0` as `PUBLIC_URL`.
-> That causes `getaddrinfo ENOTFOUND 0.0.0.0` after seed.
+1. Deploy `backend/` with env from `.env.example`
+2. Set `DATABASE_URL` (PostgreSQL), `CORS_ORIGIN` = your Vercel URL
+3. Set `PUBLIC_URL` to Railway public domain (not `0.0.0.0`)
 
 ### Frontend (Vercel)
 
-1. Import `frontend/` as the root directory
-2. Set `NEXT_PUBLIC_API_URL=https://<railway-host>/api`
-3. Set `NEXT_PUBLIC_SITE_URL=https://<vercel-domain>`
-4. Deploy
+1. Root directory: `frontend/`
+2. `NEXT_PUBLIC_API_URL=https://<railway-host>/api`
+3. `NEXT_PUBLIC_SITE_URL=https://<vercel-domain>`
 
-CORS on Strapi must allow only the Vercel origin (comma-separated list) — never `*` for authenticated APIs.
+---
+
+## Submission Checklist
+
+Before **30 August 2026, 11:59 PM**:
+
+1. ✅ GitHub repo (public) with commit history
+2. ⚠️ Live **Vercel** frontend URL
+3. ⚠️ Live **Railway** backend URL
+4. ⚠️ **10-minute video** (screen + voice): student flow, staff flow, admin roles, data flow, backend RBAC, progress logic, quiz grading, blog publish, deployment env vars
 
 ---
 
 ## Security Notes
 
-- Passwords hashed by Strapi users-permissions (never plaintext / never returned)
-- Role always taken from authenticated user, never from client body
-- Ownership checks for instructor resources
-- Quiz auto-grade on server; options stripped of `isCorrect` on take
-- Progress derived from persisted completions, capped at 100%
-- Draft courses/posts excluded from public listing
+- Passwords hashed by Strapi; never returned to client
+- Role from authenticated user only — never from request body
+- Quiz `isCorrect` stripped on student take endpoints
+- Draft courses/posts hidden from public APIs
 - Registration cannot self-assign Admin
-
----
-
-## Architectural Decisions
-
-1. **Strapi as sole backend** — contest stack requirement; no Express/Nest duplicate API
-2. **Custom `/api/lms` controllers** — ownership, enroll, progress, and grading need explicit logic beyond default CRUD
-3. **httpOnly JWT cookie via Next BFF** — reduces XSS token theft vs localStorage-only
-4. **SQLite locally / Postgres in prod** — fast demo onboarding without sacrificing deployability
-5. **No Prisma twin models** — avoid dual sources of truth for the same entities
 
 ---
 

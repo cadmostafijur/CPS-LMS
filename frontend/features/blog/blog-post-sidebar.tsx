@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import {
-  Facebook,
-  Linkedin,
   Link2,
   Mail,
   MessageCircle,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/notify";
@@ -14,10 +13,28 @@ import type { BlogHeading } from "@/features/blog/blog-utils";
 import { cn } from "@/lib/utils";
 
 const shareItems = [
-  { label: "Facebook", icon: Facebook, getUrl: (u: string) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(u)}` },
-  { label: "LinkedIn", icon: Linkedin, getUrl: (u: string) => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(u)}` },
-  { label: "Email", icon: Mail, getUrl: (u: string, t: string) => `mailto:?subject=${encodeURIComponent(t)}&body=${encodeURIComponent(u)}` },
-  { label: "WhatsApp", icon: MessageCircle, getUrl: (u: string, t: string) => `https://wa.me/?text=${encodeURIComponent(`${t} ${u}`)}` },
+  {
+    label: "Facebook",
+    icon: Share2,
+    getUrl: (u: string) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(u)}`,
+  },
+  {
+    label: "LinkedIn",
+    icon: Share2,
+    getUrl: (u: string) => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(u)}`,
+  },
+  {
+    label: "Email",
+    icon: Mail,
+    getUrl: (u: string, t: string) =>
+      `mailto:?subject=${encodeURIComponent(t)}&body=${encodeURIComponent(u)}`,
+  },
+  {
+    label: "WhatsApp",
+    icon: MessageCircle,
+    getUrl: (u: string, t: string) =>
+      `https://wa.me/?text=${encodeURIComponent(`${t} ${u}`)}`,
+  },
 ];
 
 export function BlogPostSidebar({
