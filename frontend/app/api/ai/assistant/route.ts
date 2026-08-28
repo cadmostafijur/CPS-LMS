@@ -17,7 +17,13 @@ export async function POST(request: Request) {
   try {
     user = await fetchStrapiMe(token);
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      {
+        error:
+          "Could not reach the API server. Restart the backend (npm run dev) if you're running locally, then try again.",
+      },
+      { status: 502 }
+    );
   }
 
   if (!isStudent(user)) {

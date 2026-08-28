@@ -65,6 +65,9 @@ async function readSageAttachment(file: File): Promise<SageAttachment> {
 }
 
 function formatSageError(message: string): string {
+  if (/^unauthorized$/i.test(message.trim())) {
+    return "Could not reach Sage. If you're running locally, restart the backend (it may have stopped after a build error), then try again.";
+  }
   if (/unauthorized client/i.test(message)) {
     return `${message} Redeploy the Railway backend after setting AGENTROUTER_API_KEY.`;
   }
@@ -482,10 +485,10 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
       )}
     >
       {hasConversation ? (
-        <>
+        <div className="flex h-[calc(100dvh-10.5rem)] flex-col md:h-[calc(100dvh-8.5rem)]">
           <div
             ref={threadRef}
-            className="max-h-[calc(100vh-12rem)] space-y-4 overflow-y-auto pr-1 sm:max-h-[calc(100vh-11rem)]"
+            className="sage-thread-scroll min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-2 pb-2"
           >
             {threadMessages.map((m) => {
             const isUser = m.role === "user";
@@ -561,7 +564,7 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
           ) : null}
           </div>
 
-          <div className="mt-3 border-t border-border/60 pt-3">
+          <div className="shrink-0 border-t border-border/60 bg-surface/60 pt-3 backdrop-blur-sm">
             <SageAskBar
               value={input}
               onChange={setInput}
@@ -574,7 +577,7 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
               onClearAttachment={() => setPendingAttachment(null)}
             />
           </div>
-        </>
+        </div>
       ) : (
         <div className="flex w-full max-w-2xl flex-col items-center px-2">
           <h2 className="font-display text-center text-2xl font-semibold tracking-tight text-navy sm:text-3xl">

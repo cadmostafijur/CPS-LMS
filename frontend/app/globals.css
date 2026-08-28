@@ -175,3 +175,22 @@ summary::marker {
   font-weight: 600 !important;
   padding: 0.55rem 1.15rem !important;
 }
+
+/* Sage chat — visible scrollbar */
+.sage-thread-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(11, 18, 32, 0.28) transparent;
+}
+.sage-thread-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.sage-thread-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sage-thread-scroll::-webkit-scrollbar-thumb {
+  background: rgba(11, 18, 32, 0.22);
+  border-radius: 999px;
+}
+.sage-thread-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(11, 18, 32, 0.38);
+}
