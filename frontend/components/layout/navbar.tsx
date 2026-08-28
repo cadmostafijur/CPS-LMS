@@ -130,6 +130,12 @@ export function Navbar({
                   className={overHero ? "text-white hover:bg-white/10" : undefined}
                 />
               ) : null}
+              <SignOutButton
+                className={cn(
+                  "hidden md:inline-flex",
+                  overHero ? "text-white hover:bg-white/10" : undefined
+                )}
+              />
               <div className="hidden md:flex">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
