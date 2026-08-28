@@ -8,8 +8,20 @@ import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 
-export default async function StudentNotificationsPage() {
-  const user = await requireUser("/student/notifications");
+async function loadNotifications(token: string | null) {
+  const res = await apiFetch<{
+    data: StudentNotification[];
+    meta?: { unreadCount?: number };
+  }>("/lms/notifications/me", { token });
+  const items = res.data || [];
+  const unread = Number(
+    res.meta?.unreadCount ?? items.filter((n) => !n.isRead).length
+  );
+  return { items, unread };
+}
+
+export default async function AdminInboxPage() {
+  const user = await requireUser("/admin/inbox");
   const token = await getTokenFromCookies();
 
   let items: StudentNotification[] = [];
@@ -17,12 +29,9 @@ export default async function StudentNotificationsPage() {
   let loadError: string | null = null;
 
   try {
-    const res = await apiFetch<{
-      data: StudentNotification[];
-      meta?: { unreadCount?: number };
-    }>("/lms/notifications/me", { token });
-    items = res.data || [];
-    unread = Number(res.meta?.unreadCount ?? items.filter((n) => !n.isRead).length);
+    const data = await loadNotifications(token);
+    items = data.items;
+    unread = data.unread;
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Could not load notifications";
   }
@@ -30,8 +39,8 @@ export default async function StudentNotificationsPage() {
   return (
     <DashboardShell user={user}>
       <PageHeader
-        title="Notifications"
-        description="Alerts for enrollments, assignments, quizzes, announcements, and course updates."
+        title="My notifications"
+        description="Your personal alerts — enrollments, messages, and system updates."
       />
       {loadError ? (
         <p className="mb-4 rounded-xl border border-dashed border-destructive/30 bg-card px-4 py-3 text-sm text-muted-foreground">

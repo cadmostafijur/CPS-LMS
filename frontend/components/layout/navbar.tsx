@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BrandLogo } from "@/components/shared/brand-logo";
-import { NotificationBell } from "@/components/layout/notification-bell";
+import { NotificationMenu } from "@/components/layout/notification-menu";
 import { SignOutButton, useSignOut } from "@/components/layout/sign-out-button";
 import {
   dashboardPathForRole,
@@ -126,14 +126,11 @@ export function Navbar({
             <>
               <div className="hidden items-center gap-0.5 md:flex">
                 {notificationsHref ? (
-                  <NotificationBell
+                  <NotificationMenu
                     href={notificationsHref}
                     className={overHero ? "text-white hover:bg-white/10" : undefined}
                   />
                 ) : null}
-                <SignOutButton
-                  className={overHero ? "text-white hover:bg-white/10" : undefined}
-                />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -187,6 +184,9 @@ export function Navbar({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <SignOutButton
+                  className={overHero ? "text-white hover:bg-white/10" : undefined}
+                />
               </div>
             </>
           ) : (
@@ -233,6 +233,15 @@ export function Navbar({
               : null}
             {user ? (
               <>
+                {notificationsHref ? (
+                  <Link
+                    href={notificationsHref}
+                    className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
+                    onClick={() => setOpen(false)}
+                  >
+                    Notifications
+                  </Link>
+                ) : null}
                 <Link
                   href={dash}
                   className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
@@ -247,15 +256,6 @@ export function Navbar({
                 >
                   My profile
                 </Link>
-                {notificationsHref ? (
-                  <Link
-                    href={notificationsHref}
-                    className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
-                    onClick={() => setOpen(false)}
-                  >
-                    Notifications
-                  </Link>
-                ) : null}
                 <SignOutButton
                   variant="menu"
                   className="mt-1"

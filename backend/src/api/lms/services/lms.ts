@@ -17,7 +17,7 @@ import {
 } from '../../../utils/roles';
 import { sanitizeUser } from '../../../utils/sanitize';
 import { ensureUniqueSlug } from '../../../utils/slug';
-import { notifyUser } from '../../../utils/notify-user';
+import { notifyUser, notifyCourseStudents } from '../../../utils/notify-user';
 import { savePublicUpload, readUploadedFile } from '../../../utils/mail-upload';
 import { createOpsHandlers } from './ops';
 import { createExtrasHandlers } from './extras';
@@ -2332,6 +2332,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       data.instructor = instructor.id;
     }
 
+    const prevStatus = course.status;
     const updated = await strapi.db.query('api::course.course').update({
       where: { id: course.id },
       data,
@@ -2343,6 +2344,15 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         modules: true,
       },
     });
+
+    if (data.status === 'ARCHIVED' && prevStatus !== 'ARCHIVED') {
+      await notifyCourseStudents(strapi, course.id, {
+        title: `Course canceled: ${updated.title}`,
+        body: `“${updated.title}” has been archived. Contact support if you have questions.`,
+        type: 'course',
+        linkUrl: '/student/my-courses',
+      });
+    }
 
     return { data: updated };
   },
@@ -2357,6 +2367,13 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     });
     if (!course) throw new NotFoundError('Course not found');
     assertCourseOwnerOrManager(user, course);
+
+    await notifyCourseStudents(strapi, course.id, {
+      title: `Course removed: ${course.title}`,
+      body: `“${course.title}” is no longer available on CPS Academy.`,
+      type: 'course',
+      linkUrl: '/student/my-courses',
+    });
 
     await strapi.db.query('api::course.course').delete({ where: { id: course.id } });
     return { data: { id: course.id, documentId: course.documentId } };
@@ -2748,6 +2765,17 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     const full = await findQuiz(strapi, String(quiz.id), {
       course: true,
       questions: { populate: { options: true } },
+    });
+
+    const timeLimit = Number(quiz.timeLimitMinutes || 0);
+    await notifyCourseStudents(strapi, course.id, {
+      title: `New quiz: ${quiz.title}`,
+      body:
+        timeLimit > 0
+          ? `A timed quiz (${timeLimit} min) is ready in “${course.title}”.`
+          : `A new quiz is available in “${course.title}”.`,
+      type: 'quiz_reminder',
+      linkUrl: `/quizzes/${quiz.documentId || quiz.id}`,
     });
 
     return { data: full };
@@ -3458,6 +3486,20 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       },
       populate: { course: true },
     });
+
+    const status = String(body.status || 'DRAFT');
+    if (status === 'PUBLISHED') {
+      const dueHint = created.dueDate
+        ? ` Due ${new Date(created.dueDate).toLocaleString()}.`
+        : '';
+      await notifyCourseStudents(strapi, course.id, {
+        title: `New assignment: ${created.title}`,
+        body: `Posted in “${fullCourse.title}”.${dueHint}`,
+        type: 'assignment',
+        linkUrl: '/student/assignments',
+      });
+    }
+
     return { data: created };
   },
 
@@ -3519,6 +3561,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       .findOne({
         where: { id: submission.id },
         populate: {
+          student: true,
           assignment: {
             populate: { course: { populate: { instructor: true, createdByUser: true } } },
           },
@@ -3536,8 +3579,17 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           feedback: feedback != null ? String(feedback) : full.feedback,
           status: status || 'GRADED',
         },
-        populate: { student: true },
+        populate: { student: true, assignment: true },
       });
+
+    if (full?.student?.id && score != null && score !== '') {
+      await notifyUser(strapi, full.student.id, {
+        title: `Assignment graded: ${full.assignment?.title || 'Assignment'}`,
+        body: `You scored ${Number(score)} / ${full.assignment?.maxMarks ?? 100}.`,
+        type: 'assignment',
+        linkUrl: '/student/assignments',
+      });
+    }
 
     return {
       data: {

@@ -90,9 +90,13 @@ export function notificationsPathForRole(
 ): string | null {
   switch (normalizeRoleName(role)) {
     case ROLE_NAMES.ADMIN:
-      return "/admin/notifications";
+      return "/admin/inbox";
     case ROLE_NAMES.STUDENT:
       return "/student/notifications";
+    case ROLE_NAMES.INSTRUCTOR:
+      return "/instructor/notifications";
+    case ROLE_NAMES.CONTENT_MANAGER:
+      return "/content-manager/notifications";
     default:
       return null;
   }

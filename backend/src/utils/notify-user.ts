@@ -38,3 +38,30 @@ export async function notifyUser(
     strapi.log.warn(`[notifyUser] failed for user ${userId}: ${String(err)}`);
   }
 }
+
+/** Notify all students enrolled in a course. Never throws. */
+export async function notifyCourseStudents(
+  strapi: Core.Strapi,
+  courseId: number | string,
+  payload: {
+    title: string;
+    body?: string;
+    type?: string;
+    linkUrl?: string | null;
+  }
+) {
+  try {
+    const enrollments = await strapi.db.query('api::enrollment.enrollment').findMany({
+      where: { course: courseId },
+      populate: { student: true },
+      limit: 500,
+    });
+    for (const e of enrollments) {
+      if (e.student?.id) {
+        await notifyUser(strapi, e.student.id, payload);
+      }
+    }
+  } catch (err) {
+    strapi.log.warn(`[notifyCourseStudents] failed for course ${courseId}: ${String(err)}`);
+  }
+}

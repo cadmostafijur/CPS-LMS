@@ -83,7 +83,7 @@ export function StudentNotificationsPanel({
       <EmptyState
         icon={Bell}
         title="No notifications yet"
-        description="You’ll get alerts when you enroll, finish quizzes, or earn certificates."
+        description="You’ll get alerts when you enroll, receive assignments, quizzes, announcements, or course updates."
       />
     );
   }

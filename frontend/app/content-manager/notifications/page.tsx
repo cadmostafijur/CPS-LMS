@@ -8,8 +8,8 @@ import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 
-export default async function StudentNotificationsPage() {
-  const user = await requireUser("/student/notifications");
+export default async function ContentManagerNotificationsPage() {
+  const user = await requireUser("/content-manager/notifications");
   const token = await getTokenFromCookies();
 
   let items: StudentNotification[] = [];
@@ -31,7 +31,7 @@ export default async function StudentNotificationsPage() {
     <DashboardShell user={user}>
       <PageHeader
         title="Notifications"
-        description="Alerts for enrollments, assignments, quizzes, announcements, and course updates."
+        description="Publishing updates, messages, and platform alerts."
       />
       {loadError ? (
         <p className="mb-4 rounded-xl border border-dashed border-destructive/30 bg-card px-4 py-3 text-sm text-muted-foreground">
