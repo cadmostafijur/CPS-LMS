@@ -83,12 +83,15 @@ export function SignOutButton({
       type="button"
       variant="ghost"
       size="icon"
-      className={cn("shrink-0 text-navy hover:bg-navy/5", className)}
+      className={cn(
+        "h-10 w-10 shrink-0 text-navy hover:bg-navy/5",
+        className
+      )}
       onClick={() => void handleLogout()}
       aria-label="Sign out"
       title="Sign out"
     >
-      <LogOut className="h-5 w-5" />
+      <LogOut className="h-5 w-5" strokeWidth={2} />
     </Button>
   );
 }

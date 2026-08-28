@@ -124,19 +124,16 @@ export function Navbar({
         <div className="ml-auto flex items-center gap-1">
           {user ? (
             <>
-              {notificationsHref ? (
-                <NotificationBell
-                  href={notificationsHref}
+              <div className="hidden items-center gap-0.5 md:flex">
+                {notificationsHref ? (
+                  <NotificationBell
+                    href={notificationsHref}
+                    className={overHero ? "text-white hover:bg-white/10" : undefined}
+                  />
+                ) : null}
+                <SignOutButton
                   className={overHero ? "text-white hover:bg-white/10" : undefined}
                 />
-              ) : null}
-              <SignOutButton
-                className={cn(
-                  "hidden md:inline-flex",
-                  overHero ? "text-white hover:bg-white/10" : undefined
-                )}
-              />
-              <div className="hidden md:flex">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
