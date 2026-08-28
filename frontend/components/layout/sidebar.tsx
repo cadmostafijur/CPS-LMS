@@ -148,7 +148,7 @@ function flatNavForRole(role: string | null | undefined): NavItem[] {
         { href: "/instructor/courses", label: "My courses", icon: BookOpen },
         { href: "/instructor/progress", label: "Progress", icon: BarChart3 },
         { href: "/instructor/assignments", label: "Assignments", icon: FileText },
-        { href: "/instructor/messages", label: "Messages", icon: MessageSquare },
+        { href: "/instructor/messages", label: "Help Desk", icon: MessageSquare },
         { href: "/profile", label: "Profile", icon: UserCheck },
       ];
     default:
@@ -159,7 +159,7 @@ function flatNavForRole(role: string | null | undefined): NavItem[] {
         { href: "/student/certificates", label: "Certificates", icon: Award },
         { href: "/student/wishlist", label: "Wishlist", icon: Star },
         { href: "/student/calendar", label: "Live calendar", icon: CalendarCheck },
-        { href: "/student/messages", label: "Messages", icon: MessageSquare },
+        { href: "/student/messages", label: "Help Desk", icon: MessageSquare },
         { href: "/student/assistant", label: "AI assistant", icon: Bot },
         { href: "/student/transcript", label: "Transcript", icon: ScrollText },
         { href: "/student/notifications", label: "Notifications", icon: Bell },

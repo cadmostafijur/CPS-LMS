@@ -1,17 +1,12 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { PageHeader } from "@/components/shared/page-header";
-import { StudentMessagesPanel } from "@/features/student/student-messages-panel";
+import { StudentHelpDesk } from "@/features/student/student-help-desk";
 import { requireUser } from "@/lib/session";
 
-export default async function InstructorMessagesPage() {
+export default async function InstructorHelpDeskPage() {
   const user = await requireUser("/instructor/messages");
   return (
     <DashboardShell user={user}>
-      <PageHeader
-        title="Messages"
-        description="Chat with enrolled students. Use their user id from enrollment lists."
-      />
-      <StudentMessagesPanel myUserId={user.id} />
+      <StudentHelpDesk studentName={user.name || user.username} />
     </DashboardShell>
   );
 }

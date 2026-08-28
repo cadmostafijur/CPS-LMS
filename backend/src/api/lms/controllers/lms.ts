@@ -341,4 +341,10 @@ export default ({ strapi }: { strapi: any }) => ({
   async listMyLiveCalendar(ctx: any) {
     ctx.body = await strapi.service('api::lms.lms').listMyLiveCalendar(ctx);
   },
+  async listHelpDeskPosts(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').listHelpDeskPosts(ctx);
+  },
+  async createHelpDeskPost(ctx: any) {
+    ctx.body = await strapi.service('api::lms.lms').createHelpDeskPost(ctx);
+  },
 });

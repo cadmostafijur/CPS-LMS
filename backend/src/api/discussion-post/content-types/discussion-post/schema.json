@@ -22,6 +22,15 @@
       "type": "boolean",
       "default": false
     },
+    "category": {
+      "type": "enumeration",
+      "enum": ["courses", "bugs", "feature", "others"],
+      "default": "courses"
+    },
+    "isResolved": {
+      "type": "boolean",
+      "default": false
+    },
     "course": {
       "type": "relation",
       "relation": "manyToOne",

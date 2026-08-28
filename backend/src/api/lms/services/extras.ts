@@ -859,5 +859,230 @@ export function createExtrasHandlers(strapi: Core.Strapi) {
         })),
       };
     },
+
+    // —— Help Desk (community forum) ——
+    async listHelpDeskPosts(ctx: Ctx) {
+      const user = await getAuthUser(ctx, strapi);
+      let courseIds: number[] = [];
+      const courseMap = new Map<number, any>();
+      const courseOptions: { id: string | number; title?: string }[] = [];
+
+      if (isStudent(user)) {
+        const enrollments = await strapi.db.query('api::enrollment.enrollment').findMany({
+          where: { student: user.id },
+          populate: { course: true },
+          limit: 100,
+        });
+        courseIds = enrollments.map((e: any) => e.course?.id).filter(Boolean);
+        for (const e of enrollments) {
+          if (e.course?.id) {
+            courseMap.set(e.course.id, e.course);
+            courseOptions.push({
+              id: e.course.documentId || e.course.id,
+              title: e.course.title,
+            });
+          }
+        }
+      } else if (isInstructor(user) || isContentManager(user) || isAdmin(user)) {
+        const taught = await strapi.db.query('api::course.course').findMany({
+          where: isAdmin(user) || isContentManager(user)
+            ? {}
+            : { instructor: user.id },
+          limit: 100,
+        });
+        courseIds = taught.map((c: any) => c.id).filter(Boolean);
+        for (const c of taught) {
+          courseMap.set(c.id, c);
+          courseOptions.push({ id: c.documentId || c.id, title: c.title });
+        }
+      }
+
+      let threads: any[] = [];
+      if (courseIds.length) {
+        threads = await strapi.db.query('api::discussion-post.discussion-post').findMany({
+          where: {
+            course: { id: { $in: courseIds } },
+            parent: null,
+            isHidden: false,
+          },
+          populate: {
+            author: { populate: { role: true } },
+            course: true,
+            replies: { populate: { author: { populate: { role: true } } } },
+          },
+          orderBy: { id: 'desc' },
+          limit: 100,
+        });
+      }
+
+      const announcements = await strapi.db.query('api::announcement.announcement').findMany({
+        where: {
+          isActive: true,
+          audience: { $in: ['EVERYONE', 'STUDENTS'] },
+        },
+        populate: { course: true },
+        orderBy: { id: 'desc' },
+        limit: 30,
+      });
+
+      const mapPost = (p: any) => {
+        const roleName = p.author?.role?.name || p.author?.role?.type || '';
+        const isStaff = ['Admin', 'Content Manager', 'Instructor'].includes(roleName);
+        const course = p.course;
+        return {
+          id: p.id,
+          documentId: p.documentId,
+          kind: 'post' as const,
+          title: p.title || null,
+          body: p.body,
+          category: p.category || 'courses',
+          isResolved: Boolean(p.isResolved),
+          createdAt: p.createdAt,
+          author: sanitizeUser(p.author),
+          isStaffPost: isStaff,
+          isMine: String(p.author?.id) === String(user.id),
+          commentCount: (p.replies || []).filter((r: any) => !r.isHidden).length,
+          course: course
+            ? {
+                id: course.id,
+                documentId: course.documentId,
+                title: course.title,
+                slug: course.slug,
+              }
+            : null,
+          replies: [...(p.replies || [])]
+            .filter((r: any) => !r.isHidden)
+            .sort(
+              (a: any, b: any) =>
+                new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+            )
+            .map((r: any) => ({
+              id: r.id,
+              documentId: r.documentId,
+              body: r.body,
+              createdAt: r.createdAt,
+              author: sanitizeUser(r.author),
+            })),
+        };
+      };
+
+      const posts = threads.map(mapPost);
+      const annPosts = announcements.map((a: any) => ({
+        id: `ann-${a.id}`,
+        documentId: a.documentId,
+        kind: 'announcement' as const,
+        title: a.title,
+        body: a.content,
+        category: 'announcements' as const,
+        isResolved: false,
+        createdAt: a.publishAt || a.createdAt,
+        author: { name: 'CPS Academy', email: null },
+        isStaffPost: true,
+        isMine: false,
+        commentCount: 0,
+        course: a.course
+          ? {
+              id: a.course.id,
+              documentId: a.course.documentId,
+              title: a.course.title,
+              slug: a.course.slug,
+            }
+          : null,
+        replies: [],
+      }));
+
+      const merged = [...annPosts, ...posts].sort(
+        (a, b) =>
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+
+      const counts = {
+        courses: posts.filter((p) => p.category === 'courses').length,
+        bugs: posts.filter((p) => p.category === 'bugs').length,
+        feature: posts.filter((p) => p.category === 'feature').length,
+        others: posts.filter((p) => p.category === 'others').length,
+        announcements: annPosts.length,
+        resolved: posts.filter((p) => p.isResolved).length,
+      };
+
+      return {
+        data: merged,
+        meta: {
+          counts,
+          courses: courseOptions,
+        },
+      };
+    },
+
+    async createHelpDeskPost(ctx: Ctx) {
+      const user = await getAuthUser(ctx, strapi);
+      const body = ctx.request.body || {};
+      const text = String(body.body || '').trim();
+      const title = String(body.title || '').trim();
+      const category = String(body.category || 'courses');
+      const allowed = ['courses', 'bugs', 'feature', 'others'];
+      if (!allowed.includes(category)) throw new ValidationError('Invalid category');
+      if (!text) throw new ValidationError('body is required');
+
+      let course = null;
+      if (body.courseId) {
+        course = await findCourse(strapi, String(body.courseId), {
+          instructor: true,
+          createdByUser: true,
+        });
+      } else if (isStudent(user)) {
+        const enrollment = await strapi.db.query('api::enrollment.enrollment').findOne({
+          where: { student: user.id },
+          populate: { course: true },
+          orderBy: { id: 'desc' },
+        });
+        course = enrollment?.course || null;
+      }
+      if (!course) throw new ValidationError('courseId is required');
+
+      const canManage = canManageCourse(user, course);
+      if (!canManage) {
+        assertStudent(user);
+        await requireEnrollment(strapi, user.id, course.id);
+      }
+
+      const post = await strapi.db.query('api::discussion-post.discussion-post').create({
+        data: {
+          title: title || null,
+          body: text,
+          category,
+          isResolved: false,
+          isHidden: false,
+          course: course.id,
+          author: user.id,
+          parent: null,
+        },
+        populate: { author: { populate: { role: true } }, course: true },
+      });
+
+      return {
+        data: {
+          id: post.id,
+          documentId: post.documentId,
+          kind: 'post',
+          title: post.title,
+          body: post.body,
+          category: post.category || category,
+          isResolved: false,
+          createdAt: post.createdAt,
+          author: sanitizeUser(post.author || user),
+          isStaffPost: false,
+          isMine: true,
+          commentCount: 0,
+          course: {
+            id: course.id,
+            documentId: course.documentId,
+            title: course.title,
+            slug: course.slug,
+          },
+          replies: [],
+        },
+      };
+    },
   };
 }

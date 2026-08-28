@@ -641,6 +641,18 @@ export default {
     },
     {
       method: 'GET',
+      path: '/lms/helpdesk/posts',
+      handler: 'lms.listHelpDeskPosts',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'POST',
+      path: '/lms/helpdesk/posts',
+      handler: 'lms.createHelpDeskPost',
+      config: { auth: false, policies: ['global::is-authenticated'] },
+    },
+    {
+      method: 'GET',
       path: '/lms/messages',
       handler: 'lms.listMyMessages',
       config: { auth: false, policies: ['global::is-authenticated'] },
