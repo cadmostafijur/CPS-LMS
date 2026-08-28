@@ -3,12 +3,73 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import type { Core } from '@strapi/strapi';
 
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+
+const ALLOWED_MIME = new Set([
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+  'image/gif',
+  'text/plain',
+  'text/markdown',
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]);
+
+const ALLOWED_EXT = /\.(pdf|png|jpe?g|webp|gif|txt|md|zip|doc|docx)$/i;
+
+type UploadFileLike = {
+  filepath?: string;
+  path?: string;
+  originalFilename?: string;
+  name?: string;
+  mimetype?: string;
+  type?: string;
+  size?: number;
+};
+
+export function assertAllowedUpload(name: string, mimetype?: string) {
+  const mime = String(mimetype || '').toLowerCase();
+  const safeName = String(name || '').toLowerCase();
+  const mimeOk = mime && ALLOWED_MIME.has(mime);
+  const extOk = ALLOWED_EXT.test(safeName);
+  if (!mimeOk && !extOk) {
+    throw new Error('File type not allowed. Upload a PDF or image (PNG, JPG, WebP, GIF).');
+  }
+}
+
+export async function readUploadedFile(file: UploadFileLike) {
+  const filepath = file.filepath || file.path;
+  if (!filepath) {
+    throw new Error('Upload file missing on server');
+  }
+  const name = file.originalFilename || file.name || 'upload.bin';
+  const mimetype = file.mimetype || file.type || 'application/octet-stream';
+  const size = file.size ?? fs.statSync(filepath).size;
+  if (size > MAX_UPLOAD_BYTES) {
+    throw new Error('File too large (max 15MB)');
+  }
+  assertAllowedUpload(name, mimetype);
+  const buffer = fs.readFileSync(filepath);
+  return { buffer, name, mimetype, size };
+}
+
 /** Persist a student file under public/uploads and return a public URL. */
 export async function savePublicUpload(
   strapi: Core.Strapi,
   buffer: Buffer,
-  originalName: string
+  originalName: string,
+  mimetype?: string
 ) {
+  assertAllowedUpload(originalName, mimetype);
+  if (buffer.length > MAX_UPLOAD_BYTES) {
+    throw new Error('File too large (max 15MB)');
+  }
+
   const uploadsDir = path.join(strapi.dirs.static.public, 'uploads');
   fs.mkdirSync(uploadsDir, { recursive: true });
   const safe = String(originalName || 'file')

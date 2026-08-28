@@ -18,7 +18,7 @@ import {
 import { sanitizeUser } from '../../../utils/sanitize';
 import { ensureUniqueSlug } from '../../../utils/slug';
 import { notifyUser } from '../../../utils/notify-user';
-import { savePublicUpload } from '../../../utils/mail-upload';
+import { savePublicUpload, readUploadedFile } from '../../../utils/mail-upload';
 import { createOpsHandlers } from './ops';
 import { createExtrasHandlers } from './extras';
 
@@ -3100,21 +3100,38 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     });
     if (!enrolled) throw new ForbiddenError('Enroll in the course first');
 
-    const { content, fileUrl, fileBase64, fileName } = ctx.request.body || {};
-    let resolvedFileUrl = fileUrl ? String(fileUrl) : null;
-    if (fileBase64 && typeof fileBase64 === 'string') {
+    const body = ctx.request.body || {};
+    const { fileUrl, fileBase64, fileName } = body;
+    const textContent = body.content != null ? String(body.content).trim() : '';
+    let resolvedFileUrl = fileUrl ? String(fileUrl).trim() : null;
+
+    const rawFiles = ctx.request.files;
+    let uploaded = rawFiles?.file ?? rawFiles?.files;
+    if (Array.isArray(uploaded)) uploaded = uploaded[0];
+    if (uploaded) {
+      try {
+        const { buffer, name, mimetype } = await readUploadedFile(uploaded);
+        resolvedFileUrl = await savePublicUpload(strapi, buffer, name, mimetype);
+      } catch (err: any) {
+        throw new ValidationError(err?.message || 'Invalid file upload');
+      }
+    } else if (fileBase64 && typeof fileBase64 === 'string') {
       const raw = fileBase64.includes(',') ? fileBase64.split(',').pop()! : fileBase64;
       const buffer = Buffer.from(raw, 'base64');
       if (buffer.length > 15 * 1024 * 1024) {
         throw new ValidationError('File too large (max 15MB)');
       }
-      resolvedFileUrl = await savePublicUpload(
-        strapi,
-        buffer,
-        String(fileName || 'assignment-file.bin')
-      );
+      try {
+        resolvedFileUrl = await savePublicUpload(
+          strapi,
+          buffer,
+          String(fileName || 'assignment-file.bin')
+        );
+      } catch (err: any) {
+        throw new ValidationError(err?.message || 'Invalid file upload');
+      }
     }
-    if (!content && !resolvedFileUrl) {
+    if (!textContent && !resolvedFileUrl) {
       throw new ValidationError('Provide content or a file upload');
     }
 
@@ -3127,7 +3144,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       });
 
     const payload = {
-      content: content ? String(content) : null,
+      content: textContent || null,
       fileUrl: resolvedFileUrl,
       status: late ? 'LATE' : 'SUBMITTED',
       submittedAt: now.toISOString(),

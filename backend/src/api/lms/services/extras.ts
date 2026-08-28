@@ -1098,11 +1098,25 @@ export function createExtrasHandlers(strapi: Core.Strapi) {
           (m: any) =>
             m &&
             (m.role === 'user' || m.role === 'assistant') &&
-            typeof m.content === 'string' &&
-            m.content.trim()
+            (typeof m.content === 'string' || m.attachment)
         )
         .slice(-20)
-        .map((m: any) => ({ role: m.role, content: m.content.trim() }));
+        .map((m: any) => {
+          const row: any = {
+            role: m.role,
+            content: typeof m.content === 'string' ? m.content.trim() : '',
+          };
+          if (m.attachment?.dataBase64 && m.attachment?.mimeType) {
+            row.attachment = {
+              name: String(m.attachment.name || 'upload'),
+              mimeType: String(m.attachment.mimeType),
+              kind: m.attachment.kind === 'pdf' ? 'pdf' : 'image',
+              dataBase64: String(m.attachment.dataBase64),
+            };
+          }
+          return row;
+        })
+        .filter((m: any) => m.content || m.attachment);
 
       if (!messages.length || messages[messages.length - 1]?.role !== 'user') {
         throw new ValidationError('Send at least one user message');

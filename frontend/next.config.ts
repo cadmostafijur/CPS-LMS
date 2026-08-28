@@ -10,6 +10,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     root,
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "20mb",
+    },
+    proxyClientMaxBodySize: "20mb",
+    middlewareClientMaxBodySize: "20mb",
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "placehold.co" },

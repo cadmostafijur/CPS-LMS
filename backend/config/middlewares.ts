@@ -17,7 +17,17 @@ export default [
   },
   'strapi::poweredBy',
   'strapi::query',
-  'strapi::body',
+  {
+    name: 'strapi::body',
+    config: {
+      jsonLimit: '20mb',
+      formLimit: '20mb',
+      textLimit: '20mb',
+      formidable: {
+        maxFileSize: 15 * 1024 * 1024,
+      },
+    },
+  },
   'strapi::session',
   'strapi::favicon',
   'strapi::public',

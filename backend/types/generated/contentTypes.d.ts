@@ -942,11 +942,16 @@ export interface ApiDiscussionPostDiscussionPost
       'plugin::users-permissions.user'
     >;
     body: Schema.Attribute.Text & Schema.Attribute.Required;
+    category: Schema.Attribute.Enumeration<
+      ['courses', 'bugs', 'feature', 'others']
+    > &
+      Schema.Attribute.DefaultTo<'courses'>;
     course: Schema.Attribute.Relation<'manyToOne', 'api::course.course'>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     isHidden: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    isResolved: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',

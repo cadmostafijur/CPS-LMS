@@ -6,7 +6,7 @@ export default async function StudentAssistantPage() {
   const user = await requireUser("/student/assistant");
 
   return (
-    <DashboardShell user={user}>
+    <DashboardShell user={user} compact>
       <StudentAiAssistant studentName={user.name || user.username} />
     </DashboardShell>
   );

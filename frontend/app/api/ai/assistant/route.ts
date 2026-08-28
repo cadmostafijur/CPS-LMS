@@ -42,18 +42,32 @@ export async function POST(request: Request) {
     (m) =>
       m &&
       (m.role === "user" || m.role === "assistant") &&
-      typeof m.content === "string" &&
-      m.content.trim()
+      (typeof m.content === "string" || m.attachment)
   );
 
-  if (!messages.length || messages[messages.length - 1]?.role !== "user") {
+  const normalized = messages.map((m) => ({
+    role: m.role,
+    content: typeof m.content === "string" ? m.content.trim() : "",
+    ...(m.attachment?.dataBase64
+      ? {
+          attachment: {
+            name: m.attachment.name,
+            mimeType: m.attachment.mimeType,
+            kind: m.attachment.kind,
+            dataBase64: m.attachment.dataBase64,
+          },
+        }
+      : {}),
+  })).filter((m) => m.content || m.attachment);
+
+  if (!normalized.length || normalized[normalized.length - 1]?.role !== "user") {
     return NextResponse.json(
       { error: "Send at least one user message." },
       { status: 400 }
     );
   }
 
-  const trimmed = messages.slice(-MAX_CHAT_HISTORY);
+  const trimmed = normalized.slice(-MAX_CHAT_HISTORY);
   const role = getRoleName(user);
   const payload = JSON.stringify({
     messages: trimmed,
@@ -92,8 +106,10 @@ export async function POST(request: Request) {
       (data as { message?: string })?.message ||
       "Sage AI unavailable on server";
 
-    // If backend has no key, try local frontend env (dev fallback)
-    if (upstream.status !== 401 && upstream.status !== 403) {
+    const hasAttachment = trimmed.some((m) => m.attachment?.dataBase64);
+
+    // Never fall back to text-only Sage when an image/PDF was attached — that hides the real error.
+    if (upstream.status !== 401 && upstream.status !== 403 && !hasAttachment) {
       const local = await tryLocalSage(trimmed, user, body.context?.enrolledCourses);
       if (local) {
         return NextResponse.json({
@@ -106,22 +122,24 @@ export async function POST(request: Request) {
           meta: { role, studentId: user.id, source: "frontend-env" },
         });
       }
-      return NextResponse.json({ error: errMsg }, { status: upstream.status });
     }
 
-    return NextResponse.json(data, { status: upstream.status });
+    return NextResponse.json({ error: errMsg }, { status: upstream.status });
   } catch {
-    const local = await tryLocalSage(trimmed, user, body.context?.enrolledCourses);
-    if (local) {
-      return NextResponse.json({
-        data: {
-          role: "assistant",
-          content: local.reply,
-          provider: local.provider,
-          assistantName: AI_ASSISTANT_NAME,
-        },
-        meta: { role, studentId: user.id, source: "frontend-env" },
-      });
+    const hasAttachment = trimmed.some((m) => m.attachment?.dataBase64);
+    if (!hasAttachment) {
+      const local = await tryLocalSage(trimmed, user, body.context?.enrolledCourses);
+      if (local) {
+        return NextResponse.json({
+          data: {
+            role: "assistant",
+            content: local.reply,
+            provider: local.provider,
+            assistantName: AI_ASSISTANT_NAME,
+          },
+          meta: { role, studentId: user.id, source: "frontend-env" },
+        });
+      }
     }
     return NextResponse.json(
       { error: "Could not reach the API server. Is Strapi running?" },

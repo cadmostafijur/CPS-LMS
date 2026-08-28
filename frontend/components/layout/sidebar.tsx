@@ -37,7 +37,6 @@ import {
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { SignOutButton } from "@/components/layout/sign-out-button";
 import type { RoleName } from "@/lib/roles";
 import { ROLE_NAMES } from "@/lib/roles";
 
@@ -162,8 +161,6 @@ function flatNavForRole(role: string | null | undefined): NavItem[] {
         { href: "/student/messages", label: "Help Desk", icon: MessageSquare },
         { href: "/student/assistant", label: "Sage", icon: Bot },
         { href: "/student/transcript", label: "Transcript", icon: ScrollText },
-        { href: "/student/notifications", label: "Notifications", icon: Bell },
-        { href: "/student/tickets", label: "Support", icon: Ticket },
         { href: "/profile", label: "Profile", icon: UserCheck },
       ];
   }
@@ -354,19 +351,6 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
               })}
             </nav>
           )}
-
-          <div
-            className={cn(
-              "mt-auto border-t border-border/80 pt-3",
-              collapsed ? "w-full" : "w-full"
-            )}
-          >
-            {collapsed ? (
-              <SignOutButton className="mx-auto" />
-            ) : (
-              <SignOutButton variant="sidebar" />
-            )}
-          </div>
         </div>
       </aside>
 
