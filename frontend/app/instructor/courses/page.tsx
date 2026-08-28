@@ -5,7 +5,6 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import {
   StaffCoursesBoard,
-  coursesToStaffItems,
   type StaffCourseItem,
 } from "@/features/courses/staff-courses-board";
 import { requireUser } from "@/lib/session";
