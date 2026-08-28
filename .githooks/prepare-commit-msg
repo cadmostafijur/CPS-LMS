@@ -1,0 +1,7 @@
+#!/bin/sh
+# Strip Cursor co-author trailers before commit message is finalized.
+# Install: git config core.hooksPath .githooks
+MSG_FILE="$1"
+if [ -f "$MSG_FILE" ]; then
+  grep -v '^Co-authored-by: Cursor <cursoragent@cursor.com>$' "$MSG_FILE" > "$MSG_FILE.tmp" && mv "$MSG_FILE.tmp" "$MSG_FILE"
+fi
