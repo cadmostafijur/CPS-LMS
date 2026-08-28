@@ -36,6 +36,7 @@ import {
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 import type { RoleName } from "@/lib/roles";
 import { ROLE_NAMES } from "@/lib/roles";
 
@@ -264,7 +265,7 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
       >
         <div
           className={cn(
-            "flex flex-col pb-6",
+            "flex min-h-full flex-col pb-6",
             collapsed ? "items-center px-2 pt-2" : "p-2.5"
           )}
         >
@@ -351,6 +352,19 @@ export function Sidebar({ role }: { role?: RoleName | string | null }) {
               })}
             </nav>
           )}
+
+          <div
+            className={cn(
+              "mt-auto border-t border-border/80 pt-3",
+              collapsed ? "w-full" : "w-full"
+            )}
+          >
+            {collapsed ? (
+              <SignOutButton className="mx-auto" />
+            ) : (
+              <SignOutButton variant="sidebar" />
+            )}
+          </div>
         </div>
       </aside>
 

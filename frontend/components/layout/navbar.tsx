@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, LogOut, LayoutDashboard, X, UserRound } from "lucide-react";
+import { Menu, LayoutDashboard, X, UserRound, LogOut } from "lucide-react";
 import { useState } from "react";
-import { toast, notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,8 +15,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BrandLogo } from "@/components/shared/brand-logo";
-import { logout } from "@/services/auth.service";
-import { dashboardPathForRole, getRoleName } from "@/lib/roles";
+import { NotificationBell } from "@/components/layout/notification-bell";
+import { SignOutButton, useSignOut } from "@/components/layout/sign-out-button";
+import {
+  dashboardPathForRole,
+  getRoleName,
+  notificationsPathForRole,
+} from "@/lib/roles";
 import type { AuthUser } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -38,30 +42,13 @@ export function Navbar({
   const [open, setOpen] = useState(false);
   const role = getRoleName(user);
   const dash = dashboardPathForRole(role);
+  const notificationsHref = notificationsPathForRole(role);
+  const handleSignOut = useSignOut({ onSignedOut: () => setOpen(false) });
   const isDashboard =
     pathname.startsWith("/admin") ||
     pathname.startsWith("/student") ||
     pathname.startsWith("/instructor") ||
     pathname.startsWith("/content-manager");
-
-  async function handleLogout() {
-    const ok = await notify.confirm({
-      title: "Sign out?",
-      text: "You will need to sign in again to access your dashboard.",
-      confirmLabel: "Sign out",
-      cancelLabel: "Stay signed in",
-      destructive: true,
-    });
-    if (!ok) return;
-    try {
-      await logout();
-      toast.success("You have signed out");
-      router.push("/");
-      router.refresh();
-    } catch {
-      toast.error("Could not sign out. Please try again.");
-    }
-  }
 
   const initials =
     (user?.name || user?.email || "U")
@@ -108,70 +95,78 @@ export function Navbar({
           </nav>
         ) : null}
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="flex items-center gap-1 sm:gap-2">
           {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 border-border bg-white px-2.5">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-orange/15 text-xs text-orange">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden max-w-[120px] truncate text-sm text-navy sm:inline">
-                    {user.name || user.email}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col">
-                    <span>{user.name || "Account"}</span>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {role} · {user.email}
-                    </span>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push(dash)}>
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push("/profile")}>
-                  <UserRound className="mr-2 h-4 w-4" />
-                  My profile
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => void handleLogout()}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
             <>
+              {notificationsHref ? (
+                <NotificationBell href={notificationsHref} />
+              ) : null}
+              <SignOutButton />
+              <div className="hidden items-center gap-2 md:flex">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="gap-2 border-border bg-white px-2.5">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-orange/15 text-xs text-orange">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="hidden max-w-[120px] truncate text-sm text-navy sm:inline">
+                        {user.name || user.email}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      <div className="flex flex-col">
+                        <span>{user.name || "Account"}</span>
+                        <span className="text-xs font-normal text-muted-foreground">
+                          {role} · {user.email}
+                        </span>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => router.push(dash)}>
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push("/profile")}>
+                      <UserRound className="mr-2 h-4 w-4" />
+                      My profile
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => void handleSignOut()}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </>
+          ) : (
+            <div className="hidden items-center gap-2 md:flex">
               <Button variant="ghost" asChild>
                 <Link href="/login">Sign in</Link>
               </Button>
               <Button asChild>
                 <Link href="/register">Create account</Link>
               </Button>
-            </>
+            </div>
           )}
-        </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden"
-          onClick={() => setOpen((v) => !v)}
-          aria-label={open ? "Close menu" : "Open menu"}
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Close menu" : "Open menu"}
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </div>
 
       {open ? (
@@ -205,16 +200,20 @@ export function Navbar({
                 >
                   My profile
                 </Link>
-                <button
-                  type="button"
-                  className="rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-destructive hover:bg-destructive/5"
-                  onClick={() => {
-                    setOpen(false);
-                    void handleLogout();
-                  }}
-                >
-                  Sign out
-                </button>
+                {notificationsHref ? (
+                  <Link
+                    href={notificationsHref}
+                    className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-surface"
+                    onClick={() => setOpen(false)}
+                  >
+                    Notifications
+                  </Link>
+                ) : null}
+                <SignOutButton
+                  variant="menu"
+                  className="mt-1"
+                  onSignedOut={() => setOpen(false)}
+                />
               </>
             ) : (
               <>

@@ -85,6 +85,19 @@ export function dashboardPathForRole(role: string | null | undefined): string {
   }
 }
 
+export function notificationsPathForRole(
+  role: string | null | undefined
+): string | null {
+  switch (normalizeRoleName(role)) {
+    case ROLE_NAMES.ADMIN:
+      return "/admin/notifications";
+    case ROLE_NAMES.STUDENT:
+      return "/student/notifications";
+    default:
+      return null;
+  }
+}
+
 export function pathAllowedForRole(
   pathname: string,
   role: string | null | undefined
