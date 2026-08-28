@@ -31,10 +31,11 @@ export const metadata: Metadata = {
   description:
     "CPS Academy is a modern SaaS learning platform for courses, quizzes, and progress tracking.",
   icons: {
-    icon: [{ url: "/favicon.png", type: "image/png" }, { url: "/logo.png", type: "image/png" }],
-    apple: "/logo.png",
+    icon: "/favicon.png",
+    apple: "/apple-touch-icon.png",
     shortcut: "/favicon.png",
   },
+  manifest: "/site.webmanifest",
   openGraph: {
     title: "CPS Academy",
     description: "Learn. Build. Level up with CPS Academy.",
