@@ -99,7 +99,7 @@ export const copy = {
   courses: {
     allDesc: "Explore published courses and enroll to start learning.",
     bootcampDesc:
-      "Intensive free bootcamp tracks — start from zero and build contest-ready fundamentals.",
+      "20-day free programming and C++ STL bootcamp — live classes, contests, and scholarships.",
     unavailable: "Courses unavailable",
     apiHint: "Start the API with",
     apiHint2: "from the project root, then refresh.",

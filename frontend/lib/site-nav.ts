@@ -21,13 +21,13 @@ export type MainNavLink = {
 
 export const MAIN_NAV_LINKS: MainNavLink[] = [
   { href: "/courses", label: "Courses" },
-  { href: "/bootcamp", label: "Bootcamp" },
+  { href: "/bootcamp", label: "Free Bootcamp" },
   { href: "/#success-stories", label: "Success Stories" },
 ];
 
 export const FOOTER_LINKS = [
   { href: "/courses", label: "Courses" },
-  { href: "/bootcamp", label: "Bootcamp" },
+  { href: "/bootcamp", label: "Free Bootcamp" },
   { href: "/#success-stories", label: "Success Stories" },
   { href: "/about", label: "About us" },
   { href: "/privacy", label: "Privacy policy" },
