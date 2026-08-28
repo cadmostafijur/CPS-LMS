@@ -11,7 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { BrandLogo } from "@/components/shared/brand-logo";
+import { SectionHeader } from "@/components/marketing/section-header";
+import { TrustStrip } from "@/components/marketing/trust-strip";
 import { CourseCard } from "@/features/courses/course-card";
 import { HomeHero } from "@/features/marketing/home-hero";
 import { PromoBanners } from "@/features/marketing/promo-banners";
@@ -90,7 +91,7 @@ export default async function HomePage() {
   }
 
   const featured = courses.slice(0, 3);
-  const courseCount = courses.length || 0;
+  const courseCount = courses.length;
   const heroBanners = banners
     .filter((b) => b.style === "HERO")
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -100,150 +101,149 @@ export default async function HomePage() {
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-[#f6f8fb]">
       <Navbar user={user} />
 
-      <HomeHero banners={heroBanners} user={user} />
+      <main>
+        <HomeHero banners={heroBanners} user={user} />
 
-      {stripBanners.length > 0 ? (
-        <section className="mx-auto max-w-6xl px-4 py-8">
-          <PromoBanners banners={stripBanners} />
-        </section>
-      ) : null}
-
-      <section className="border-y border-border bg-surface/80">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-8 text-center sm:flex-row sm:justify-center sm:gap-8">
-          <BrandLogo size={28} className="opacity-90" />
-          <p className="text-sm text-muted-foreground">
-            Trusted by learners preparing for software engineering interviews and
-            contests
-          </p>
+        <div className="-mt-3 pb-4 sm:-mt-4">
+          <TrustStrip courseCount={courseCount} />
         </div>
-      </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-16">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 className="font-display text-3xl font-bold tracking-tight text-navy">
-              Featured courses
-            </h2>
-            <p className="mt-2 text-muted-foreground">
-              Start with published tracks designed for focused, hands-on learning.
-            </p>
-          </div>
-          <Button variant="outline" asChild>
-            <Link href="/courses">View all</Link>
-          </Button>
-        </div>
-        {catalogError ? (
-          <p className="rounded-2xl border border-dashed border-destructive/30 bg-card px-6 py-12 text-center text-muted-foreground shadow-sm">
-            <span className="font-medium text-navy">Courses unavailable.</span>{" "}
-            {catalogError}
-          </p>
-        ) : featured.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center text-muted-foreground shadow-sm">
-            No published courses yet. Check back soon, or browse the full catalog
-            once instructors publish their tracks.
-          </p>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((course) => (
-              <CourseCard
-                key={String(course.documentId || course.id)}
-                course={course}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+        {stripBanners.length > 0 ? (
+          <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+            <PromoBanners banners={stripBanners} />
+          </section>
+        ) : null}
 
-      <section className="bg-surface">
-        <div className="mx-auto max-w-6xl px-4 py-16">
-          <div className="mb-10 text-center">
-            <h2 className="font-display text-3xl font-bold tracking-tight text-navy">
-              Why CPS Academy
-            </h2>
-            <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
-              Everything you need to learn, practice, and track growth in one place.
-            </p>
-          </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((item) => (
-              <div
-                key={item.title}
-                className="rounded-2xl border border-border bg-card p-6 shadow-sm"
-              >
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-orange/10 text-orange">
-                  <item.icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-display text-lg font-semibold text-navy">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {item.text}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <SuccessStories stories={storyBanners} />
-
-      {courseCount > 0 ? (
-        <section className="border-y border-border bg-navy text-white">
-          <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 py-12 text-center sm:flex-row sm:justify-between sm:text-left">
-            <div>
-              <p className="font-display text-2xl font-bold tracking-tight">
-                {courseCount} published {courseCount === 1 ? "course" : "courses"}
-              </p>
-              <p className="mt-1 text-sm text-white/70">
-                Enroll free, track progress, and unlock modules with quiz checkpoints.
-              </p>
-            </div>
-            <Button
-              size="lg"
-              className="bg-orange text-white hover:bg-orange/90"
-              asChild
-            >
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+          <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
+            <SectionHeader
+              eyebrow="Catalog"
+              title="Featured courses"
+              description="Start with published tracks designed for focused, hands-on learning."
+            />
+            <Button variant="outline" className="rounded-full" asChild>
               <Link href="/courses">
-                Explore catalog
+                View all
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
           </div>
+          {catalogError ? (
+            <p className="rounded-2xl border border-dashed border-destructive/30 bg-white px-6 py-12 text-center text-muted-foreground shadow-sm">
+              <span className="font-medium text-navy">Courses unavailable.</span>{" "}
+              {catalogError}
+            </p>
+          ) : featured.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-border bg-white px-6 py-12 text-center text-muted-foreground shadow-sm">
+              No published courses yet. Check back soon, or browse the full catalog
+              once instructors publish their tracks.
+            </p>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {featured.map((course) => (
+                <CourseCard
+                  key={String(course.documentId || course.id)}
+                  course={course}
+                />
+              ))}
+            </div>
+          )}
         </section>
-      ) : null}
 
-      <section className="mx-auto max-w-3xl px-4 py-16">
-        <div className="mb-8 text-center">
-          <h2 className="font-display text-3xl font-bold tracking-tight text-navy">
-            Frequently asked questions
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-            Quick answers about learning on CPS Academy.
-          </p>
-        </div>
-        <div className="space-y-3">
-          {faqs.map((item) => (
-            <details
-              key={item.q}
-              className="group rounded-2xl border border-border bg-card px-5 py-4 shadow-sm open:shadow-md"
-            >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-semibold text-navy outline-none [&::-webkit-details-marker]:hidden [&::marker]:content-none">
-                <span>{item.q}</span>
-                <span className="relative flex h-6 w-6 shrink-0 items-center justify-center text-orange">
-                  <Plus className="h-4 w-4 group-open:hidden" strokeWidth={2.5} />
-                  <Minus className="hidden h-4 w-4 group-open:block" strokeWidth={2.5} />
-                </span>
-              </summary>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {item.a}
-              </p>
-            </details>
-          ))}
-        </div>
-      </section>
+        <section className="border-y border-border bg-white py-16 sm:py-20">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <SectionHeader
+              align="center"
+              eyebrow="Platform"
+              title="Why CPS Academy"
+              description="Everything you need to learn, practice, and track growth in one place."
+              className="mb-12"
+            />
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {features.map((item) => (
+                <div
+                  key={item.title}
+                  className="group rounded-2xl border border-border/80 bg-[#f6f8fb] p-6 transition hover:border-orange/30 hover:bg-white hover:shadow-md"
+                >
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange/10 text-orange transition group-hover:bg-orange group-hover:text-white">
+                    <item.icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-display text-lg font-semibold text-navy">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {item.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <SuccessStories stories={storyBanners} />
+
+        <section className="py-16 sm:py-20">
+          <div className="mx-auto max-w-3xl px-4 sm:px-6">
+            <SectionHeader
+              align="center"
+              title="Frequently asked questions"
+              description="Quick answers about learning on CPS Academy."
+              className="mb-10"
+            />
+            <div className="space-y-3">
+              {faqs.map((item) => (
+                <details
+                  key={item.q}
+                  className="group rounded-2xl border border-border bg-white px-5 py-4 shadow-sm open:border-orange/20 open:shadow-md"
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-semibold text-navy outline-none">
+                    <span>{item.q}</span>
+                    <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange/10 text-orange">
+                      <Plus className="h-4 w-4 group-open:hidden" strokeWidth={2.5} />
+                      <Minus className="hidden h-4 w-4 group-open:block" strokeWidth={2.5} />
+                    </span>
+                  </summary>
+                  <p className="mt-3 border-t border-border pt-3 text-sm leading-relaxed text-muted-foreground">
+                    {item.a}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20">
+          <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-navy via-navy-2 to-navy px-6 py-10 text-center sm:px-10 sm:py-12">
+            <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">
+              Ready to start learning?
+            </h2>
+            <p className="mx-auto mt-2 max-w-lg text-sm text-white/70 sm:text-base">
+              Browse the catalog, enroll for free, and track your progress from day one.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Button size="lg" className="rounded-full px-6" asChild>
+                <Link href="/courses">
+                  Browse courses
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="rounded-full border-white/25 bg-white/5 px-6 text-white hover:bg-white/15"
+                asChild
+              >
+                <Link href={user ? "/dashboard" : "/register"}>
+                  {user ? "Go to dashboard" : "Create free account"}
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>

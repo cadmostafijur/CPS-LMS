@@ -64,10 +64,10 @@ export function Navbar({
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 backdrop-blur-md",
+        "sticky top-0 z-40 border-b backdrop-blur-md",
         overHero
-          ? "border-b border-white/10 bg-navy/50"
-          : "border-b border-border/70 bg-white/95"
+          ? "border-white/10 bg-navy/50"
+          : "border-border/60 bg-white/90 shadow-[0_1px_0_rgba(11,18,32,0.04)]"
       )}
     >
       <div

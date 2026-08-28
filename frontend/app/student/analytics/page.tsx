@@ -31,17 +31,6 @@ export default async function StudentAnalyticsPage() {
   try {
     const res = await getStudentAnalytics(token);
     data = { ...empty, ...res.data };
-    if (!data.videoByDay?.length) {
-      const now = new Date();
-      data.videoByDay = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(now);
-        d.setDate(d.getDate() - (6 - i));
-        return {
-          label: d.toLocaleDateString(undefined, { day: "numeric", month: "short" }),
-          minutes: 0,
-        };
-      });
-    }
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Could not load analytics";
   }
@@ -50,7 +39,7 @@ export default async function StudentAnalyticsPage() {
     <DashboardShell user={user}>
       <PageHeader
         title="Student analytics"
-        description="Track your learning health, quizzes, videos, and assignments."
+        description="Your learning health, quiz scores, video time, and assignment trends at a glance."
       />
 
       {loadError ? (

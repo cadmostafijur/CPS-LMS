@@ -12,7 +12,6 @@ import {
   Percent,
   DollarSign,
   ArrowRight,
-  Search,
   Layers,
 } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
@@ -89,7 +88,6 @@ export default async function AdminDashboardPage() {
     { href: "/admin/orders", label: "Orders", desc: "Commerce" },
     { href: "/admin/banners", label: "Banners", desc: "Homepage promos" },
     { href: "/admin/certificates", label: "Certificates", desc: "Issue & revoke" },
-    { href: "/admin/search", label: "Search", desc: "Find anything" },
     { href: "/admin/reports", label: "Reports", desc: "Ops snapshot" },
     { href: "/admin/settings", label: "Settings", desc: "Org defaults" },
   ];
@@ -117,12 +115,6 @@ export default async function AdminDashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="secondary" className="bg-white text-navy hover:bg-white/90">
-              <Link href="/admin/search">
-                <Search className="h-4 w-4" />
-                Search
-              </Link>
-            </Button>
             <Button asChild className="bg-orange hover:bg-orange-hover">
               <Link href="/admin/courses">
                 Manage courses

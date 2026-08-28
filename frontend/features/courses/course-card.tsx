@@ -1,74 +1,92 @@
 import Link from "next/link";
-import { BookOpen, Clapperboard } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { ArrowRight, BookOpen, Clapperboard, GraduationCap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Course } from "@/types";
+import { cn } from "@/lib/utils";
 
-export function CourseCard({ course }: { course: Course }) {
+export function CourseCard({ course, className }: { course: Course; className?: string }) {
   const lessonCount = course.lessonCount ?? course.lessons?.length ?? 0;
   const quizCount = course.quizCount ?? course.quizzes?.length ?? 0;
+  const isPaid = course.isFree === false && Number(course.price) > 0;
 
   return (
-    <Card className="group flex h-full flex-col overflow-hidden rounded-2xl border-border/80 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
-      <div className="relative h-44 overflow-hidden bg-surface">
+    <article
+      className={cn(
+        "group flex h-full flex-col overflow-hidden rounded-2xl border border-border/80 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange/25 hover:shadow-lg",
+        className
+      )}
+    >
+      <div className="relative aspect-[16/10] overflow-hidden bg-surface">
         {course.thumbnailUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={course.thumbnailUrl}
             alt=""
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-gradient-to-br from-orange/10 to-navy/5">
-            <BookOpen className="h-10 w-10 text-orange" />
+          <div className="flex h-full items-center justify-center bg-gradient-to-br from-orange/15 via-white to-navy/5">
+            <BookOpen className="h-10 w-10 text-orange/80" />
           </div>
         )}
-        <Badge className="absolute left-3 top-3" variant="gold">
-          {course.isFree === false && Number(course.price) > 0
+        <div className="absolute inset-0 bg-gradient-to-t from-navy/50 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
+        <Badge
+          className="absolute left-3 top-3 shadow-sm"
+          variant={isPaid ? "gold" : "success"}
+        >
+          {isPaid
             ? `${course.currency || "USD"} ${Number(course.price).toFixed(0)}`
             : "Free"}
         </Badge>
-      </div>
-      <CardHeader className="space-y-2">
-        <CardTitle className="line-clamp-2 font-display text-lg leading-snug text-navy">
-          {course.title}
-        </CardTitle>
-        <CardDescription className="line-clamp-2 text-sm">
-          {course.shortDescription || course.description || "No description yet."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="mt-auto flex flex-wrap gap-3 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
-          <BookOpen className="h-3.5 w-3.5" />
-          {lessonCount} lessons
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Clapperboard className="h-3.5 w-3.5" />
-          {quizCount} quiz{quizCount === 1 ? "" : "zes"}
-        </span>
-        {course.category?.name ? (
-          <span className="truncate">{course.category.name}</span>
-        ) : null}
         {course.difficulty ? (
-          <span className="capitalize">{course.difficulty.toLowerCase()}</span>
+          <Badge
+            variant="secondary"
+            className="absolute right-3 top-3 bg-white/90 text-navy shadow-sm"
+          >
+            {String(course.difficulty).charAt(0) +
+              String(course.difficulty).slice(1).toLowerCase()}
+          </Badge>
         ) : null}
-        {course.instructor?.name ? (
-          <span className="truncate">by {course.instructor.name}</span>
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
+        {course.category?.name ? (
+          <p className="text-xs font-semibold uppercase tracking-wide text-orange">
+            {course.category.name}
+          </p>
         ) : null}
-      </CardContent>
-      <CardFooter>
-        <Button asChild className="w-full">
-          <Link href={`/courses/${course.slug}`}>View course</Link>
+        <h3 className="mt-1 line-clamp-2 font-display text-lg font-semibold leading-snug text-navy">
+          {course.title}
+        </h3>
+        <p className="mt-2 line-clamp-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+          {course.shortDescription || course.description || "Structured lessons with hands-on practice."}
+        </p>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-xs text-muted-foreground">
+            <BookOpen className="h-3 w-3" />
+            {lessonCount} lessons
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-xs text-muted-foreground">
+            <Clapperboard className="h-3 w-3" />
+            {quizCount} quizzes
+          </span>
+          {course.instructor?.name ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-xs text-muted-foreground">
+              <GraduationCap className="h-3 w-3" />
+              {course.instructor.name}
+            </span>
+          ) : null}
+        </div>
+
+        <Button asChild className="mt-5 w-full rounded-xl">
+          <Link href={`/courses/${course.slug}`}>
+            View course
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </article>
   );
 }

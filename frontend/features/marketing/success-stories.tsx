@@ -1,33 +1,48 @@
 import Link from "next/link";
 import { Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SectionHeader } from "@/components/marketing/section-header";
 import type { Banner } from "@/types";
+import { cn } from "@/lib/utils";
 
 export function SuccessStories({ stories }: { stories: Banner[] }) {
   if (!stories.length) return null;
 
-  return (
-    <section className="bg-surface py-16">
-      <div className="mx-auto max-w-6xl px-4">
-        <div className="mb-10 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange">
-            Success stories
-          </p>
-          <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-navy">
-            Learners who grew with CPS Academy
-          </h2>
-          <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
-            Real students, real progress — discover how structured learning helped them level up.
-          </p>
-        </div>
+  const gridClass =
+    stories.length === 1
+      ? "mx-auto max-w-md"
+      : stories.length === 2
+        ? "mx-auto grid max-w-4xl gap-6 sm:grid-cols-2"
+        : "grid gap-6 sm:grid-cols-2 lg:grid-cols-3";
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+  return (
+    <section className="border-t border-border bg-white py-20">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <SectionHeader
+          align="center"
+          eyebrow="Success stories"
+          title="Learners who grew with CPS Academy"
+          description="Real students, real progress — structured learning that helps them level up."
+          className="mb-12"
+        />
+
+        <div className={gridClass}>
           {stories.map((story) => (
             <article
               key={String(story.documentId || story.id)}
-              className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
+              className={cn(
+                "flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition hover:shadow-md",
+                stories.length === 1 && "sm:flex-row sm:items-stretch"
+              )}
             >
-              <div className="relative w-full overflow-hidden bg-navy/5 aspect-square sm:aspect-[4/5] lg:aspect-square">
+              <div
+                className={cn(
+                  "relative shrink-0 overflow-hidden bg-navy/5",
+                  stories.length === 1
+                    ? "aspect-square sm:aspect-auto sm:w-2/5"
+                    : "aspect-[4/5] sm:aspect-square"
+                )}
+              >
                 {story.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -38,28 +53,32 @@ export function SuccessStories({ stories }: { stories: Banner[] }) {
                     loading="lazy"
                   />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-muted-foreground">
+                  <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-muted-foreground">
                     No photo
                   </div>
                 )}
               </div>
-              <div className="flex flex-1 flex-col p-5">
-                <Quote className="h-5 w-5 text-orange/80" />
+              <div className="flex flex-1 flex-col p-6">
+                <Quote className="h-5 w-5 text-orange" />
                 {story.showSubtitle !== false && story.subtitle ? (
-                  <p className="mt-3 flex-1 text-sm leading-relaxed text-navy/90">
+                  <p className="mt-3 flex-1 text-sm leading-relaxed text-navy/85 sm:text-base">
                     &ldquo;{story.subtitle}&rdquo;
                   </p>
-                ) : null}
-                <div className="mt-4 border-t border-border pt-4">
-                  {story.showTitle !== false ? (
+                ) : (
+                  <p className="mt-3 flex-1 text-sm italic text-muted-foreground">
+                    A CPS Academy learner
+                  </p>
+                )}
+                <div className="mt-5 border-t border-border pt-4">
+                  {story.showTitle !== false && story.title ? (
                     <p className="font-display font-semibold text-navy">{story.title}</p>
                   ) : null}
                   {story.personRole ? (
-                    <p className="text-xs text-muted-foreground">{story.personRole}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{story.personRole}</p>
                   ) : null}
                 </div>
                 {story.showCta !== false && story.linkUrl ? (
-                  <Button asChild variant="outline" size="sm" className="mt-4 w-fit">
+                  <Button asChild variant="outline" size="sm" className="mt-4 w-fit rounded-full">
                     <Link href={story.linkUrl}>{story.ctaLabel || "Read their story"}</Link>
                   </Button>
                 ) : null}

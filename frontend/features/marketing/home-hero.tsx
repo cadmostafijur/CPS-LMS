@@ -29,7 +29,7 @@ export function HomeHero({
   }
 
   return (
-    <section className="bg-surface/80 px-4 pb-2 pt-4 sm:px-6 sm:pb-4 sm:pt-6">
+    <section className="bg-[#f6f8fb] px-4 pb-6 pt-2 sm:px-6 sm:pb-8 sm:pt-4">
       <div className="relative mx-auto max-w-6xl">
         <div className="relative overflow-hidden rounded-[1.75rem] border border-navy/20 bg-navy shadow-[0_24px_60px_-20px_rgba(11,18,32,0.55)] sm:rounded-[2rem]">
           <div

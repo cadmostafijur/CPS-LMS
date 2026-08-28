@@ -16,7 +16,6 @@ import {
   Package,
   PanelLeft,
   PanelLeftClose,
-  Search,
   Settings,
   ShoppingCart,
   Tag,
@@ -59,7 +58,6 @@ function adminSections(): NavSection[] {
       label: "Overview",
       items: [
         { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { href: "/admin/search", label: "Search", icon: Search },
         { href: "/admin/reports", label: "Reports", icon: BarChart3 },
       ],
     },

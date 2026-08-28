@@ -175,9 +175,9 @@ function sanitizeBanner(banner: any) {
     style: normalizeBannerStyle(banner.style),
     showTitle: banner.showTitle !== false,
     showSubtitle: banner.showSubtitle !== false,
-    showCta: banner.showCta !== false,
-    showBrowseCourses: banner.showBrowseCourses !== false,
-    showAuthButton: banner.showAuthButton !== false,
+    showCta: banner.showCta === true,
+    showBrowseCourses: banner.showBrowseCourses === true,
+    showAuthButton: banner.showAuthButton === true,
     isActive: banner.isActive !== false,
     sortOrder: banner.sortOrder ?? 0,
   };
@@ -1165,7 +1165,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         lesson.lessonType === 'VIDEO' ||
         lesson.lessonType === 'AUDIO' ||
         Boolean(lesson.videoUrl);
-      if (isVideo) videoMinutes += Number(lesson.durationMinutes ?? 10);
+        if (isVideo) videoMinutes += Number(lesson.durationMinutes ?? 0);
     }
 
     const healthCheck = Math.min(
@@ -1207,7 +1207,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           lesson.lessonType === 'VIDEO' ||
           lesson.lessonType === 'AUDIO' ||
           Boolean(lesson.videoUrl);
-        if (isVideo) minutes += Number(lesson.durationMinutes ?? 10);
+        if (isVideo) minutes += Number(lesson.durationMinutes ?? 0);
       }
       videoByDay.push({
         label: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
@@ -1215,10 +1215,13 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       });
     }
 
-    const assignmentSeries = assignments.slice(0, 6).map((a: any, index: number) => ({
-      label: `A${index + 1}`,
-      score: a.score != null ? Number(a.score) : 0,
-    }));
+    const assignmentSeries = assignments
+      .filter((a: any) => a.score != null)
+      .slice(0, 6)
+      .map((a: any, index: number) => ({
+        label: `A${index + 1}`,
+        score: Number(a.score),
+      }));
 
     const rewardPoints =
       lessonProgress.length * 10 +
@@ -1236,6 +1239,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           attempted: attemptedQuizIds.size,
           incomplete: Math.max(0, totalQuizIds.size - attemptedQuizIds.size),
           total: totalQuizIds.size,
+          passed: passedQuizIds.size,
         },
         calendarMonth,
         completedDays,
@@ -1993,9 +1997,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         style: normalizeBannerStyle(body.style),
         showTitle: body.showTitle !== false,
         showSubtitle: body.showSubtitle !== false,
-        showCta: body.showCta !== false,
-        showBrowseCourses: body.showBrowseCourses !== false,
-        showAuthButton: body.showAuthButton !== false,
+        showCta: body.showCta === true,
+        showBrowseCourses: body.showBrowseCourses === true,
+        showAuthButton: body.showAuthButton === true,
         isActive: body.isActive !== false,
         sortOrder: Number(body.sortOrder || 0),
       },
