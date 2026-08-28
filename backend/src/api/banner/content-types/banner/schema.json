@@ -52,15 +52,15 @@
     },
     "showCta": {
       "type": "boolean",
-      "default": true
+      "default": false
     },
     "showBrowseCourses": {
       "type": "boolean",
-      "default": true
+      "default": false
     },
     "showAuthButton": {
       "type": "boolean",
-      "default": true
+      "default": false
     },
     "isActive": {
       "type": "boolean",

@@ -600,10 +600,11 @@ export interface ApiBannerBanner extends Struct.CollectionTypeSchema {
     placement: Schema.Attribute.Enumeration<['HOME', 'CATALOG', 'BOTH']> &
       Schema.Attribute.DefaultTo<'BOTH'>;
     publishedAt: Schema.Attribute.DateTime;
-    showAuthButton: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    showAuthButton: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
     showBrowseCourses: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    showCta: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+      Schema.Attribute.DefaultTo<false>;
+    showCta: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     showSubtitle: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
     showTitle: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
     sortOrder: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;

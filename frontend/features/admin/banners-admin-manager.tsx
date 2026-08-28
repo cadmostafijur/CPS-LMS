@@ -48,7 +48,7 @@ const emptyForm = {
   style: "STRIP" as NonNullable<Banner["style"]>,
   showTitle: false,
   showSubtitle: false,
-  showCta: true,
+  showCta: false,
   showBrowseCourses: false,
   showAuthButton: false,
   isActive: true,
@@ -109,9 +109,9 @@ export function BannersAdminManager() {
       style: banner.style || "STRIP",
       showTitle: banner.showTitle !== false,
       showSubtitle: banner.showSubtitle !== false,
-      showCta: banner.showCta !== false,
-      showBrowseCourses: banner.showBrowseCourses !== false,
-      showAuthButton: banner.showAuthButton !== false,
+      showCta: banner.showCta === true,
+      showBrowseCourses: banner.showBrowseCourses === true,
+      showAuthButton: banner.showAuthButton === true,
       isActive: banner.isActive !== false,
       sortOrder: banner.sortOrder ?? 0,
     });
@@ -393,8 +393,27 @@ export function BannersAdminManager() {
               </div>
             </div>
 
-            <div className="space-y-2 rounded-xl border border-border bg-surface/40 p-4">
-              <Label className="text-sm font-semibold text-navy">What to show</Label>
+            <div className="space-y-3 rounded-xl border border-border bg-surface/40 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label className="text-sm font-semibold text-navy">What to show</Label>
+                {form.style === "HERO" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        showCta: false,
+                        showBrowseCourses: false,
+                        showAuthButton: false,
+                      }))
+                    }
+                  >
+                    Turn off all buttons
+                  </Button>
+                ) : null}
+              </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox
@@ -410,15 +429,20 @@ export function BannersAdminManager() {
                   />
                   Subtitle / quote
                 </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={form.showCta}
-                    onCheckedChange={(v) => setForm((f) => ({ ...f, showCta: Boolean(v) }))}
-                  />
-                  Primary button (CTA)
-                </label>
-                {form.style === "HERO" ? (
-                  <>
+              </div>
+              {form.style === "HERO" ? (
+                <div className="rounded-lg border border-orange/20 bg-orange/5 p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-orange">
+                    Hero buttons
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={form.showCta}
+                        onCheckedChange={(v) => setForm((f) => ({ ...f, showCta: Boolean(v) }))}
+                      />
+                      Learn more (primary CTA)
+                    </label>
                     <label className="flex items-center gap-2 text-sm">
                       <Checkbox
                         checked={form.showBrowseCourses}
@@ -426,7 +450,7 @@ export function BannersAdminManager() {
                           setForm((f) => ({ ...f, showBrowseCourses: Boolean(v) }))
                         }
                       />
-                      Browse courses button
+                      Browse courses
                     </label>
                     <label className="flex items-center gap-2 text-sm">
                       <Checkbox
@@ -435,13 +459,24 @@ export function BannersAdminManager() {
                           setForm((f) => ({ ...f, showAuthButton: Boolean(v) }))
                         }
                       />
-                      Sign in / dashboard button
+                      Sign in / dashboard
                     </label>
-                  </>
-                ) : null}
-              </div>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Leave all unchecked for a clean image-only hero (no buttons on the banner).
+                  </p>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={form.showCta}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, showCta: Boolean(v) }))}
+                  />
+                  Primary button (CTA)
+                </label>
+              )}
               <p className="text-xs text-muted-foreground">
-                Uncheck all for an image-only hero slide. Multiple hero slides auto-rotate every 6 seconds.
+                Image-only hero: uncheck title, subtitle, and all hero buttons. Slides rotate every 6 seconds.
               </p>
             </div>
 
