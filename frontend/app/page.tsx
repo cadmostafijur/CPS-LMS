@@ -124,7 +124,7 @@ export default async function HomePage() {
               title="Featured courses"
               description="Start with published tracks designed for focused, hands-on learning."
             />
-            <Button variant="outline" className="rounded-full" asChild>
+            <Button variant="outline" size="pill" asChild>
               <Link href="/courses">
                 View all
                 <ArrowRight className="h-4 w-4" />
@@ -224,18 +224,13 @@ export default async function HomePage() {
               Browse the catalog, enroll for free, and track your progress from day one.
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              <Button size="lg" className="rounded-full px-6" asChild>
+              <Button size="pill" asChild>
                 <Link href="/courses">
                   Browse courses
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="rounded-full border-white/25 bg-white/5 px-6 text-white hover:bg-white/15"
-                asChild
-              >
+              <Button size="pill" variant="onDark" asChild>
                 <Link href={user ? "/dashboard" : "/register"}>
                   {user ? "Go to dashboard" : "Create free account"}
                 </Link>

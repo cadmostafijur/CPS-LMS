@@ -67,11 +67,7 @@ function HeroButtons({
   return (
     <div className={cn("flex flex-wrap items-center gap-2 sm:gap-3", className)}>
       {showCta ? (
-        <Button
-          size="lg"
-          className="h-11 rounded-full px-6 text-sm font-semibold shadow-lg shadow-orange/25"
-          asChild
-        >
+        <Button size="pill" asChild>
           <Link href={banner.linkUrl!}>
             {banner.ctaLabel || "Learn more"}
             <ArrowRight className="h-4 w-4" />
@@ -79,21 +75,12 @@ function HeroButtons({
         </Button>
       ) : null}
       {showBrowse ? (
-        <Button
-          size="lg"
-          className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-navy hover:bg-white/90"
-          asChild
-        >
+        <Button size="pill" variant="inverse" asChild>
           <Link href="/courses">Browse courses</Link>
         </Button>
       ) : null}
       {showAuth ? (
-        <Button
-          size="lg"
-          variant="outline"
-          className="h-11 rounded-full border-white/25 bg-white/5 px-6 text-sm text-white hover:bg-white/15"
-          asChild
-        >
+        <Button size="pill" variant="onDark" asChild>
           <Link href={user ? "/dashboard" : "/login"}>
             {user ? "Dashboard" : "Sign in"}
           </Link>

@@ -131,7 +131,7 @@ export default async function StudentDashboardPage() {
             </p>
           </div>
           {data.courses.length > 0 ? (
-            <Button asChild variant="ghost" size="sm" className="text-orange">
+            <Button asChild variant="link" size="sm">
               <Link href="/student/my-courses">View all</Link>
             </Button>
           ) : null}

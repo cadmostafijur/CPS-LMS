@@ -78,7 +78,7 @@ export function SuccessStories({ stories }: { stories: Banner[] }) {
                   ) : null}
                 </div>
                 {story.showCta !== false && story.linkUrl ? (
-                  <Button asChild variant="outline" size="sm" className="mt-4 w-fit rounded-full">
+                  <Button asChild variant="outline" size="sm" className="mt-4 w-fit">
                     <Link href={story.linkUrl}>{story.ctaLabel || "Read their story"}</Link>
                   </Button>
                 ) : null}

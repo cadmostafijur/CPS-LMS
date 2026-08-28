@@ -35,7 +35,7 @@ export function PromoBanners({ banners }: { banners: Banner[] }) {
               </p>
             ) : null}
             {banner.showCta === true && banner.linkUrl ? (
-              <Button asChild className="mt-5 w-fit" variant="secondary">
+              <Button asChild className="mt-5 w-fit" variant="inverse">
                 <Link href={banner.linkUrl}>
                   {banner.ctaLabel || "Learn more"}
                 </Link>

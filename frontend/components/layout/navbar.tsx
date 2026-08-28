@@ -198,7 +198,7 @@ export function Navbar({
               >
                 <Link href="/login">Sign in</Link>
               </Button>
-              <Button asChild className={overHero ? "bg-orange text-white hover:bg-orange/90" : undefined}>
+              <Button asChild>
                 <Link href="/register">Create account</Link>
               </Button>
             </div>

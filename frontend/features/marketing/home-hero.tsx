@@ -59,21 +59,13 @@ export function HomeHero({
                 built for serious practice.
               </p>
               <div className="relative mt-8 flex flex-wrap gap-3">
-                <Button
-                  size="lg"
-                  className="h-11 rounded-full px-6 font-semibold shadow-lg shadow-orange/25"
-                  asChild
-                >
+                <Button size="pill" asChild>
                   <Link href="/courses">
                     Browse courses
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
-                <Button
-                  size="lg"
-                  className="h-11 rounded-full bg-white px-6 font-semibold text-navy hover:bg-white/90"
-                  asChild
-                >
+                <Button size="pill" variant="inverse" asChild>
                   <Link href={user ? "/dashboard" : "/login"}>
                     {user ? "Dashboard" : "Sign in"}
                   </Link>

@@ -115,7 +115,7 @@ export default async function AdminDashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild className="bg-orange hover:bg-orange-hover">
+            <Button asChild>
               <Link href="/admin/courses">
                 Manage courses
                 <ArrowRight className="h-4 w-4" />

@@ -169,11 +169,22 @@ summary::marker {
 .cps-swal-toast .swal2-title {
   font-size: 1rem !important;
 }
-.cps-swal-confirm,
+.cps-swal-confirm {
+  border-radius: 0.65rem !important;
+  font-weight: 600 !important;
+  padding: 0.55rem 1.15rem !important;
+  background: #f97316 !important;
+  color: #ffffff !important;
+}
+.cps-swal-confirm:hover {
+  background: #ea580c !important;
+}
 .cps-swal-cancel {
   border-radius: 0.65rem !important;
   font-weight: 600 !important;
   padding: 0.55rem 1.15rem !important;
+  background: #f1f5f9 !important;
+  color: #0b1220 !important;
 }
 
 /* Sage chat — visible scrollbar */

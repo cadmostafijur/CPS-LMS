@@ -103,10 +103,10 @@ export default async function ContentManagerDashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="secondary" className="bg-white text-navy hover:bg-white/90">
+            <Button asChild variant="inverse">
               <Link href="/content-manager/blog">Blog</Link>
             </Button>
-            <Button asChild className="bg-orange hover:bg-orange-hover">
+            <Button asChild>
               <Link href="/content-manager/courses">
                 Manage courses
                 <ArrowRight className="h-4 w-4" />

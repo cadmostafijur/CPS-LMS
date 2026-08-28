@@ -80,7 +80,7 @@ export function CourseCard({ course, className }: { course: Course; className?: 
           ) : null}
         </div>
 
-        <Button asChild className="mt-5 w-full rounded-xl">
+        <Button asChild className="mt-5 w-full">
           <Link href={`/courses/${course.slug}`}>
             View course
             <ArrowRight className="h-4 w-4" />
