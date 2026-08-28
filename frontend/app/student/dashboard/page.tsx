@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { continueLessonHref } from "@/lib/continue-lesson";
+import { AI_ASSISTANT_NAME } from "@/lib/ai/sage";
 import { getStudentDashboard } from "@/services/dashboard.service";
 import type { StudentDashboard } from "@/types";
 import { cn } from "@/lib/utils";
@@ -104,7 +105,7 @@ export default async function StudentDashboardPage() {
               Your AI assistant
             </p>
             <h2 className="font-display text-lg font-semibold text-navy">
-              Ask Ersa anything, learn everything
+              Ask {AI_ASSISTANT_NAME} anything, learn everything
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Get guided answers and continue your learning journey in one place.

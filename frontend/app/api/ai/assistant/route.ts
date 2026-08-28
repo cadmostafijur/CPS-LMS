@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { fetchStrapiMe, TOKEN_COOKIE } from "@/lib/auth";
 import { getRoleName, isStudent } from "@/lib/roles";
-import { generateErsaReply, type ChatMessage } from "@/lib/ai/ersa";
+import { generateSageReply, AI_ASSISTANT_NAME, type ChatMessage } from "@/lib/ai/sage";
 
 export async function POST(request: Request) {
   const jar = await cookies();
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   const role = getRoleName(user);
 
   try {
-    const { reply, provider } = await generateErsaReply(trimmed, {
+    const { reply, provider } = await generateSageReply(trimmed, {
       studentName: user.name || user.username,
       enrolledCourses: body.context?.enrolledCourses,
     });
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
         role: "assistant",
         content: reply,
         provider,
-        assistantName: "Ersa",
+        assistantName: AI_ASSISTANT_NAME,
       },
       meta: { role, studentId: user.id },
     });

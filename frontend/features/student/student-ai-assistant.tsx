@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Send, Bot, UserRound } from "lucide-react";
 import { bffFetch, ApiError } from "@/lib/api";
 import { toast } from "@/lib/notify";
+import { AI_ASSISTANT_NAME } from "@/lib/ai/sage";
 import { cn } from "@/lib/utils";
 
 type ChatMessage = {
@@ -29,8 +30,7 @@ const SUGGESTIONS = [
 const WELCOME: ChatMessage = {
   id: "welcome",
   role: "assistant",
-  content:
-    "Hi! I'm Ersa, your CPS Academy learning assistant. Ask me about your courses, tricky concepts, study plans, or how to stay on track — I'm here to guide you, not do the work for you.",
+  content: `Hi! I'm ${AI_ASSISTANT_NAME}, your CPS Academy learning assistant. Ask me about your courses, tricky concepts, study plans, or how to stay on track — I'm here to guide you, not do the work for you.`,
 };
 
 function uid() {
@@ -104,7 +104,7 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
           },
         ]);
       } catch (err) {
-        toast.error(err instanceof ApiError ? err.message : "Ersa could not respond");
+        toast.error(err instanceof ApiError ? err.message : `${AI_ASSISTANT_NAME} could not respond`);
       }
     });
   }
@@ -126,7 +126,7 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
           </h2>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/80 sm:text-base">
             Ask questions, get guided answers, and continue your learning journey
-            with <span className="font-semibold text-white">Ersa</span> in one
+            with <span className="font-semibold text-white">{AI_ASSISTANT_NAME}</span> in one
             place.
           </p>
           <p className="mt-4 text-sm text-white/70">
@@ -169,7 +169,7 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
                   )}
                 >
                   <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide opacity-70">
-                    {isUser ? "You" : "Ersa"}
+                    {isUser ? "You" : AI_ASSISTANT_NAME}
                   </p>
                   <div className="whitespace-pre-wrap">{m.content}</div>
                 </div>
@@ -183,7 +183,7 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
                 <Bot className="h-4 w-4" />
               </div>
               <div className="rounded-2xl rounded-tl-md border border-border bg-white px-4 py-3 text-sm text-muted-foreground">
-                Ersa is thinking…
+                {AI_ASSISTANT_NAME} is thinking…
               </div>
             </div>
           ) : null}
@@ -207,7 +207,7 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
         <div className="border-t border-border/80 bg-white px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <Textarea
-              placeholder="Ask Ersa anything about your learning…"
+              placeholder={`Ask ${AI_ASSISTANT_NAME} anything about your learning…`}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -226,11 +226,11 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
               className="shrink-0 gap-2 sm:min-w-[120px]"
             >
               <Send className="h-4 w-4" />
-              Ask Ersa
+              Ask {AI_ASSISTANT_NAME}
             </Button>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Ersa guides your learning — she won&apos;t complete graded work for you.
+            {AI_ASSISTANT_NAME} guides your learning — it won&apos;t complete graded work for you.
           </p>
         </div>
       </div>
