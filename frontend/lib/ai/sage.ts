@@ -1,5 +1,7 @@
 export const AI_ASSISTANT_NAME = "Sage";
 
+export const MAX_CHAT_HISTORY = 20;
+
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
@@ -17,7 +19,8 @@ Help students understand concepts, break down difficult topics, suggest study st
 Be warm, clear, and concise. Use short paragraphs and bullet points when helpful.
 Guide students to think for themselves — do not complete assignments, quizzes, or exams for them.
 When course context is provided, tailor examples to those subjects.
-If you are unsure, say so honestly and suggest where the student can look in their course materials.`;
+If you are unsure, say so honestly and suggest where the student can look in their course materials.
+You are in a multi-turn chat: read the full conversation history and answer follow-up questions in context. Refer back to earlier messages when the student says "that", "it", "explain more", or asks a related question.`;
 
 function buildSystemMessage(context?: SageContext) {
   const lines = [SAGE_SYSTEM];
@@ -173,17 +176,40 @@ async function callOpenAI(messages: ChatMessage[], context?: SageContext): Promi
 }
 
 function fallbackReply(messages: ChatMessage[], context?: SageContext): string {
-  const last = [...messages].reverse().find((m) => m.role === "user")?.content.toLowerCase() || "";
+  const lastUser =
+    [...messages].reverse().find((m) => m.role === "user")?.content || "";
+  const lastLower = lastUser.toLowerCase();
   const courseHint = context?.enrolledCourses?.[0];
   const name = AI_ASSISTANT_NAME;
+  const priorTurns = messages.slice(-6, -1);
 
-  if (last.includes("hello") || last.includes("hi")) {
+  if (
+    priorTurns.length > 0 &&
+    (lastLower.includes("more") ||
+      lastLower.includes("that") ||
+      lastLower.includes("it") ||
+      lastLower.includes("explain") ||
+      lastLower.includes("again") ||
+      lastLower.length < 40)
+  ) {
+    const lastAssistant = [...priorTurns]
+      .reverse()
+      .find((m) => m.role === "assistant")?.content;
+    const lastQuestion = [...priorTurns]
+      .reverse()
+      .find((m) => m.role === "user")?.content;
+    if (lastAssistant && lastQuestion) {
+      return `Continuing our chat about "${lastQuestion}":\n\n${lastAssistant.slice(0, 400)}${lastAssistant.length > 400 ? "…" : ""}\n\nFor your follow-up ("${lastUser}"), try narrowing one specific part you want clarified — e.g. a step, term, or example — and I can go deeper once the full AI service is connected.`;
+    }
+  }
+
+  if (lastLower.includes("hello") || lastLower.includes("hi")) {
     return `Hi${context?.studentName ? ` ${context.studentName.split(" ")[0]}` : ""}! I'm ${name}, your CPS Academy learning assistant. What would you like to explore today?`;
   }
-  if (last.includes("study") || last.includes("learn")) {
+  if (lastLower.includes("study") || lastLower.includes("learn")) {
     return `Great mindset! Try this:\n\n• Skim the lesson headings first, then watch or read actively.\n• Write one question per section before moving on.\n• Teach the idea out loud in 60 seconds — if you get stuck, that's your review target.\n\n${courseHint ? `Want help with ${courseHint} specifically? Tell me the topic or module.` : "Tell me which course or topic you're working on."}`;
   }
-  if (last.includes("quiz") || last.includes("exam") || last.includes("test")) {
+  if (lastLower.includes("quiz") || lastLower.includes("exam") || lastLower.includes("test")) {
     return `For quizzes, focus on understanding *why* an answer is correct:\n\n• Review missed questions from past attempts.\n• Make a tiny cheat sheet of formulas or rules (for study only).\n• Practice explaining each concept without looking at notes.\n\nI can quiz you with practice questions if you share the topic — I won't solve graded work for you.`;
   }
 

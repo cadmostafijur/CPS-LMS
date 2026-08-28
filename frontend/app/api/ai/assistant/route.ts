@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { fetchStrapiMe, TOKEN_COOKIE } from "@/lib/auth";
 import { getRoleName, isStudent } from "@/lib/roles";
-import { generateSageReply, AI_ASSISTANT_NAME, type ChatMessage } from "@/lib/ai/sage";
+import { generateSageReply, AI_ASSISTANT_NAME, MAX_CHAT_HISTORY, type ChatMessage } from "@/lib/ai/sage";
 
 export async function POST(request: Request) {
   const jar = await cookies();
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const trimmed = messages.slice(-12);
+  const trimmed = messages.slice(-MAX_CHAT_HISTORY);
   const role = getRoleName(user);
 
   try {

@@ -105,15 +105,17 @@ export function Navbar({
               <div className="hidden items-center gap-2 md:flex">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2 border-border bg-white px-2.5">
-                      <Avatar className="h-8 w-8">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-10 w-10 rounded-full border-border bg-white p-0"
+                      aria-label={`${user.name || user.email || "Account"} menu`}
+                    >
+                      <Avatar className="h-9 w-9">
                         <AvatarFallback className="bg-orange/15 text-xs text-orange">
                           {initials}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="hidden max-w-[120px] truncate text-sm text-navy sm:inline">
-                        {user.name || user.email}
-                      </span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">

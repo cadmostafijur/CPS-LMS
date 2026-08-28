@@ -43,11 +43,17 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
   const [courses, setCourses] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
   const threadRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<ChatMessage[]>([WELCOME]);
+  const requestIdRef = useRef(0);
 
   const firstName = useMemo(
     () => studentName?.split(" ")[0] || "there",
     [studentName]
   );
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   useEffect(() => {
     (async () => {
@@ -70,21 +76,27 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
     });
   }, [messages, pending]);
 
+  function toApiHistory(msgs: ChatMessage[]) {
+    return msgs
+      .filter((m) => m.id !== "welcome")
+      .map((m) => ({ role: m.role, content: m.content }));
+  }
+
   function sendMessage(text: string) {
     const trimmed = text.trim();
     if (!trimmed || pending) return;
 
     const userMsg: ChatMessage = { id: uid(), role: "user", content: trimmed };
-    const nextMessages = [...messages, userMsg];
+    const nextMessages = [...messagesRef.current, userMsg];
+    messagesRef.current = nextMessages;
     setMessages(nextMessages);
     setInput("");
 
+    const requestId = ++requestIdRef.current;
+    const history = toApiHistory(nextMessages);
+
     startTransition(async () => {
       try {
-        const history = nextMessages
-          .filter((m) => m.id !== "welcome")
-          .map((m) => ({ role: m.role, content: m.content }));
-
         const res = await bffFetch<{
           data: { content: string };
         }>("/api/ai/assistant", {
@@ -95,15 +107,18 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
           }),
         });
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: uid(),
-            role: "assistant",
-            content: res.data.content,
-          },
-        ]);
+        if (requestId !== requestIdRef.current) return;
+
+        const assistantMsg: ChatMessage = {
+          id: uid(),
+          role: "assistant",
+          content: res.data.content,
+        };
+        const withReply = [...messagesRef.current, assistantMsg];
+        messagesRef.current = withReply;
+        setMessages(withReply);
       } catch (err) {
+        if (requestId !== requestIdRef.current) return;
         toast.error(err instanceof ApiError ? err.message : `${AI_ASSISTANT_NAME} could not respond`);
       }
     });
