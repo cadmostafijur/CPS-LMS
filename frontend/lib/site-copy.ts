@@ -38,8 +38,9 @@ export const copy = {
     goDashboard: "Go to dashboard",
     createFreeAccount: "Create free account",
     placementsEyebrow: "Career outcomes",
+    placementsTitle: "Where our students work",
     placementsDesc:
-      "CPS Academy graduates work at leading tech companies in Bangladesh and around the world — on-site, hybrid, and fully remote.",
+      "Graduates join top tech teams in Bangladesh and worldwide — from local offices to fully remote roles at companies like WellDev, Rokomari, Vivasoft, and CholoBD.",
     features: [
       {
         title: "Sage AI assistant",
