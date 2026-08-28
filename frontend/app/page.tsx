@@ -13,7 +13,9 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import { CourseCard } from "@/features/courses/course-card";
+import { HomeHero } from "@/features/marketing/home-hero";
 import { PromoBanners } from "@/features/marketing/promo-banners";
+import { SuccessStories } from "@/features/marketing/success-stories";
 import { getCurrentUser } from "@/lib/session";
 import { listPublishedCourses } from "@/services/courses.service";
 import { apiFetch } from "@/lib/api";
@@ -89,50 +91,27 @@ export default async function HomePage() {
 
   const featured = courses.slice(0, 3);
   const courseCount = courses.length || 0;
+  const heroBanners = banners
+    .filter((b) => b.style === "HERO")
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const stripBanners = banners.filter((b) => (b.style || "STRIP") === "STRIP");
+  const storyBanners = banners
+    .filter((b) => b.style === "STORY")
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar user={user} />
+      <Navbar user={user} overHero={heroBanners.length > 0} />
 
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-16 top-10 h-64 w-64 rounded-full bg-orange/15 blur-3xl animate-soft-pulse" />
-          <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-navy/5 blur-3xl" />
-        </div>
+      <HomeHero banners={heroBanners} user={user} />
 
-        <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-20 pt-16 text-center sm:pt-24">
-          <BrandLogo size={112} priority className="animate-fade-up rounded-2xl shadow-md ring-1 ring-navy/10" />
-          <p className="animate-fade-up mt-6 font-display text-5xl font-bold tracking-tight text-navy sm:text-6xl">
-            CPS Academy
-          </p>
-          <h1 className="animate-fade-up-delay mt-5 max-w-2xl font-display text-2xl font-semibold leading-snug text-navy sm:text-3xl">
-            Master software engineering with structured courses
-          </h1>
-          <p className="animate-fade-up-delay mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Progress tracking, auto-graded quizzes, and role-based learning —
-            built for serious practice.
-          </p>
-          <div className="animate-fade-up-delay mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Button size="lg" asChild>
-              <Link href="/courses">
-                Browse Courses
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="dark" asChild>
-              <Link href={user ? "/dashboard" : "/login"}>
-                {user ? "Go to dashboard" : "Sign in"}
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {banners.length > 0 ? (
-        <section className="mx-auto max-w-6xl px-4 pb-4">
-          <PromoBanners banners={banners} />
+      {stripBanners.length > 0 ? (
+        <section className="mx-auto max-w-6xl px-4 py-8">
+          <PromoBanners banners={stripBanners} />
         </section>
       ) : null}
+
+      <SuccessStories stories={storyBanners} />
 
       <section className="border-y border-border bg-surface/80">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-8 text-center sm:flex-row sm:justify-center sm:gap-8">

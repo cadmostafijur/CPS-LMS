@@ -586,6 +586,7 @@ export interface ApiBannerBanner extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     ctaLabel: Schema.Attribute.String;
+    eyebrow: Schema.Attribute.String;
     imageUrl: Schema.Attribute.Text;
     isActive: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
     linkUrl: Schema.Attribute.String;
@@ -595,10 +596,19 @@ export interface ApiBannerBanner extends Struct.CollectionTypeSchema {
       'api::banner.banner'
     > &
       Schema.Attribute.Private;
+    personRole: Schema.Attribute.String;
     placement: Schema.Attribute.Enumeration<['HOME', 'CATALOG', 'BOTH']> &
       Schema.Attribute.DefaultTo<'BOTH'>;
     publishedAt: Schema.Attribute.DateTime;
+    showAuthButton: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    showBrowseCourses: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<true>;
+    showCta: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    showSubtitle: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    showTitle: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
     sortOrder: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    style: Schema.Attribute.Enumeration<['HERO', 'STRIP', 'STORY']> &
+      Schema.Attribute.DefaultTo<'STRIP'>;
     subtitle: Schema.Attribute.Text;
     title: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;

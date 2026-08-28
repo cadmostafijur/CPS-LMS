@@ -29,7 +29,9 @@ export default async function CoursesPage() {
   const user = await getCurrentUser();
   let courses: Awaited<ReturnType<typeof listPublishedCourses>> = [];
   let loadError: string | null = null;
-  const banners = await listCatalogBanners();
+  const banners = (await listCatalogBanners()).filter(
+    (b) => (b.style || "STRIP") === "STRIP"
+  );
 
   try {
     courses = await listPublishedCourses();

@@ -32,8 +32,11 @@ const links = [
 
 export function Navbar({
   user,
+  overHero = false,
 }: {
   user?: AuthUser | null;
+  /** Light header on dark hero image */
+  overHero?: boolean;
   /** @deprecated Light header is always used */
   variant?: "light" | "dark";
 }) {
@@ -59,10 +62,17 @@ export function Navbar({
       .toUpperCase() || "U";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-white/95 backdrop-blur-md">
+    <header
+      className={cn(
+        "sticky top-0 z-40 backdrop-blur-md",
+        overHero
+          ? "border-b border-white/10 bg-navy/50"
+          : "border-b border-border/70 bg-white/95"
+      )}
+    >
       <div
         className={cn(
-          "mx-auto flex h-[4.25rem] items-center justify-between gap-3 px-4",
+          "mx-auto flex h-16 items-center gap-4 px-4 sm:px-6",
           isDashboard ? "max-w-[1400px]" : "max-w-6xl"
         )}
       >
@@ -70,8 +80,20 @@ export function Navbar({
           href="/"
           className="flex shrink-0 items-center gap-2.5 rounded-xl py-1 pr-1 transition-opacity hover:opacity-90"
         >
-          <BrandLogo size={42} priority className="rounded-lg shadow-sm ring-1 ring-navy/10" />
-          <span className="font-display text-lg font-bold tracking-tight text-navy sm:text-xl">
+          <BrandLogo
+            size={36}
+            priority
+            className={cn(
+              "rounded-lg shadow-sm",
+              overHero ? "ring-1 ring-white/20" : "ring-1 ring-navy/10"
+            )}
+          />
+          <span
+            className={cn(
+              "font-display text-lg font-bold tracking-tight sm:text-xl",
+              overHero ? "text-white" : "text-navy"
+            )}
+          >
             CPS Academy
           </span>
         </Link>
@@ -85,8 +107,12 @@ export function Navbar({
                 className={cn(
                   "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   pathname.startsWith(link.href)
-                    ? "bg-orange/10 text-navy"
-                    : "text-muted-foreground hover:bg-navy/5 hover:text-navy"
+                    ? overHero
+                      ? "bg-white/15 text-white"
+                      : "bg-orange/10 text-navy"
+                    : overHero
+                      ? "text-white/80 hover:bg-white/10 hover:text-white"
+                      : "text-muted-foreground hover:bg-navy/5 hover:text-navy"
                 )}
               >
                 {link.label}
@@ -95,24 +121,36 @@ export function Navbar({
           </nav>
         ) : null}
 
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="ml-auto flex items-center gap-1">
           {user ? (
             <>
               {notificationsHref ? (
-                <NotificationBell href={notificationsHref} />
+                <NotificationBell
+                  href={notificationsHref}
+                  className={overHero ? "text-white hover:bg-white/10" : undefined}
+                />
               ) : null}
-              <SignOutButton />
-              <div className="hidden items-center gap-2 md:flex">
+              <div className="hidden md:flex">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-10 w-10 rounded-full border-border bg-white p-0"
+                      className={cn(
+                        "h-10 w-10 rounded-full p-0",
+                        overHero
+                          ? "border-white/25 bg-white/10 text-white hover:bg-white/20"
+                          : "border-border bg-white"
+                      )}
                       aria-label={`${user.name || user.email || "Account"} menu`}
                     >
                       <Avatar className="h-9 w-9">
-                        <AvatarFallback className="bg-orange/15 text-xs text-orange">
+                        <AvatarFallback
+                          className={cn(
+                            "text-xs",
+                            overHero ? "bg-white/20 text-white" : "bg-orange/15 text-orange"
+                          )}
+                        >
                           {initials}
                         </AvatarFallback>
                       </Avatar>
@@ -150,10 +188,14 @@ export function Navbar({
             </>
           ) : (
             <div className="hidden items-center gap-2 md:flex">
-              <Button variant="ghost" asChild>
+              <Button
+                variant="ghost"
+                asChild
+                className={overHero ? "text-white hover:bg-white/10 hover:text-white" : undefined}
+              >
                 <Link href="/login">Sign in</Link>
               </Button>
-              <Button asChild>
+              <Button asChild className={overHero ? "bg-orange text-white hover:bg-orange/90" : undefined}>
                 <Link href="/register">Create account</Link>
               </Button>
             </div>
@@ -162,7 +204,7 @@ export function Navbar({
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className={cn("md:hidden", overHero && "text-white hover:bg-white/10")}
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? "Close menu" : "Open menu"}
           >

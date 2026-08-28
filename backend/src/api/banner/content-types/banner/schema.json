@@ -18,6 +18,12 @@
     "subtitle": {
       "type": "text"
     },
+    "eyebrow": {
+      "type": "string"
+    },
+    "personRole": {
+      "type": "string"
+    },
     "ctaLabel": {
       "type": "string"
     },
@@ -31,6 +37,31 @@
       "type": "enumeration",
       "enum": ["HOME", "CATALOG", "BOTH"],
       "default": "BOTH"
+    },
+    "style": {
+      "type": "enumeration",
+      "enum": ["HERO", "STRIP", "STORY"],
+      "default": "STRIP"
+    },
+    "showTitle": {
+      "type": "boolean",
+      "default": true
+    },
+    "showSubtitle": {
+      "type": "boolean",
+      "default": true
+    },
+    "showCta": {
+      "type": "boolean",
+      "default": true
+    },
+    "showBrowseCourses": {
+      "type": "boolean",
+      "default": true
+    },
+    "showAuthButton": {
+      "type": "boolean",
+      "default": true
     },
     "isActive": {
       "type": "boolean",

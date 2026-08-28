@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { bffFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-export function NotificationBell({ href }: { href: string }) {
+export function NotificationBell({ href, className }: { href: string; className?: string }) {
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function NotificationBell({ href }: { href: string }) {
     <Button
       variant="ghost"
       size="icon"
-      className="relative shrink-0 text-navy hover:bg-navy/5"
+      className={cn("relative shrink-0 text-navy hover:bg-navy/5", className)}
       asChild
     >
       <Link href={href} aria-label="Notifications">

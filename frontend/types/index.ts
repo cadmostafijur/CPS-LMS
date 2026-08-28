@@ -309,10 +309,18 @@ export interface Banner {
   documentId?: string;
   title: string;
   subtitle?: string | null;
+  eyebrow?: string | null;
+  personRole?: string | null;
   ctaLabel?: string | null;
   linkUrl?: string | null;
   imageUrl?: string | null;
   placement?: "HOME" | "CATALOG" | "BOTH";
+  style?: "HERO" | "STRIP" | "STORY";
+  showTitle?: boolean;
+  showSubtitle?: boolean;
+  showCta?: boolean;
+  showBrowseCourses?: boolean;
+  showAuthButton?: boolean;
   isActive?: boolean;
   sortOrder?: number;
 }

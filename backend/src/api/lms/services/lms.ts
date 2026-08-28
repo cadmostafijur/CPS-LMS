@@ -153,6 +153,12 @@ function sanitizeCoupon(coupon: any) {
   };
 }
 
+function normalizeBannerStyle(style: unknown) {
+  const value = String(style || 'STRIP').toUpperCase();
+  if (value === 'HERO' || value === 'STORY') return value;
+  return 'STRIP';
+}
+
 function sanitizeBanner(banner: any) {
   if (!banner) return null;
   return {
@@ -160,10 +166,18 @@ function sanitizeBanner(banner: any) {
     documentId: banner.documentId,
     title: banner.title,
     subtitle: banner.subtitle,
+    eyebrow: banner.eyebrow || null,
+    personRole: banner.personRole || null,
     ctaLabel: banner.ctaLabel,
     linkUrl: banner.linkUrl,
     imageUrl: banner.imageUrl,
     placement: banner.placement || 'BOTH',
+    style: normalizeBannerStyle(banner.style),
+    showTitle: banner.showTitle !== false,
+    showSubtitle: banner.showSubtitle !== false,
+    showCta: banner.showCta !== false,
+    showBrowseCourses: banner.showBrowseCourses !== false,
+    showAuthButton: banner.showAuthButton !== false,
     isActive: banner.isActive !== false,
     sortOrder: banner.sortOrder ?? 0,
   };
@@ -1759,9 +1773,13 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   async listBanners(ctx: Ctx) {
     const placement = String(ctx.query?.placement || '').toUpperCase();
+    const style = String(ctx.query?.style || '').toUpperCase();
     const where: any = { isActive: true };
     if (placement === 'HOME' || placement === 'CATALOG') {
       where.$or = [{ placement }, { placement: 'BOTH' }];
+    }
+    if (style === 'HERO' || style === 'STRIP' || style === 'STORY') {
+      where.style = style;
     }
 
     const banners = await strapi.db.query('api::banner.banner').findMany({
@@ -1793,10 +1811,18 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       data: {
         title: String(body.title).trim(),
         subtitle: body.subtitle || null,
+        eyebrow: body.eyebrow || null,
+        personRole: body.personRole || null,
         ctaLabel: body.ctaLabel || null,
         linkUrl: body.linkUrl || null,
         imageUrl: body.imageUrl || null,
         placement: body.placement || 'BOTH',
+        style: normalizeBannerStyle(body.style),
+        showTitle: body.showTitle !== false,
+        showSubtitle: body.showSubtitle !== false,
+        showCta: body.showCta !== false,
+        showBrowseCourses: body.showBrowseCourses !== false,
+        showAuthButton: body.showAuthButton !== false,
         isActive: body.isActive !== false,
         sortOrder: Number(body.sortOrder || 0),
       },
@@ -1820,14 +1846,25 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     for (const key of [
       'title',
       'subtitle',
+      'eyebrow',
+      'personRole',
       'ctaLabel',
       'linkUrl',
       'imageUrl',
       'placement',
+      'style',
+      'showTitle',
+      'showSubtitle',
+      'showCta',
+      'showBrowseCourses',
+      'showAuthButton',
       'isActive',
       'sortOrder',
     ]) {
-      if (body[key] !== undefined) data[key] = body[key];
+      if (body[key] !== undefined) {
+        data[key] =
+          key === 'style' ? normalizeBannerStyle(body[key]) : body[key];
+      }
     }
     const updated = await strapi.db.query('api::banner.banner').update({
       where: { id: target.id },
