@@ -54,6 +54,9 @@ export interface Course {
   language?: string | null;
   requirements?: string | null;
   outcomes?: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  tags?: string | null;
   publishedAt?: string | null;
   category?: CourseCategory | null;
   modules?: CourseModule[];
@@ -326,6 +329,63 @@ export interface Coupon {
   usedCount?: number;
   expiresAt?: string | null;
   minAmount?: number;
+}
+
+export interface CourseReview {
+  id: number | string;
+  documentId?: string;
+  rating: number;
+  body?: string | null;
+  student?: { name?: string | null } | null;
+}
+
+export interface LiveSession {
+  id: number | string;
+  documentId?: string;
+  title: string;
+  startsAt?: string;
+  meetingUrl?: string;
+  attendeeIds?: Array<number | string>;
+}
+
+export interface CourseAnnouncement {
+  id: number | string;
+  documentId?: string;
+  title: string;
+  content?: string | null;
+}
+
+export interface WishlistItem {
+  id: number | string;
+  documentId?: string;
+  course?: Pick<Course, "id" | "documentId" | "title" | "slug" | "shortDescription"> | null;
+}
+
+export interface SupportTicket {
+  id: number | string;
+  documentId?: string;
+  ticketNumber: string;
+  subject: string;
+  body?: string | null;
+  status?: string;
+  priority?: string;
+  createdAt?: string;
+}
+
+export interface TranscriptCourseRow {
+  courseTitle: string;
+  courseSlug?: string;
+  progressPercent: number;
+  completedLessons: number;
+  totalLessons: number;
+  bestQuizPercent?: number | null;
+  completedAt?: string | null;
+}
+
+export interface StudentTranscript {
+  student?: User;
+  generatedAt?: string;
+  courses: TranscriptCourseRow[];
 }
 
 export interface StrapiListResponse<T> {

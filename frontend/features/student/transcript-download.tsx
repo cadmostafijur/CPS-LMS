@@ -2,13 +2,14 @@
 
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import type { StudentTranscript } from "@/types";
 
-export function TranscriptDownload({ payload }: { payload: any }) {
+export function TranscriptDownload({ payload }: { payload: StudentTranscript }) {
   function download() {
     const lines = [
       "course,progress_percent,completed_lessons,total_lessons,best_quiz_percent,completed_at",
       ...(payload.courses || []).map(
-        (c: any) =>
+        (c) =>
           `"${c.courseTitle}",${c.progressPercent},${c.completedLessons},${c.totalLessons},${c.bestQuizPercent ?? ""},${c.completedAt ?? ""}`
       ),
     ];

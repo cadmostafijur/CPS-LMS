@@ -4,13 +4,14 @@ import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { TranscriptDownload } from "@/features/student/transcript-download";
+import type { StudentTranscript } from "@/types";
 
 export default async function StudentTranscriptPage() {
   const user = await requireUser("/student/transcript");
   const token = await getTokenFromCookies();
-  let data: any = null;
+  let data: StudentTranscript | null = null;
   try {
-    const res = await apiFetch<{ data: any }>("/lms/transcript", { token });
+    const res = await apiFetch<{ data: StudentTranscript }>("/lms/transcript", { token });
     data = res.data;
   } catch {
     data = null;
@@ -37,7 +38,7 @@ export default async function StudentTranscriptPage() {
               </tr>
             </thead>
             <tbody>
-              {(data.courses || []).map((c: any) => (
+              {(data.courses || []).map((c) => (
                 <tr key={c.courseSlug || c.courseTitle} className="border-b last:border-0">
                   <td className="px-4 py-3 font-medium text-navy">{c.courseTitle}</td>
                   <td className="px-4 py-3">

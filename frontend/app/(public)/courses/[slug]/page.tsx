@@ -27,6 +27,12 @@ import { continueLessonHref } from "@/lib/continue-lesson";
 import { apiFetch } from "@/lib/api";
 import { isAdmin, isContentManager, isInstructor, isStudent } from "@/lib/roles";
 import { BookOpen } from "lucide-react";
+import type {
+  CourseAnnouncement,
+  CourseReview,
+  LiveSession,
+  WishlistItem,
+} from "@/types";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -34,9 +40,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const course = await getCourseBySlug(slug).catch(() => null);
   if (!course) return { title: "Course" };
-  const seoTitle = (course as any).seoTitle || course.title;
+  const seoTitle = course.seoTitle || course.title;
   const seoDesc =
-    (course as any).seoDescription ||
+    course.seoDescription ||
     course.shortDescription ||
     course.description ||
     undefined;
@@ -98,13 +104,13 @@ export default async function CourseDetailPage({ params }: Props) {
     isAdmin(user) || isContentManager(user) || isInstructor(user);
   const canDiscuss = Boolean(enrolled || staff);
   let threads: DiscussionThread[] = [];
-  let reviews: any[] = [];
+  let reviews: CourseReview[] = [];
   let wishlisted = false;
-  let liveSessions: any[] = [];
-  let announcements: any[] = [];
+  let liveSessions: LiveSession[] = [];
+  let announcements: CourseAnnouncement[] = [];
 
   try {
-    const rev = await apiFetch<{ data: any[] }>(
+    const rev = await apiFetch<{ data: CourseReview[] }>(
       `/lms/courses/${courseKey}/reviews`
     );
     reviews = rev.data || [];
@@ -114,7 +120,7 @@ export default async function CourseDetailPage({ params }: Props) {
 
   if (user && token && student) {
     try {
-      const wish = await apiFetch<{ data: any[] }>("/lms/wishlist", { token });
+      const wish = await apiFetch<{ data: WishlistItem[] }>("/lms/wishlist", { token });
       wishlisted = Boolean(
         (wish.data || []).some(
           (w) =>
@@ -138,7 +144,7 @@ export default async function CourseDetailPage({ params }: Props) {
       threads = [];
     }
     try {
-      const live = await apiFetch<{ data: any[] }>(
+      const live = await apiFetch<{ data: LiveSession[] }>(
         `/lms/courses/${courseKey}/live-sessions`,
         { token }
       );
@@ -147,7 +153,7 @@ export default async function CourseDetailPage({ params }: Props) {
       liveSessions = [];
     }
     try {
-      const ann = await apiFetch<{ data: any[] }>(
+      const ann = await apiFetch<{ data: CourseAnnouncement[] }>(
         `/lms/courses/${courseKey}/announcements`,
         { token }
       );

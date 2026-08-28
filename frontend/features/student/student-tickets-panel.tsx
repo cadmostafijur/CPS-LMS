@@ -10,19 +10,9 @@ import { MessageSquare } from "lucide-react";
 import { bffFetch, ApiError } from "@/lib/api";
 import { toast } from "@/lib/notify";
 import { formatDate } from "@/lib/utils";
+import type { SupportTicket } from "@/types";
 
-type Ticket = {
-  id: string | number;
-  documentId?: string;
-  ticketNumber: string;
-  subject: string;
-  body?: string | null;
-  status?: string;
-  priority?: string;
-  createdAt?: string;
-};
-
-export function StudentTicketsPanel({ initialItems = [] }: { initialItems?: Ticket[] }) {
+export function StudentTicketsPanel({ initialItems = [] }: { initialItems?: SupportTicket[] }) {
   const [items, setItems] = useState(initialItems);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -35,7 +25,7 @@ export function StudentTicketsPanel({ initialItems = [] }: { initialItems?: Tick
     }
     startTransition(async () => {
       try {
-        const res = await bffFetch<{ data: Ticket }>("/api/lms/tickets/me", {
+        const res = await bffFetch<{ data: SupportTicket }>("/api/lms/tickets/me", {
           method: "POST",
           body: JSON.stringify({ subject, body }),
         });

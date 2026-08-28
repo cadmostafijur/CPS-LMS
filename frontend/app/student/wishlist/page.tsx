@@ -8,13 +8,14 @@ import { WishlistRemindButton } from "@/features/student/wishlist-remind-button"
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
+import type { WishlistItem } from "@/types";
 
 export default async function StudentWishlistPage() {
   const user = await requireUser("/student/wishlist");
   const token = await getTokenFromCookies();
-  let items: any[] = [];
+  let items: WishlistItem[] = [];
   try {
-    const res = await apiFetch<{ data: any[] }>("/lms/wishlist", { token });
+    const res = await apiFetch<{ data: WishlistItem[] }>("/lms/wishlist", { token });
     items = res.data || [];
   } catch {
     items = [];

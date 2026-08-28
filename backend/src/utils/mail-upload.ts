@@ -32,30 +32,31 @@ export async function sendEmail(opts: {
   subject: string;
   text: string;
 }) {
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM || user || 'noreply@cps-academy.local';
-  if (!host || !user || !pass) {
-    // Soft no-op when SMTP is not configured — in-app notification still works
-    return { sent: false, reason: 'SMTP not configured' as const };
+  const apiKey = process.env.RESEND_API_KEY;
+  const from =
+    process.env.RESEND_FROM || 'CPS Academy <onboarding@resend.dev>';
+  if (!apiKey) {
+    return { sent: false, reason: 'Resend not configured' as const };
   }
 
   try {
-    // Dynamic import so local boot works without the package until installed
-    const nodemailer = await import('nodemailer');
-    const transporter = nodemailer.createTransport({
-      host,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: { user, pass },
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: [opts.to],
+        subject: opts.subject,
+        text: opts.text,
+      }),
     });
-    await transporter.sendMail({
-      from,
-      to: opts.to,
-      subject: opts.subject,
-      text: opts.text,
-    });
+    if (!res.ok) {
+      const err = await res.text();
+      return { sent: false, reason: err || res.statusText };
+    }
     return { sent: true as const };
   } catch (err) {
     return { sent: false, reason: String(err) };

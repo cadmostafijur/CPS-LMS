@@ -4,13 +4,14 @@ import { StudentTicketsPanel } from "@/features/student/student-tickets-panel";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
+import type { SupportTicket } from "@/types";
 
 export default async function StudentTicketsPage() {
   const user = await requireUser("/student/tickets");
   const token = await getTokenFromCookies();
-  let items: any[] = [];
+  let items: SupportTicket[] = [];
   try {
-    const res = await apiFetch<{ data: any[] }>("/lms/tickets/me", { token });
+    const res = await apiFetch<{ data: SupportTicket[] }>("/lms/tickets/me", { token });
     items = res.data || [];
   } catch {
     items = [];

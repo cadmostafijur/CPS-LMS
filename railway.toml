@@ -1,12 +1,12 @@
-# Docker build from repo root (Railway).
-# Start cwd is /opt/app (backend files copied there).
+# Railway backend (monorepo root — no Docker).
+# Prefer setting Railway service Root Directory to `backend/`.
 
 [build]
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+builder = "RAILPACK"
+buildCommand = "cd backend && npm ci && npm run build"
 
 [deploy]
-startCommand = "npm run start"
+startCommand = "cd backend && npm run start"
 healthcheckPath = "/_health"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
