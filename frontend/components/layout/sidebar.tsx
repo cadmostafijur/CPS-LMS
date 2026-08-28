@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Award,
   BookOpen,
+  Bot,
   ClipboardList,
   FileText,
   FolderKanban,
@@ -159,6 +160,7 @@ function flatNavForRole(role: string | null | undefined): NavItem[] {
         { href: "/student/wishlist", label: "Wishlist", icon: Star },
         { href: "/student/calendar", label: "Live calendar", icon: CalendarCheck },
         { href: "/student/messages", label: "Messages", icon: MessageSquare },
+        { href: "/student/assistant", label: "AI assistant", icon: Bot },
         { href: "/student/transcript", label: "Transcript", icon: ScrollText },
         { href: "/student/notifications", label: "Notifications", icon: Bell },
         { href: "/student/tickets", label: "Support", icon: Ticket },

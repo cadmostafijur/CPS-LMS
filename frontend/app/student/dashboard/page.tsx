@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Award, BookOpen, CheckCircle2, ClipboardList } from "lucide-react";
+import { Award, BookOpen, Bot, CheckCircle2, ClipboardList, Sparkles } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatsCard } from "@/components/shared/stats-card";
@@ -92,6 +92,31 @@ export default async function StudentDashboardPage() {
             </span>
           }
         />
+      </div>
+
+      <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-orange/25 bg-gradient-to-r from-orange/10 via-white to-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange/15 text-orange">
+            <Bot className="h-6 w-6" />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-orange">
+              Your AI assistant
+            </p>
+            <h2 className="font-display text-lg font-semibold text-navy">
+              Ask Ersa anything, learn everything
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Get guided answers and continue your learning journey in one place.
+            </p>
+          </div>
+        </div>
+        <Button asChild className="shrink-0 gap-2 self-start sm:self-center">
+          <Link href="/student/assistant">
+            <Sparkles className="h-4 w-4" />
+            Open assistant
+          </Link>
+        </Button>
       </div>
 
       <div className="mt-10">
