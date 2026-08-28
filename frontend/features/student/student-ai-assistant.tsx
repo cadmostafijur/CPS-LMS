@@ -98,7 +98,7 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
     startTransition(async () => {
       try {
         const res = await bffFetch<{
-          data: { content: string };
+          data: { content: string; provider?: string };
         }>("/api/ai/assistant", {
           method: "POST",
           body: JSON.stringify({
@@ -119,7 +119,15 @@ export function StudentAiAssistant({ studentName }: { studentName?: string | nul
         setMessages(withReply);
       } catch (err) {
         if (requestId !== requestIdRef.current) return;
-        toast.error(err instanceof ApiError ? err.message : `${AI_ASSISTANT_NAME} could not respond`);
+        const msg =
+          err instanceof ApiError
+            ? err.message
+            : `${AI_ASSISTANT_NAME} could not respond`;
+        toast.error(
+          msg.includes("AGENTROUTER") || msg.includes("API")
+            ? msg
+            : `${msg}. If this persists, check AGENTROUTER_API_KEY in frontend env (Vercel).`
+        );
       }
     });
   }

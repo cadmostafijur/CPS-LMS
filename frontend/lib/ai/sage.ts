@@ -92,11 +92,16 @@ async function callAgentRouter(
 
   const payload = (await res.json()) as {
     choices?: { message?: { content?: string } }[];
-    error?: { message?: string };
+    error?: { message?: string; code?: string };
+    message?: string;
   };
 
   if (!res.ok) {
-    throw new Error(payload.error?.message || "Agent Router request failed");
+    const msg =
+      payload.error?.message ||
+      payload.message ||
+      `Agent Router request failed (${res.status})`;
+    throw new Error(msg);
   }
 
   const text = payload.choices?.[0]?.message?.content?.trim();
@@ -220,31 +225,37 @@ export async function generateSageReply(
   messages: ChatMessage[],
   context?: SageContext
 ): Promise<{ reply: string; provider: SageProvider }> {
-  if (process.env.AGENTROUTER_API_KEY) {
+  const errors: string[] = [];
+
+  if (process.env.AGENTROUTER_API_KEY?.trim()) {
     try {
       const reply = await callAgentRouter(messages, context);
       return { reply, provider: "agentrouter" };
-    } catch {
-      /* try next provider */
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : "Agent Router failed");
     }
   }
 
-  if (process.env.GEMINI_API_KEY) {
+  if (process.env.GEMINI_API_KEY?.trim()) {
     try {
       const reply = await callGemini(buildPrompt(messages, context));
       return { reply, provider: "gemini" };
-    } catch {
-      /* try next provider */
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : "Gemini failed");
     }
   }
 
-  if (process.env.OPENAI_API_KEY) {
+  if (process.env.OPENAI_API_KEY?.trim()) {
     try {
       const reply = await callOpenAI(messages, context);
       return { reply, provider: "openai" };
-    } catch {
-      /* use fallback */
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : "OpenAI failed");
     }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(errors[0]);
   }
 
   return { reply: fallbackReply(messages, context), provider: "fallback" };
