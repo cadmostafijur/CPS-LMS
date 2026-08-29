@@ -3,6 +3,13 @@ const AI_ASSISTANT_NAME = 'Sage';
 /** Agent Router WAF only accepts known client fingerprints (e.g. Claude Code). */
 const AGENTROUTER_USER_AGENT = 'claude-cli/1.0.0 (external, cli)';
 
+const AGENTROUTER_TEXT_MODELS = [
+  'deepseek-v4-flash',
+  'deepseek-r1',
+  'glm-4.5-air',
+  'glm-4.6',
+];
+
 const SAGE_MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024;
 
 /** Models on Agent Router that accept OpenAI-style image_url content (not glm/deepseek). */
@@ -66,26 +73,6 @@ async function readJsonResponse(res: Response): Promise<unknown> {
   } catch {
     throw new Error(`AI provider returned invalid JSON: ${trimmed.slice(0, 160)}`);
   }
-}
-
-function fallbackReply(messages: SageChatMessage[], context?: SageContext): string {
-  const lastUser =
-    [...messages].reverse().find((m) => m.role === 'user')?.content || '';
-  const lastLower = lastUser.toLowerCase();
-  const courseHint = context?.enrolledCourses?.[0];
-  const name = AI_ASSISTANT_NAME;
-
-  if (lastLower.includes('hello') || lastLower.includes('hi')) {
-    return `Hi${context?.studentName ? ` ${String(context.studentName).split(' ')[0]}` : ''}! I'm ${name}, your CPS Academy learning assistant. What would you like to explore today?`;
-  }
-  if (lastLower.includes('study') || lastLower.includes('learn')) {
-    return `Great mindset! Try this:\n\n• Skim lesson headings first, then read or watch actively.\n• Write one question per section.\n• Explain the idea out loud in 60 seconds.\n\n${courseHint ? `Want help with ${courseHint}? Tell me the topic or module.` : 'Tell me which course you are working on.'}`;
-  }
-  if (lastLower.includes('quiz') || lastLower.includes('exam') || lastLower.includes('test')) {
-    return `For quizzes, focus on understanding why an answer is correct:\n\n• Review missed questions from past attempts.\n• Make a short cheat sheet of key rules.\n• Practice explaining each concept without notes.\n\nI can help you study — I will not solve graded work for you.`;
-  }
-
-  return `I'm ${name}, here to help you learn step by step. You asked about "${lastUser || 'your topic'}".\n\nTry breaking it into:\n1. What you already know\n2. What is confusing\n3. One small example to test your understanding\n\n${courseHint ? `Since you are enrolled in ${courseHint}, share a lesson name for more specific help.` : 'Share your course or lesson name for tailored guidance.'}`;
 }
 
 function findLastUserAttachmentIndex(messages: SageChatMessage[]): number {
@@ -181,40 +168,56 @@ async function callAgentRouter(
     /\/+$/,
     ''
   );
-  const model = options?.vision
+  const preferred = options?.vision
     ? visionModelForAgentRouter()
-    : process.env.AGENTROUTER_MODEL || 'deepseek-v4-flash';
+    : process.env.AGENTROUTER_MODEL?.trim() || AGENTROUTER_TEXT_MODELS[0];
+  const models = options?.vision
+    ? [preferred]
+    : [preferred, ...AGENTROUTER_TEXT_MODELS.filter((m) => m !== preferred)];
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-      'User-Agent': AGENTROUTER_USER_AGENT,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.7,
-      max_tokens: 1024,
-      messages: buildOpenAIMessages(messages, context, Boolean(options?.vision)),
-    }),
-  });
+  const bodyMessages = buildOpenAIMessages(messages, context, Boolean(options?.vision));
+  const errors: string[] = [];
 
-  const payload = (await readJsonResponse(res)) as {
-    choices?: { message?: { content?: string } }[];
-    error?: { message?: string };
-    message?: string;
-  };
+  for (const model of models) {
+    try {
+      const res = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          'User-Agent': AGENTROUTER_USER_AGENT,
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.7,
+          max_tokens: 1024,
+          messages: bodyMessages,
+        }),
+      });
 
-  if (!res.ok) {
-    throw new Error(
-      payload?.error?.message || payload?.message || `Agent Router failed (${res.status})`
-    );
+      const payload = (await readJsonResponse(res)) as {
+        choices?: { message?: { content?: string } }[];
+        error?: { message?: string };
+        message?: string;
+      };
+
+      if (!res.ok) {
+        throw new Error(
+          payload?.error?.message || payload?.message || `Agent Router failed (${res.status})`
+        );
+      }
+
+      const text = payload?.choices?.[0]?.message?.content?.trim();
+      if (!text) throw new Error('Empty response from Agent Router');
+      return text;
+    } catch (err) {
+      errors.push(
+        `${model}: ${err instanceof Error ? err.message : 'request failed'}`
+      );
+    }
   }
 
-  const text = payload?.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error('Empty response from Agent Router');
-  return text;
+  throw new Error(errors[0] || 'Agent Router unavailable');
 }
 
 async function callGemini(messages: SageChatMessage[], context?: SageContext): Promise<string> {
@@ -339,9 +342,14 @@ export async function generateSageReply(
     }
   }
 
-  return {
-    reply: fallbackReply(messages, context),
-    provider: 'fallback',
-    assistantName: AI_ASSISTANT_NAME,
-  };
+  if (errors.length > 0) {
+    throw new Error(
+      errors.join(' · ') ||
+        'Sage AI is unavailable. Set AGENTROUTER_API_KEY on the server (backend/.env or Railway).'
+    );
+  }
+
+  throw new Error(
+    'Sage AI is not configured. Set AGENTROUTER_API_KEY on the server, or GEMINI_API_KEY as a fallback.'
+  );
 }

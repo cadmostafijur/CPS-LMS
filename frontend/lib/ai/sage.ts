@@ -5,6 +5,13 @@ export const MAX_CHAT_HISTORY = 20;
 /** Agent Router WAF only accepts known client fingerprints (e.g. Claude Code). */
 const AGENTROUTER_USER_AGENT = "claude-cli/1.0.0 (external, cli)";
 
+const AGENTROUTER_TEXT_MODELS = [
+  "deepseek-v4-flash",
+  "deepseek-r1",
+  "glm-4.5-air",
+  "glm-4.6",
+];
+
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
@@ -21,7 +28,7 @@ export type SageContext = {
   enrolledCourses?: string[];
 };
 
-export type SageProvider = "agentrouter" | "gemini" | "openai" | "fallback";
+export type SageProvider = "agentrouter" | "gemini" | "openai";
 
 const SAGE_SYSTEM = `You are Sage, the friendly AI learning assistant for CPS Academy LMS.
 Help students understand concepts, break down difficult topics, suggest study strategies, and encourage their learning journey.
@@ -96,43 +103,53 @@ async function callAgentRouter(
     /\/+$/,
     ""
   );
-  const model = process.env.AGENTROUTER_MODEL || "deepseek-v4-flash";
+  const preferred = process.env.AGENTROUTER_MODEL?.trim() || AGENTROUTER_TEXT_MODELS[0];
+  const models = [preferred, ...AGENTROUTER_TEXT_MODELS.filter((m) => m !== preferred)];
+  const errors: string[] = [];
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      "User-Agent": AGENTROUTER_USER_AGENT,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.7,
-      max_tokens: 1024,
-      messages: [
-        { role: "system", content: buildSystemMessage(context) },
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
-      ],
-    }),
-  });
+  for (const model of models) {
+    try {
+      const res = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          "User-Agent": AGENTROUTER_USER_AGENT,
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.7,
+          max_tokens: 1024,
+          messages: [
+            { role: "system", content: buildSystemMessage(context) },
+            ...messages.map((m) => ({ role: m.role, content: m.content })),
+          ],
+        }),
+      });
 
-  const payload = (await readJsonResponse(res)) as {
-    choices?: { message?: { content?: string } }[];
-    error?: { message?: string; code?: string };
-    message?: string;
-  };
+      const payload = (await readJsonResponse(res)) as {
+        choices?: { message?: { content?: string } }[];
+        error?: { message?: string; code?: string };
+        message?: string;
+      };
 
-  if (!res.ok) {
-    const msg =
-      payload?.error?.message ||
-      payload?.message ||
-      `Agent Router request failed (${res.status})`;
-    throw new Error(msg);
+      if (!res.ok) {
+        const msg =
+          payload?.error?.message ||
+          payload?.message ||
+          `Agent Router request failed (${res.status})`;
+        throw new Error(msg);
+      }
+
+      const text = payload?.choices?.[0]?.message?.content?.trim();
+      if (!text) throw new Error("Empty response from Agent Router");
+      return text;
+    } catch (err) {
+      errors.push(`${model}: ${err instanceof Error ? err.message : "request failed"}`);
+    }
   }
 
-  const text = payload?.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error("Empty response from Agent Router");
-  return text;
+  throw new Error(errors[0] || "Agent Router unavailable");
 }
 
 async function callGemini(prompt: string): Promise<string> {
@@ -206,47 +223,6 @@ async function callOpenAI(messages: ChatMessage[], context?: SageContext): Promi
   return text;
 }
 
-function fallbackReply(messages: ChatMessage[], context?: SageContext): string {
-  const lastUser =
-    [...messages].reverse().find((m) => m.role === "user")?.content || "";
-  const lastLower = lastUser.toLowerCase();
-  const courseHint = context?.enrolledCourses?.[0];
-  const name = AI_ASSISTANT_NAME;
-  const priorTurns = messages.slice(-6, -1);
-
-  if (
-    priorTurns.length > 0 &&
-    (lastLower.includes("more") ||
-      lastLower.includes("that") ||
-      lastLower.includes("it") ||
-      lastLower.includes("explain") ||
-      lastLower.includes("again") ||
-      lastLower.length < 40)
-  ) {
-    const lastAssistant = [...priorTurns]
-      .reverse()
-      .find((m) => m.role === "assistant")?.content;
-    const lastQuestion = [...priorTurns]
-      .reverse()
-      .find((m) => m.role === "user")?.content;
-    if (lastAssistant && lastQuestion) {
-      return `Continuing our chat about "${lastQuestion}":\n\n${lastAssistant.slice(0, 400)}${lastAssistant.length > 400 ? "…" : ""}\n\nFor your follow-up ("${lastUser}"), try narrowing one specific part you want clarified — e.g. a step, term, or example — and I can go deeper once the full AI service is connected.`;
-    }
-  }
-
-  if (lastLower.includes("hello") || lastLower.includes("hi")) {
-    return `Hi${context?.studentName ? ` ${context.studentName.split(" ")[0]}` : ""}! I'm ${name}, your CPS Academy learning assistant. What would you like to explore today?`;
-  }
-  if (lastLower.includes("study") || lastLower.includes("learn")) {
-    return `Great mindset! Try this:\n\n• Skim the lesson headings first, then watch or read actively.\n• Write one question per section before moving on.\n• Teach the idea out loud in 60 seconds — if you get stuck, that's your review target.\n\n${courseHint ? `Want help with ${courseHint} specifically? Tell me the topic or module.` : "Tell me which course or topic you're working on."}`;
-  }
-  if (lastLower.includes("quiz") || lastLower.includes("exam") || lastLower.includes("test")) {
-    return `For quizzes, focus on understanding *why* an answer is correct:\n\n• Review missed questions from past attempts.\n• Make a tiny cheat sheet of formulas or rules (for study only).\n• Practice explaining each concept without looking at notes.\n\nI can quiz you with practice questions if you share the topic — I won't solve graded work for you.`;
-  }
-
-  return `I'm ${name}, here to help you learn step by step. You asked about "${messages[messages.length - 1]?.content || "your topic"}".\n\nTry breaking it into:\n1. What you already know\n2. What's confusing\n3. One small example to test your understanding\n\n${courseHint ? `Since you're enrolled in ${courseHint}, I can relate examples to that course if you share the lesson name.` : "Share your course or lesson name for more tailored guidance."}\n\nNote: Add AGENTROUTER_API_KEY (recommended), GEMINI_API_KEY, or OPENAI_API_KEY on the server for full AI answers.`;
-}
-
 export async function generateSageReply(
   messages: ChatMessage[],
   context?: SageContext
@@ -288,8 +264,10 @@ export async function generateSageReply(
   }
 
   if (errors.length > 0) {
-    throw new Error(errors[0]);
+    throw new Error(errors.join(" · "));
   }
 
-  return { reply: fallbackReply(messages, context), provider: "fallback" };
+  throw new Error(
+    "Sage AI is not configured. Add AGENTROUTER_API_KEY to backend/.env (local) or Railway (production)."
+  );
 }

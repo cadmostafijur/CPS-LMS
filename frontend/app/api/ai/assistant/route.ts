@@ -75,14 +75,42 @@ export async function POST(request: Request) {
 
   const trimmed = normalized.slice(-MAX_CHAT_HISTORY);
   const role = getRoleName(user);
+  const sageContext = {
+    studentName: user.name || user.username,
+    enrolledCourses: body.context?.enrolledCourses,
+  };
+  const hasAttachment = trimmed.some((m) => m.attachment?.dataBase64);
+
+  async function respondWithSage(source: "frontend-env" | "backend") {
+    const result = await generateSageReply(trimmed, sageContext);
+    return NextResponse.json({
+      data: {
+        role: "assistant",
+        content: result.reply,
+        provider: result.provider,
+        assistantName: AI_ASSISTANT_NAME,
+      },
+      meta: { role, studentId: user.id, source },
+    });
+  }
+
+  let localError: string | undefined;
+
+  // 1) Local AI (frontend .env.local / Vercel) — fastest path for dev
+  if (!hasAttachment && process.env.AGENTROUTER_API_KEY?.trim()) {
+    try {
+      return await respondWithSage("frontend-env");
+    } catch (localErr) {
+      localError = localErr instanceof Error ? localErr.message : "Local Sage failed";
+    }
+  }
+
+  // 2) Strapi backend (Railway) — production keys live in backend/.env
   const payload = JSON.stringify({
     messages: trimmed,
-    context: {
-      enrolledCourses: body.context?.enrolledCourses,
-    },
+    context: { enrolledCourses: body.context?.enrolledCourses },
   });
 
-  // Prefer Strapi backend (Railway) — API keys live in backend .env
   try {
     const upstream = await fetch(`${getApiBaseUrl()}/lms/ai/assistant`, {
       method: "POST",
@@ -98,25 +126,12 @@ export async function POST(request: Request) {
     let data: unknown = null;
     const responseText = text.trim();
     if (responseText.startsWith("<")) {
-      const hasAttachment = trimmed.some((m) => m.attachment?.dataBase64);
-      if (!hasAttachment) {
-        const local = await tryLocalSage(trimmed, user, body.context?.enrolledCourses);
-        if (local) {
-          return NextResponse.json({
-            data: {
-              role: "assistant",
-              content: local.reply,
-              provider: local.provider,
-              assistantName: AI_ASSISTANT_NAME,
-            },
-            meta: { role, studentId: user.id, source: "frontend-env" },
-          });
-        }
-      }
       return NextResponse.json(
         {
           error:
-            "API server returned HTML instead of JSON. Is Strapi running? Check NEXT_PUBLIC_API_URL and restart the backend.",
+            typeof localError === "string"
+              ? `API server returned HTML instead of JSON. Local Sage error: ${localError}`
+              : "API server returned HTML instead of JSON. Is Strapi running? Check NEXT_PUBLIC_API_URL and restart the backend.",
         },
         { status: 502 }
       );
@@ -137,60 +152,24 @@ export async function POST(request: Request) {
       (data as { message?: string })?.message ||
       "Sage AI unavailable on server";
 
-    const hasAttachment = trimmed.some((m) => m.attachment?.dataBase64);
-
-    // Never fall back to text-only Sage when an image/PDF was attached — that hides the real error.
-    if (upstream.status !== 401 && upstream.status !== 403 && !hasAttachment) {
-      const local = await tryLocalSage(trimmed, user, body.context?.enrolledCourses);
-      if (local) {
-        return NextResponse.json({
-          data: {
-            role: "assistant",
-            content: local.reply,
-            provider: local.provider,
-            assistantName: AI_ASSISTANT_NAME,
-          },
-          meta: { role, studentId: user.id, source: "frontend-env" },
-        });
-      }
-    }
-
-    return NextResponse.json({ error: errMsg }, { status: upstream.status });
-  } catch {
-    const hasAttachment = trimmed.some((m) => m.attachment?.dataBase64);
-    if (!hasAttachment) {
-      const local = await tryLocalSage(trimmed, user, body.context?.enrolledCourses);
-      if (local) {
-        return NextResponse.json({
-          data: {
-            role: "assistant",
-            content: local.reply,
-            provider: local.provider,
-            assistantName: AI_ASSISTANT_NAME,
-          },
-          meta: { role, studentId: user.id, source: "frontend-env" },
-        });
-      }
-    }
     return NextResponse.json(
-      { error: "Could not reach the API server. Is Strapi running?" },
+      {
+        error:
+          typeof localError === "string"
+            ? `${errMsg} (local: ${localError})`
+            : errMsg,
+      },
+      { status: upstream.status >= 400 ? upstream.status : 502 }
+    );
+  } catch {
+    return NextResponse.json(
+      {
+        error:
+          typeof localError === "string"
+            ? `Could not reach the API server. Local Sage error: ${localError}`
+            : "Could not reach the API server. Is Strapi running?",
+      },
       { status: 502 }
     );
-  }
-}
-
-async function tryLocalSage(
-  messages: ChatMessage[],
-  user: { name?: string | null; username?: string | null },
-  enrolledCourses?: string[]
-) {
-  if (!process.env.AGENTROUTER_API_KEY?.trim()) return null;
-  try {
-    return await generateSageReply(messages, {
-      studentName: user.name || user.username,
-      enrolledCourses,
-    });
-  } catch {
-    return null;
   }
 }
