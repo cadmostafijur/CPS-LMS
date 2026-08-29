@@ -36,3 +36,4 @@ backend/public/uploads/*
 coverage/
 .turbo/
 VIDEO_WALKTHROUGH_SCRIPT.md
+docs/VIDEO-SCRIPT.md
