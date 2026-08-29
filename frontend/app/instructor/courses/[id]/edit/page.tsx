@@ -2,14 +2,13 @@ import { notFound } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/shared/page-header";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
-import { CourseForm } from "@/features/courses/course-form";
-import { LessonManager } from "@/features/courses/lesson-manager";
-import { ModuleManager } from "@/features/courses/module-manager";
-import { QuizManager } from "@/features/courses/quiz-manager";
+import { CourseEditWorkspace } from "@/features/courses/course-edit-workspace";
 import { InstructorCourseExtras } from "@/features/instructor/instructor-course-extras";
 import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { getCourseById } from "@/services/courses.service";
+
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -32,25 +31,13 @@ export default async function EditCoursePage({ params }: Props) {
       />
       <PageHeader
         title="Edit course"
-        description="Update details, modules, lessons, and quizzes."
+        description="Use the tabs below to update details, modules, lessons, and quizzes."
       />
-      <div className="grid gap-6 xl:grid-cols-2">
-        <CourseForm course={course} />
-        <div className="space-y-6">
-          <ModuleManager courseId={courseKey} modules={course.modules || []} />
-          <LessonManager
-            courseId={courseKey}
-            lessons={course.lessons || []}
-            modules={course.modules || []}
-          />
-          <QuizManager
-            courseId={courseKey}
-            quizzes={course.quizzes || []}
-            modules={course.modules || []}
-          />
-        </div>
-      </div>
-      <InstructorCourseExtras courseId={courseKey} />
+      <CourseEditWorkspace
+        course={course}
+        redirectBase="/instructor/courses"
+        extras={<InstructorCourseExtras courseId={courseKey} />}
+      />
     </DashboardShell>
   );
 }

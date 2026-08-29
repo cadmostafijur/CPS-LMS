@@ -12,6 +12,8 @@ import { getTokenFromCookies } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import type { Course } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 async function listStaffCourses(token: string | null) {
   const res = await apiFetch<{ data: Course[] }>("/lms/staff/courses", { token });
   return Array.isArray(res.data) ? res.data : [];

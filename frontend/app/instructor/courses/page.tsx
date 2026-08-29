@@ -11,6 +11,8 @@ import { requireUser } from "@/lib/session";
 import { getTokenFromCookies } from "@/lib/auth";
 import { getInstructorDashboard } from "@/services/dashboard.service";
 
+export const dynamic = "force-dynamic";
+
 export default async function InstructorCoursesPage() {
   const user = await requireUser("/instructor/courses");
   const token = await getTokenFromCookies();

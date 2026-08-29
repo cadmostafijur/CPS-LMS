@@ -19,6 +19,8 @@ import { getTokenFromCookies } from "@/lib/auth";
 import { getContentManagerDashboard } from "@/services/dashboard.service";
 import type { ContentManagerDashboard } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 const empty: ContentManagerDashboard = {
   user: null,
   courses: 0,

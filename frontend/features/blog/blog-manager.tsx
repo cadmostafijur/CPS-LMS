@@ -41,7 +41,8 @@ export function BlogManager({ posts }: { posts: BlogPost[] }) {
 
   async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
+    const formEl = e.currentTarget;
+    const form = new FormData(formEl);
     const payload = {
       title: String(form.get("title") || ""),
       excerpt: String(form.get("excerpt") || ""),
@@ -70,7 +71,7 @@ export function BlogManager({ posts }: { posts: BlogPost[] }) {
       }
       setEditing(null);
       setCoverImageUrl("");
-      e.currentTarget.reset();
+      formEl.reset();
       setStatus("DRAFT");
       router.refresh();
     } catch (err) {

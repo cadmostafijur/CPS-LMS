@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageUrlField } from "@/components/shared/image-url-field";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { bffFetch, ApiError } from "@/lib/api";
+import { revalidateStaffCoursePaths } from "@/features/courses/revalidate-staff-paths";
 import { cn } from "@/lib/utils";
 import type {
   Course,
@@ -80,9 +81,11 @@ function FormSection({
 export function CourseForm({
   course,
   redirectBase = "/instructor/courses",
+  hideHeader = false,
 }: {
   course?: Course | null;
   redirectBase?: string;
+  hideHeader?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -161,6 +164,7 @@ export function CourseForm({
           body: JSON.stringify(payload),
         });
         toast.success("Course updated");
+        await revalidateStaffCoursePaths(redirectBase);
         router.push(`${redirectBase}/${id}/edit`);
       } else {
         const created = await bffFetch<{ data: Course }>("/api/lms/courses", {
@@ -169,6 +173,7 @@ export function CourseForm({
         });
         toast.success("Course created");
         const id = created.data.documentId || created.data.id;
+        await revalidateStaffCoursePaths(redirectBase);
         router.push(`${redirectBase}/${id}/edit`);
       }
       router.refresh();
@@ -187,6 +192,7 @@ export function CourseForm({
       await bffFetch(`/api/lms/courses/${id}`, { method: "DELETE" });
       toast.success("Course deleted");
       setConfirmDelete(false);
+      await revalidateStaffCoursePaths(redirectBase);
       router.push(redirectBase);
       router.refresh();
     } catch (err) {
@@ -202,43 +208,61 @@ export function CourseForm({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-orange/20 bg-gradient-to-r from-orange/10 via-white to-white p-5 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange/15 text-orange">
-              <BookOpen className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-orange">
-                {course ? "Course editor" : "New course"}
-              </p>
-              <h2 className="font-display text-xl font-semibold text-navy">
-                {course ? course.title : "Build your course in clear steps"}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {course
-                  ? "Update details here, then manage lessons and quizzes in the editor."
-                  : "Start with the basics. You can add lessons and quizzes after saving."}
-              </p>
+      {hideHeader ? (
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button type="submit" form="course-form" disabled={loading || deleting}>
+            {loading ? "Saving…" : course ? "Save changes" : "Create course"}
+          </Button>
+          {course ? (
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={loading || deleting}
+              onClick={() => setConfirmDelete(true)}
+            >
+              Delete
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-orange/20 bg-gradient-to-r from-orange/10 via-white to-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange/15 text-orange">
+                <BookOpen className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-orange">
+                  {course ? "Course editor" : "New course"}
+                </p>
+                <h2 className="font-display text-xl font-semibold text-navy">
+                  {course ? course.title : "Build your course in clear steps"}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {course
+                    ? "Update details here, then manage lessons and quizzes in the editor."
+                    : "Start with the basics. You can add lessons and quizzes after saving."}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" form="course-form" disabled={loading || deleting}>
+                {loading ? "Saving…" : course ? "Save changes" : "Create course"}
+              </Button>
+              {course ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={loading || deleting}
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  Delete
+                </Button>
+              ) : null}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" form="course-form" disabled={loading || deleting}>
-              {loading ? "Saving…" : course ? "Save changes" : "Create course"}
-            </Button>
-            {course ? (
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={loading || deleting}
-                onClick={() => setConfirmDelete(true)}
-              >
-                Delete
-              </Button>
-            ) : null}
-          </div>
         </div>
-      </div>
+      )}
 
       <form id="course-form" onSubmit={onSubmit}>
         <Tabs defaultValue="basics" className="space-y-5">

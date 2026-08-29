@@ -2616,11 +2616,12 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     assertCourseOwnerOrManager(user, course);
     const body = ctx.request.body || {};
     if (!body.title) throw new ValidationError('title is required');
+    const orderRaw = Number(body.order);
     const created = await strapi.db.query('api::course-module.course-module').create({
       data: {
         title: String(body.title).trim(),
         description: body.description || null,
-        order: Number(body.order || 0),
+        order: Number.isFinite(orderRaw) ? orderRaw : 0,
         course: course.id,
       },
     });
