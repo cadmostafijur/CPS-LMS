@@ -2668,10 +2668,29 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       populate: { course: { populate: { instructor: true, createdByUser: true } } },
     });
     assertCourseOwnerOrManager(user, withCourse.course);
-    await strapi.db.query('api::lesson.lesson').updateMany({
+
+    const linkedLessons = await strapi.db.query('api::lesson.lesson').findMany({
       where: { module: target.id },
-      data: { module: null },
+      select: ['id'],
     });
+    for (const lesson of linkedLessons) {
+      await strapi.db.query('api::lesson.lesson').update({
+        where: { id: lesson.id },
+        data: { module: null },
+      });
+    }
+
+    const linkedQuizzes = await strapi.db.query('api::quiz.quiz').findMany({
+      where: { module: target.id },
+      select: ['id'],
+    });
+    for (const quiz of linkedQuizzes) {
+      await strapi.db.query('api::quiz.quiz').update({
+        where: { id: quiz.id },
+        data: { module: null },
+      });
+    }
+
     await strapi.db.query('api::course-module.course-module').delete({
       where: { id: target.id },
     });
