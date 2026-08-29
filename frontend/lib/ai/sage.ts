@@ -268,6 +268,6 @@ export async function generateSageReply(
   }
 
   throw new Error(
-    "Sage AI is not configured. Add AGENTROUTER_API_KEY to backend/.env (local) or Railway (production)."
+    "Sage AI is not configured. Add AGENTROUTER_API_KEY on Vercel (frontend server env) and/or Railway (backend), then redeploy."
   );
 }

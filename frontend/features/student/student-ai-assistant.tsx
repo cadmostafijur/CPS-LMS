@@ -29,17 +29,20 @@ const IMAGE_UPLOAD_COMING_SOON =
   "Image upload is coming soon. For now, Sage supports text chat only — type your question below.";
 
 function formatSageError(message: string): string {
-  if (/unexpected token|not valid json|html instead of json/i.test(message)) {
-    return "Sage could not reach the AI service. Ensure AGENTROUTER_API_KEY is set on Railway (backend), redeploy, then try again.";
+  if (/html instead of json|returned html/i.test(message)) {
+    return `${message} Tip: add AGENTROUTER_API_KEY on Vercel → Settings → Environment Variables (Production), then Redeploy.`;
+  }
+  if (/unexpected token|not valid json/i.test(message)) {
+    return "Sage got a bad response from the API. Check NEXT_PUBLIC_API_URL on Vercel (must be your Railway Strapi URL ending in /api).";
   }
   if (/^unauthorized$/i.test(message.trim())) {
-    return "Could not reach Sage. If you're running locally, restart the backend (it may have stopped after a build error), then try again.";
+    return "Session expired. Sign out and sign in again as a student.";
   }
   if (/unauthorized client/i.test(message)) {
-    return `${message} Redeploy the Railway backend after setting AGENTROUTER_API_KEY.`;
+    return `${message} Redeploy after confirming AGENTROUTER_API_KEY is valid.`;
   }
-  if (/not set|not configured/i.test(message)) {
-    return `${message} Set AGENTROUTER_API_KEY on Railway (backend), not Vercel.`;
+  if (/not set|not configured|is not configured/i.test(message)) {
+    return `${message} Add AGENTROUTER_API_KEY on Vercel (frontend) and/or Railway (backend), then redeploy.`;
   }
   return message;
 }

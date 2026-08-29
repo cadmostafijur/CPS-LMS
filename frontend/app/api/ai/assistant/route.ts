@@ -3,8 +3,21 @@ import { cookies } from "next/headers";
 import { fetchStrapiMe, TOKEN_COOKIE } from "@/lib/auth";
 import { getApiBaseUrl } from "@/lib/config";
 import { getRoleName, isStudent } from "@/lib/roles";
-import { generateSageReply, AI_ASSISTANT_NAME, MAX_CHAT_HISTORY, type ChatMessage } from "@/lib/ai/sage";
+import {
+  generateSageReply,
+  AI_ASSISTANT_NAME,
+  MAX_CHAT_HISTORY,
+  type ChatMessage,
+} from "@/lib/ai/sage";
 import type { AuthUser } from "@/types";
+
+function hasAnyAiKey() {
+  return Boolean(
+    process.env.AGENTROUTER_API_KEY?.trim() ||
+      process.env.GEMINI_API_KEY?.trim() ||
+      process.env.OPENAI_API_KEY?.trim()
+  );
+}
 
 export async function POST(request: Request) {
   const jar = await cookies();
@@ -21,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Could not reach the API server. Restart the backend (npm run dev) if you're running locally, then try again.",
+          "Could not reach the API server. Check NEXT_PUBLIC_API_URL (must end with /api) and that Strapi/Railway is running.",
       },
       { status: 502 }
     );
@@ -52,20 +65,22 @@ export async function POST(request: Request) {
       (typeof m.content === "string" || m.attachment)
   );
 
-  const normalized = messages.map((m) => ({
-    role: m.role,
-    content: typeof m.content === "string" ? m.content.trim() : "",
-    ...(m.attachment?.dataBase64
-      ? {
-          attachment: {
-            name: m.attachment.name,
-            mimeType: m.attachment.mimeType,
-            kind: m.attachment.kind,
-            dataBase64: m.attachment.dataBase64,
-          },
-        }
-      : {}),
-  })).filter((m) => m.content || m.attachment);
+  const normalized = messages
+    .map((m) => ({
+      role: m.role,
+      content: typeof m.content === "string" ? m.content.trim() : "",
+      ...(m.attachment?.dataBase64
+        ? {
+            attachment: {
+              name: m.attachment.name,
+              mimeType: m.attachment.mimeType,
+              kind: m.attachment.kind,
+              dataBase64: m.attachment.dataBase64,
+            },
+          }
+        : {}),
+    }))
+    .filter((m) => m.content || m.attachment);
 
   if (!normalized.length || normalized[normalized.length - 1]?.role !== "user") {
     return NextResponse.json(
@@ -82,31 +97,28 @@ export async function POST(request: Request) {
   };
   const hasAttachment = trimmed.some((m) => m.attachment?.dataBase64);
 
-  async function respondWithSage(source: "frontend-env" | "backend") {
-    const result = await generateSageReply(trimmed, sageContext);
-    return NextResponse.json({
-      data: {
-        role: "assistant",
-        content: result.reply,
-        provider: result.provider,
-        assistantName: AI_ASSISTANT_NAME,
-      },
-      meta: { role, studentId: user.id, source },
-    });
-  }
-
   let localError: string | undefined;
 
-  // 1) Local AI (frontend .env.local / Vercel) — fastest path for dev
-  if (!hasAttachment && process.env.AGENTROUTER_API_KEY?.trim()) {
+  // Prefer Next.js env (Vercel / .env.local) for text chat — no Strapi hop needed.
+  if (!hasAttachment && hasAnyAiKey()) {
     try {
-      return await respondWithSage("frontend-env");
+      const result = await generateSageReply(trimmed, sageContext);
+      return NextResponse.json({
+        data: {
+          role: "assistant",
+          content: result.reply,
+          provider: result.provider,
+          assistantName: AI_ASSISTANT_NAME,
+        },
+        meta: { role, studentId: user.id, source: "frontend-env" },
+      });
     } catch (localErr) {
-      localError = localErr instanceof Error ? localErr.message : "Local Sage failed";
+      localError =
+        localErr instanceof Error ? localErr.message : "Local Sage failed";
     }
   }
 
-  // 2) Strapi backend (Railway) — production keys live in backend/.env
+  // Fallback: Strapi on Railway (AGENTROUTER_* in backend/.env)
   const payload = JSON.stringify({
     messages: trimmed,
     context: { enrolledCourses: body.context?.enrolledCourses },
@@ -124,19 +136,20 @@ export async function POST(request: Request) {
     });
 
     const text = await upstream.text();
-    let data: unknown = null;
     const responseText = text.trim();
+
     if (responseText.startsWith("<")) {
       return NextResponse.json(
         {
-          error:
-            typeof localError === "string"
-              ? `API server returned HTML instead of JSON. Local Sage error: ${localError}`
-              : "API server returned HTML instead of JSON. Is Strapi running? Check NEXT_PUBLIC_API_URL and restart the backend.",
+          error: localError
+            ? `Backend returned HTML (check NEXT_PUBLIC_API_URL). Also: ${localError}`
+            : "Backend returned HTML instead of JSON. Set AGENTROUTER_API_KEY on Vercel (server env) OR on Railway, and confirm NEXT_PUBLIC_API_URL points to your Strapi /api URL.",
         },
         { status: 502 }
       );
     }
+
+    let data: unknown = null;
     try {
       data = responseText ? JSON.parse(responseText) : null;
     } catch {
@@ -155,20 +168,21 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        error:
-          typeof localError === "string"
-            ? `${errMsg} (local: ${localError})`
-            : errMsg,
+        error: localError ? `${errMsg} (frontend: ${localError})` : errMsg,
       },
       { status: upstream.status >= 400 ? upstream.status : 502 }
     );
   } catch {
+    if (localError) {
+      return NextResponse.json(
+        { error: `Could not reach Strapi. Frontend Sage error: ${localError}` },
+        { status: 502 }
+      );
+    }
     return NextResponse.json(
       {
         error:
-          typeof localError === "string"
-            ? `Could not reach the API server. Local Sage error: ${localError}`
-            : "Could not reach the API server. Is Strapi running?",
+          "Sage is not configured. Add AGENTROUTER_API_KEY to Vercel (frontend project, Production) and redeploy — or set it on Railway (backend) and keep NEXT_PUBLIC_API_URL correct.",
       },
       { status: 502 }
     );
