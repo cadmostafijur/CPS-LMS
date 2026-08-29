@@ -4,6 +4,7 @@ import { fetchStrapiMe, TOKEN_COOKIE } from "@/lib/auth";
 import { getApiBaseUrl } from "@/lib/config";
 import { getRoleName, isStudent } from "@/lib/roles";
 import { generateSageReply, AI_ASSISTANT_NAME, MAX_CHAT_HISTORY, type ChatMessage } from "@/lib/ai/sage";
+import type { AuthUser } from "@/types";
 
 export async function POST(request: Request) {
   const jar = await cookies();
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let user;
+  let user: AuthUser;
   try {
     user = await fetchStrapiMe(token);
   } catch {
