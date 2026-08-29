@@ -29,6 +29,9 @@ const IMAGE_UPLOAD_COMING_SOON =
   "Image upload is coming soon. For now, Sage supports text chat only — type your question below.";
 
 function formatSageError(message: string): string {
+  if (/unexpected token|not valid json|html instead of json/i.test(message)) {
+    return "Sage could not reach the AI service. Ensure AGENTROUTER_API_KEY is set on Railway (backend), redeploy, then try again.";
+  }
   if (/^unauthorized$/i.test(message.trim())) {
     return "Could not reach Sage. If you're running locally, restart the backend (it may have stopped after a build error), then try again.";
   }

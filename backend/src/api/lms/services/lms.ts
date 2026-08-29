@@ -1123,21 +1123,23 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           progressRows.length
         : 0;
 
-    const quizPctValues: number[] = [];
+    const bestQuizById = new Map<string, number>();
     const attemptedQuizIds = new Set<string>();
     const passedQuizIds = new Set<string>();
     for (const attempt of quizAttempts) {
       const qid = attempt.quiz?.id;
-      if (qid != null) attemptedQuizIds.add(String(qid));
+      if (qid == null) continue;
+      const key = String(qid);
+      attemptedQuizIds.add(key);
       const pct = Number(attempt.percentage ?? 0);
-      if (pct > 0) quizPctValues.push(pct);
-      if (pct >= 80 && qid != null) passedQuizIds.add(String(qid));
+      const prev = bestQuizById.get(key) ?? 0;
+      if (pct > prev) bestQuizById.set(key, pct);
+      if (pct >= 80) passedQuizIds.add(key);
     }
+    const quizPctValues = [...bestQuizById.values()];
     const avgQuizMark =
       quizPctValues.length > 0
-        ? Math.round(
-            quizPctValues.reduce((a, b) => a + b, 0) / quizPctValues.length
-          )
+        ? Math.round(quizPctValues.reduce((a, b) => a + b, 0) / quizPctValues.length)
         : 0;
 
     const totalQuizIds = new Set<string>();
@@ -1157,26 +1159,8 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           ) / 100
         : 0;
 
-    let videoMinutes = 0;
-    for (const lp of lessonProgress) {
-      const lesson = lp.lesson;
-      if (!lesson) continue;
-      const isVideo =
-        lesson.lessonType === 'VIDEO' ||
-        lesson.lessonType === 'AUDIO' ||
-        Boolean(lesson.videoUrl);
-        if (isVideo) videoMinutes += Number(lesson.durationMinutes ?? 0);
-    }
-
-    const healthCheck = Math.min(
-      100,
-      Math.round(
-        moduleProgress * 0.35 +
-          avgQuizMark * 0.25 +
-          avgAssignmentMark * 0.25 +
-          Math.min(100, lessonProgress.length * 4) * 0.15
-      )
-    );
+    const enrolledCourses = enrollments.length;
+    const completedCourses = enrollments.filter((e: any) => e.completedAt).length;
 
     const now = new Date();
     const calendarMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -1191,62 +1175,52 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     }
     completedDays.sort((a, b) => a - b);
 
-    const videoByDay: { label: string; minutes: number }[] = [];
+    const activityByDay: { label: string; lessons: number }[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      let minutes = 0;
+      let lessons = 0;
       for (const lp of lessonProgress) {
         if (!lp.completedAt) continue;
         const completedKey = new Date(lp.completedAt).toISOString().slice(0, 10);
-        if (completedKey !== key) continue;
-        const lesson = lp.lesson;
-        if (!lesson) continue;
-        const isVideo =
-          lesson.lessonType === 'VIDEO' ||
-          lesson.lessonType === 'AUDIO' ||
-          Boolean(lesson.videoUrl);
-        if (isVideo) minutes += Number(lesson.durationMinutes ?? 0);
+        if (completedKey === key) lessons += 1;
       }
-      videoByDay.push({
+      activityByDay.push({
         label: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
-        minutes,
+        lessons,
       });
     }
 
     const assignmentSeries = assignments
       .filter((a: any) => a.score != null)
-      .slice(0, 6)
-      .map((a: any, index: number) => ({
-        label: `A${index + 1}`,
-        score: Number(a.score),
-      }));
-
-    const rewardPoints =
-      lessonProgress.length * 10 +
-      Math.round(avgQuizMark * 0.6) +
-      gradedAssignments.length * 15;
+      .slice(-6)
+      .map((a: any, index: number) => {
+        const title = String(a.assignment?.title || `Assignment ${index + 1}`).trim();
+        return {
+          label: title.length > 18 ? `${title.slice(0, 16)}…` : title,
+          score: Number(a.score),
+        };
+      });
 
     return {
       data: {
-        healthCheck,
         moduleProgress: Math.round(moduleProgress),
+        enrolledCourses,
+        completedCourses,
         avgQuizMark,
         avgAssignmentMark,
+        quizAttemptsTotal: quizAttempts.length,
         quiz: {
           completed: passedQuizIds.size,
           attempted: attemptedQuizIds.size,
           incomplete: Math.max(0, totalQuizIds.size - attemptedQuizIds.size),
           total: totalQuizIds.size,
-          passed: passedQuizIds.size,
         },
         calendarMonth,
         completedDays,
-        videoMinutesTotal: videoMinutes,
-        videoByDay,
+        activityByDay,
         assignmentSeries,
-        rewardPoints,
         lessonsCompleted: lessonProgress.length,
       },
     };

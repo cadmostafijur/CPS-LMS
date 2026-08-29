@@ -96,8 +96,33 @@ export async function POST(request: Request) {
 
     const text = await upstream.text();
     let data: unknown = null;
+    const responseText = text.trim();
+    if (responseText.startsWith("<")) {
+      const hasAttachment = trimmed.some((m) => m.attachment?.dataBase64);
+      if (!hasAttachment) {
+        const local = await tryLocalSage(trimmed, user, body.context?.enrolledCourses);
+        if (local) {
+          return NextResponse.json({
+            data: {
+              role: "assistant",
+              content: local.reply,
+              provider: local.provider,
+              assistantName: AI_ASSISTANT_NAME,
+            },
+            meta: { role, studentId: user.id, source: "frontend-env" },
+          });
+        }
+      }
+      return NextResponse.json(
+        {
+          error:
+            "API server returned HTML instead of JSON. Is Strapi running? Check NEXT_PUBLIC_API_URL and restart the backend.",
+        },
+        { status: 502 }
+      );
+    }
     try {
-      data = text ? JSON.parse(text) : null;
+      data = responseText ? JSON.parse(responseText) : null;
     } catch {
       data = { error: text || "Invalid response from API" };
     }

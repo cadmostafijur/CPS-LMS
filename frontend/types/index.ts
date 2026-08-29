@@ -246,10 +246,12 @@ export interface StudentDashboard {
 }
 
 export interface StudentAnalytics {
-  healthCheck: number;
   moduleProgress: number;
+  enrolledCourses: number;
+  completedCourses: number;
   avgQuizMark: number;
   avgAssignmentMark: number;
+  quizAttemptsTotal: number;
   quiz: {
     completed: number;
     attempted: number;
@@ -258,10 +260,8 @@ export interface StudentAnalytics {
   };
   calendarMonth: string;
   completedDays: number[];
-  videoMinutesTotal: number;
-  videoByDay: Array<{ label: string; minutes: number }>;
+  activityByDay: Array<{ label: string; lessons: number }>;
   assignmentSeries: Array<{ label: string; score: number }>;
-  rewardPoints: number;
   lessonsCompleted: number;
 }
 

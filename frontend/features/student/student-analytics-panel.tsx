@@ -1,17 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import {
   BarChart3,
   BookOpen,
-  Calendar,
   ClipboardList,
   FileText,
+  GraduationCap,
   Star,
-  Trophy,
-  Video,
 } from "lucide-react";
 import { StatsCard } from "@/components/shared/stats-card";
+import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { StudentAnalytics } from "@/types";
 import { cn } from "@/lib/utils";
@@ -21,8 +22,10 @@ function PanelCard({
   children,
   className,
   action,
+  description,
 }: {
   title: string;
+  description?: string;
   children: React.ReactNode;
   className?: string;
   action?: React.ReactNode;
@@ -34,8 +37,13 @@ function PanelCard({
         className
       )}
     >
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <h3 className="font-display text-sm font-semibold text-navy">{title}</h3>
+      <div className="mb-4 flex items-start justify-between gap-2">
+        <div>
+          <h3 className="font-display text-sm font-semibold text-navy">{title}</h3>
+          {description ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+          ) : null}
+        </div>
         {action}
       </div>
       {children}
@@ -43,64 +51,11 @@ function PanelCard({
   );
 }
 
-function DonutChart({ value }: { value: number }) {
-  const pct = Math.min(100, Math.max(0, value));
-  const radius = 52;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (pct / 100) * circumference;
-
+function ChartEmpty({ message }: { message: string }) {
   return (
-    <div className="relative mx-auto h-36 w-36">
-      <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90">
-        <circle
-          cx="70"
-          cy="70"
-          r={radius}
-          fill="none"
-          stroke="#f1f5f9"
-          strokeWidth="12"
-        />
-        <circle
-          cx="70"
-          cy="70"
-          r={radius}
-          fill="none"
-          stroke="#f97316"
-          strokeWidth="12"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="transition-all duration-700"
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display text-3xl font-bold text-navy">{pct}%</span>
-        <span className="text-xs text-muted-foreground">Health</span>
-      </div>
+    <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-dashed border-border bg-surface/60 px-4 py-8 text-center text-sm text-muted-foreground">
+      {message}
     </div>
-  );
-}
-
-function HealthLegend() {
-  const items = [
-    { icon: Calendar, label: "Module finish on time" },
-    { icon: BarChart3, label: "Module progress" },
-    { icon: ClipboardList, label: "Quiz mark" },
-    { icon: Video, label: "Video duration" },
-    { icon: FileText, label: "Assignment mark" },
-  ];
-
-  return (
-    <ul className="space-y-2.5 text-sm text-muted-foreground">
-      {items.map((item) => (
-        <li key={item.label} className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange/10 text-orange">
-            <item.icon className="h-3.5 w-3.5" />
-          </span>
-          <span>{item.label}</span>
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -126,67 +81,62 @@ function ModuleCalendar({
           {monthLabel}
         </Badge>
       </div>
-      <div className="grid grid-cols-7 gap-1.5">
-        {Array.from({ length: daysInMonth }, (_, i) => {
-          const day = i + 1;
-          const done = completedDays.includes(day);
-          return (
-            <div
-              key={day}
-              className={cn(
-                "flex aspect-square items-center justify-center rounded-lg text-xs font-medium",
-                done
-                  ? "bg-orange text-white shadow-sm"
-                  : "bg-surface text-muted-foreground"
-              )}
-            >
-              {day}
-            </div>
-          );
-        })}
-      </div>
+      {completedDays.length === 0 ? (
+        <ChartEmpty message="No lessons completed this month yet." />
+      ) : (
+        <div className="grid grid-cols-7 gap-1.5">
+          {Array.from({ length: daysInMonth }, (_, i) => {
+            const day = i + 1;
+            const done = completedDays.includes(day);
+            return (
+              <div
+                key={day}
+                className={cn(
+                  "flex aspect-square items-center justify-center rounded-lg text-xs font-medium",
+                  done
+                    ? "bg-orange text-white shadow-sm"
+                    : "bg-surface text-muted-foreground"
+                )}
+              >
+                {day}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
-function ChartEmpty({ message }: { message: string }) {
-  return (
-    <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-dashed border-border bg-surface/60 px-4 py-8 text-center text-sm text-muted-foreground">
-      {message}
-    </div>
-  );
-}
+function ActivityBarChart({ data }: { data: StudentAnalytics["activityByDay"] }) {
+  const total = data.reduce((s, d) => s + d.lessons, 0);
+  const max = Math.max(1, ...data.map((d) => d.lessons));
 
-function VideoBarChart({ data }: { data: StudentAnalytics["videoByDay"] }) {
-  const totalMinutes = data.reduce((s, d) => s + d.minutes, 0);
-  const hours = Math.floor(totalMinutes / 60);
-  const mins = totalMinutes % 60;
-  const max = Math.max(1, ...data.map((d) => d.minutes));
-
-  if (!data.length) {
-    return <ChartEmpty message="No video activity recorded yet." />;
+  if (!data.length || total === 0) {
+    return <ChartEmpty message="Complete lessons to see your daily activity here." />;
   }
 
   return (
     <div>
       <p className="mb-4 text-sm text-muted-foreground">
-        Total:{" "}
+        Last 7 days:{" "}
         <span className="font-medium text-navy">
-          {hours} hr{hours !== 1 ? "s" : ""} {mins} min
+          {total} lesson{total !== 1 ? "s" : ""} completed
         </span>
       </p>
       <div className="flex h-36 items-end gap-2">
         {data.map((d) => {
-          const h = d.minutes > 0 ? Math.max(6, (d.minutes / max) * 100) : 4;
+          const h = d.lessons > 0 ? Math.max(8, (d.lessons / max) * 100) : 4;
           return (
             <div key={d.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
               <div className="flex h-28 w-full items-end justify-center">
                 <div
                   className={cn(
                     "w-full max-w-8 rounded-t-lg transition-all",
-                    d.minutes > 0 ? "bg-orange/80" : "bg-border"
+                    d.lessons > 0 ? "bg-orange/80" : "bg-border"
                   )}
                   style={{ height: `${h}%` }}
+                  title={`${d.lessons} lesson${d.lessons !== 1 ? "s" : ""}`}
                 />
               </div>
               <span className="truncate text-[10px] text-muted-foreground">{d.label}</span>
@@ -207,18 +157,7 @@ function AssignmentLineChart({
 }) {
   if (!data.length) {
     return (
-      <div>
-        <div className="mb-4 flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange/10 text-orange">
-            <Star className="h-4 w-4" />
-          </span>
-          <div>
-            <p className="font-display text-xl font-bold text-navy">—</p>
-            <p className="text-xs text-muted-foreground">No graded assignments yet</p>
-          </div>
-        </div>
-        <ChartEmpty message="Submit assignments and get them graded to see your trend here." />
-      </div>
+      <ChartEmpty message="Submit assignments and get them graded to see your scores here." />
     );
   }
 
@@ -248,7 +187,7 @@ function AssignmentLineChart({
         </span>
         <div>
           <p className="font-display text-xl font-bold text-navy">{avg}</p>
-          <p className="text-xs text-muted-foreground">Avg assignment mark</p>
+          <p className="text-xs text-muted-foreground">Average assignment score</p>
         </div>
       </div>
       <div className="overflow-x-auto rounded-xl bg-surface/80 p-3">
@@ -300,14 +239,38 @@ function AssignmentLineChart({
   );
 }
 
+function hasAnyActivity(data: StudentAnalytics) {
+  return (
+    data.enrolledCourses > 0 ||
+    data.lessonsCompleted > 0 ||
+    data.quiz.attempted > 0 ||
+    data.assignmentSeries.length > 0
+  );
+}
+
 export function StudentAnalyticsPanel({ data }: { data: StudentAnalytics }) {
+  if (!hasAnyActivity(data)) {
+    return (
+      <EmptyState
+        icon={BarChart3}
+        title="No learning activity yet"
+        description="Enroll in a course, complete lessons, and take quizzes — your real progress will show up here."
+        action={
+          <Button asChild>
+            <Link href="/courses">Browse courses</Link>
+          </Button>
+        }
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatsCard
-          title="Health score"
-          value={`${data.healthCheck}%`}
-          description="Overall learning health"
+          title="Course progress"
+          value={`${data.moduleProgress}%`}
+          description="Average across enrolled courses"
           icon={
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange/10 text-orange">
               <BarChart3 className="h-4 w-4" />
@@ -315,19 +278,9 @@ export function StudentAnalyticsPanel({ data }: { data: StudentAnalytics }) {
           }
         />
         <StatsCard
-          title="Quiz average"
-          value={`${data.avgQuizMark}%`}
-          description={`${data.quiz.completed} passed · ${data.quiz.attempted} attempted`}
-          icon={
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange/10 text-orange">
-              <ClipboardList className="h-4 w-4" />
-            </span>
-          }
-        />
-        <StatsCard
-          title="Lessons done"
+          title="Lessons completed"
           value={data.lessonsCompleted}
-          description="Completed lessons"
+          description="From your lesson progress records"
           icon={
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange/10 text-orange">
               <BookOpen className="h-4 w-4" />
@@ -335,12 +288,30 @@ export function StudentAnalyticsPanel({ data }: { data: StudentAnalytics }) {
           }
         />
         <StatsCard
-          title="Reward points"
-          value={data.rewardPoints}
-          description="Earned from activity"
+          title="Quiz average"
+          value={data.quiz.attempted > 0 ? `${data.avgQuizMark}%` : "—"}
+          description={
+            data.quiz.attempted > 0
+              ? `Best score per quiz · ${data.quizAttemptsTotal} attempt${data.quizAttemptsTotal !== 1 ? "s" : ""}`
+              : "No quiz attempts yet"
+          }
           icon={
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange/10 text-orange">
-              <Trophy className="h-4 w-4" />
+              <ClipboardList className="h-4 w-4" />
+            </span>
+          }
+        />
+        <StatsCard
+          title="Enrolled courses"
+          value={data.enrolledCourses}
+          description={
+            data.completedCourses > 0
+              ? `${data.completedCourses} fully completed`
+              : "Active enrollments"
+          }
+          icon={
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange/10 text-orange">
+              <GraduationCap className="h-4 w-4" />
             </span>
           }
         />
@@ -349,8 +320,10 @@ export function StudentAnalyticsPanel({ data }: { data: StudentAnalytics }) {
       <div className="rounded-2xl border border-border/80 bg-white p-5 shadow-sm">
         <div className="mb-2 flex items-center justify-between gap-3">
           <div>
-            <p className="font-display text-sm font-semibold text-navy">Module progress</p>
-            <p className="text-xs text-muted-foreground">Across all enrolled courses</p>
+            <p className="font-display text-sm font-semibold text-navy">Overall course progress</p>
+            <p className="text-xs text-muted-foreground">
+              Calculated from completed lessons ÷ total lessons per course
+            </p>
           </div>
           <span className="font-display text-lg font-bold text-navy">{data.moduleProgress}%</span>
         </div>
@@ -358,73 +331,84 @@ export function StudentAnalyticsPanel({ data }: { data: StudentAnalytics }) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <PanelCard title="Health check">
-          <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <DonutChart value={data.healthCheck} />
-            <HealthLegend />
-          </div>
-        </PanelCard>
-
-        <PanelCard title="Quiz performance">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-display text-4xl font-bold text-navy">{data.avgQuizMark}%</p>
-              <p className="mt-1 text-sm text-muted-foreground">Average mark</p>
+        <PanelCard
+          title="Quiz performance"
+          description="Counts from your enrolled courses and quiz attempts"
+        >
+          {data.quiz.total === 0 ? (
+            <ChartEmpty message="No quizzes in your enrolled courses yet." />
+          ) : (
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-display text-4xl font-bold text-navy">
+                  {data.quiz.attempted > 0 ? `${data.avgQuizMark}%` : "—"}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">Best-score average</p>
+              </div>
+              <ul className="space-y-2.5 text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-success" />
+                  Passed (80%+):{" "}
+                  <span className="font-medium text-navy">{data.quiz.completed}</span>
+                </li>
+                <li className="flex items-center gap-2 text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-orange" />
+                  Attempted:{" "}
+                  <span className="font-medium text-navy">{data.quiz.attempted}</span>
+                </li>
+                <li className="flex items-center gap-2 text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-border" />
+                  Not attempted:{" "}
+                  <span className="font-medium text-navy">{data.quiz.incomplete}</span>
+                </li>
+                <li className="flex items-center gap-2 text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-navy/30" />
+                  Total in courses:{" "}
+                  <span className="font-medium text-navy">{data.quiz.total}</span>
+                </li>
+              </ul>
             </div>
-            <ul className="space-y-2.5 text-sm">
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <span className="h-2 w-2 rounded-full bg-success" />
-                Passed (80%+): <span className="font-medium text-navy">{data.quiz.completed}</span>
-              </li>
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <span className="h-2 w-2 rounded-full bg-orange" />
-                Not attempted: <span className="font-medium text-navy">{data.quiz.incomplete}</span>
-              </li>
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <span className="h-2 w-2 rounded-full bg-border" />
-                Total: <span className="font-medium text-navy">{data.quiz.total}</span>
-              </li>
-            </ul>
-          </div>
-        </PanelCard>
-
-        <PanelCard title="Module finish track">
-          <ModuleCalendar
-            monthKey={data.calendarMonth}
-            completedDays={data.completedDays}
-          />
+          )}
         </PanelCard>
 
         <PanelCard
-          title="Video duration"
+          title="Lesson activity calendar"
+          description="Days you completed at least one lesson this month"
+        >
+          <ModuleCalendar monthKey={data.calendarMonth} completedDays={data.completedDays} />
+        </PanelCard>
+
+        <PanelCard
+          title="Daily lesson completions"
+          description="Real count from lesson progress — last 7 days"
           action={
             <Badge variant="outline" className="rounded-full text-[10px] font-normal">
-              Weekly
+              7 days
             </Badge>
           }
         >
-          <VideoBarChart data={data.videoByDay} />
+          <ActivityBarChart data={data.activityByDay} />
         </PanelCard>
-      </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <PanelCard title="Rewards">
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange/10 text-orange">
-              <Trophy className="h-7 w-7" />
+        <PanelCard
+          title="Assignment scores"
+          description={
+            data.assignmentSeries.length > 0
+              ? "Graded submissions from your courses"
+              : "No graded assignments yet"
+          }
+        >
+          <div className="flex items-start gap-2">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange/10 text-orange">
+              <FileText className="h-4 w-4" />
             </span>
-            <p className="mt-4 font-display text-4xl font-bold text-navy">
-              {data.rewardPoints}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">Total reward points</p>
+            <div className="min-w-0 flex-1">
+              <AssignmentLineChart
+                data={data.assignmentSeries}
+                avg={data.avgAssignmentMark}
+              />
+            </div>
           </div>
-        </PanelCard>
-
-        <PanelCard title="Assignment analytics">
-          <AssignmentLineChart
-            data={data.assignmentSeries}
-            avg={data.avgAssignmentMark}
-          />
         </PanelCard>
       </div>
     </div>

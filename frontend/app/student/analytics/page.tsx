@@ -7,17 +7,17 @@ import { getStudentAnalytics } from "@/services/dashboard.service";
 import type { StudentAnalytics } from "@/types";
 
 const empty: StudentAnalytics = {
-  healthCheck: 0,
   moduleProgress: 0,
+  enrolledCourses: 0,
+  completedCourses: 0,
   avgQuizMark: 0,
   avgAssignmentMark: 0,
+  quizAttemptsTotal: 0,
   quiz: { completed: 0, attempted: 0, incomplete: 0, total: 0 },
   calendarMonth: new Date().toISOString().slice(0, 7),
   completedDays: [],
-  videoMinutesTotal: 0,
-  videoByDay: [],
+  activityByDay: [],
   assignmentSeries: [],
-  rewardPoints: 0,
   lessonsCompleted: 0,
 };
 
@@ -39,7 +39,7 @@ export default async function StudentAnalyticsPage() {
     <DashboardShell user={user}>
       <PageHeader
         title="Student analytics"
-        description="Your learning health, quiz scores, video time, and assignment trends at a glance."
+        description="Real progress from your enrollments, lessons, quizzes, and graded assignments."
       />
 
       {loadError ? (
@@ -49,7 +49,7 @@ export default async function StudentAnalyticsPage() {
         </p>
       ) : null}
 
-      <StudentAnalyticsPanel data={data} />
+      {!loadError ? <StudentAnalyticsPanel data={data} /> : null}
     </DashboardShell>
   );
 }

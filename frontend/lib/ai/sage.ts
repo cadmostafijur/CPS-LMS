@@ -44,6 +44,22 @@ function buildSystemMessage(context?: SageContext) {
   return lines.join("\n");
 }
 
+async function readJsonResponse(res: Response): Promise<unknown> {
+  const text = await res.text();
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("<")) {
+    throw new Error(
+      "AI provider returned HTML instead of JSON. Check AGENTROUTER_API_KEY and AGENTROUTER_BASE_URL."
+    );
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    throw new Error(`AI provider returned invalid JSON: ${trimmed.slice(0, 160)}`);
+  }
+}
+
 function buildPrompt(messages: ChatMessage[], context?: SageContext) {
   const contextBlock = context
     ? [
@@ -100,7 +116,7 @@ async function callAgentRouter(
     }),
   });
 
-  const payload = (await res.json()) as {
+  const payload = (await readJsonResponse(res)) as {
     choices?: { message?: { content?: string } }[];
     error?: { message?: string; code?: string };
     message?: string;
@@ -108,13 +124,13 @@ async function callAgentRouter(
 
   if (!res.ok) {
     const msg =
-      payload.error?.message ||
-      payload.message ||
+      payload?.error?.message ||
+      payload?.message ||
       `Agent Router request failed (${res.status})`;
     throw new Error(msg);
   }
 
-  const text = payload.choices?.[0]?.message?.content?.trim();
+  const text = payload?.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error("Empty response from Agent Router");
   return text;
 }
@@ -139,16 +155,16 @@ async function callGemini(prompt: string): Promise<string> {
     }
   );
 
-  const payload = (await res.json()) as {
+  const payload = (await readJsonResponse(res)) as {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
     error?: { message?: string };
   };
 
   if (!res.ok) {
-    throw new Error(payload.error?.message || "Gemini request failed");
+    throw new Error(payload?.error?.message || "Gemini request failed");
   }
 
-  const text = payload.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
   if (!text) throw new Error("Empty response from Gemini");
   return text;
 }
@@ -176,16 +192,16 @@ async function callOpenAI(messages: ChatMessage[], context?: SageContext): Promi
     }),
   });
 
-  const payload = (await res.json()) as {
+  const payload = (await readJsonResponse(res)) as {
     choices?: { message?: { content?: string } }[];
     error?: { message?: string };
   };
 
   if (!res.ok) {
-    throw new Error(payload.error?.message || "OpenAI request failed");
+    throw new Error(payload?.error?.message || "OpenAI request failed");
   }
 
-  const text = payload.choices?.[0]?.message?.content?.trim();
+  const text = payload?.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error("Empty response from OpenAI");
   return text;
 }

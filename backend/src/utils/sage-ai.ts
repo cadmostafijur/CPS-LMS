@@ -52,6 +52,42 @@ function buildSystemMessage(context?: SageContext) {
   return lines.join('\n');
 }
 
+async function readJsonResponse(res: Response): Promise<unknown> {
+  const text = await res.text();
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('<')) {
+    throw new Error(
+      'AI provider returned HTML instead of JSON. Verify AGENTROUTER_API_KEY and AGENTROUTER_BASE_URL on the server, then redeploy.'
+    );
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    throw new Error(`AI provider returned invalid JSON: ${trimmed.slice(0, 160)}`);
+  }
+}
+
+function fallbackReply(messages: SageChatMessage[], context?: SageContext): string {
+  const lastUser =
+    [...messages].reverse().find((m) => m.role === 'user')?.content || '';
+  const lastLower = lastUser.toLowerCase();
+  const courseHint = context?.enrolledCourses?.[0];
+  const name = AI_ASSISTANT_NAME;
+
+  if (lastLower.includes('hello') || lastLower.includes('hi')) {
+    return `Hi${context?.studentName ? ` ${String(context.studentName).split(' ')[0]}` : ''}! I'm ${name}, your CPS Academy learning assistant. What would you like to explore today?`;
+  }
+  if (lastLower.includes('study') || lastLower.includes('learn')) {
+    return `Great mindset! Try this:\n\n• Skim lesson headings first, then read or watch actively.\n• Write one question per section.\n• Explain the idea out loud in 60 seconds.\n\n${courseHint ? `Want help with ${courseHint}? Tell me the topic or module.` : 'Tell me which course you are working on.'}`;
+  }
+  if (lastLower.includes('quiz') || lastLower.includes('exam') || lastLower.includes('test')) {
+    return `For quizzes, focus on understanding why an answer is correct:\n\n• Review missed questions from past attempts.\n• Make a short cheat sheet of key rules.\n• Practice explaining each concept without notes.\n\nI can help you study — I will not solve graded work for you.`;
+  }
+
+  return `I'm ${name}, here to help you learn step by step. You asked about "${lastUser || 'your topic'}".\n\nTry breaking it into:\n1. What you already know\n2. What is confusing\n3. One small example to test your understanding\n\n${courseHint ? `Since you are enrolled in ${courseHint}, share a lesson name for more specific help.` : 'Share your course or lesson name for tailored guidance.'}`;
+}
+
 function findLastUserAttachmentIndex(messages: SageChatMessage[]): number {
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].role === 'user' && messages[i].attachment) return i;
@@ -164,7 +200,7 @@ async function callAgentRouter(
     }),
   });
 
-  const payload = (await res.json()) as {
+  const payload = (await readJsonResponse(res)) as {
     choices?: { message?: { content?: string } }[];
     error?: { message?: string };
     message?: string;
@@ -172,11 +208,11 @@ async function callAgentRouter(
 
   if (!res.ok) {
     throw new Error(
-      payload.error?.message || payload.message || `Agent Router failed (${res.status})`
+      payload?.error?.message || payload?.message || `Agent Router failed (${res.status})`
     );
   }
 
-  const text = payload.choices?.[0]?.message?.content?.trim();
+  const text = payload?.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Empty response from Agent Router');
   return text;
 }
@@ -232,16 +268,16 @@ async function callGemini(messages: SageChatMessage[], context?: SageContext): P
     }
   );
 
-  const payload = (await res.json()) as {
+  const payload = (await readJsonResponse(res)) as {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
     error?: { message?: string };
   };
 
   if (!res.ok) {
-    throw new Error(payload.error?.message || 'Gemini request failed');
+    throw new Error(payload?.error?.message || 'Gemini request failed');
   }
 
-  const text = payload.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
   if (!text) throw new Error('Empty response from Gemini');
   return text;
 }
@@ -303,11 +339,9 @@ export async function generateSageReply(
     }
   }
 
-  if (errors.length > 0) {
-    throw new Error(errors[0]);
-  }
-
-  throw new Error(
-    'Sage AI is not configured. Set AGENTROUTER_API_KEY on Railway (backend), or GEMINI_API_KEY for image/PDF help.'
-  );
+  return {
+    reply: fallbackReply(messages, context),
+    provider: 'fallback',
+    assistantName: AI_ASSISTANT_NAME,
+  };
 }
