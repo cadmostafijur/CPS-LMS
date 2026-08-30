@@ -29,20 +29,17 @@ const IMAGE_UPLOAD_COMING_SOON =
   "Image upload is coming soon. For now, Sage supports text chat only — type your question below.";
 
 function formatSageError(message: string): string {
-  if (/html instead of json|returned html/i.test(message)) {
-    return `${message} Tip: add AGENTROUTER_API_KEY on Vercel → Settings → Environment Variables (Production), then Redeploy.`;
+  if (/HTML|WAF|blocked the request/i.test(message)) {
+    return "Sage could not reach Agent Router from the cloud. Add a free GEMINI_API_KEY on Vercel (aistudio.google.com/apikey), redeploy, and try again.";
   }
-  if (/unexpected token|not valid json/i.test(message)) {
-    return "Sage got a bad response from the API. Check NEXT_PUBLIC_API_URL on Vercel (must be your Railway Strapi URL ending in /api).";
+  if (/GEMINI_API_KEY|not configured/i.test(message)) {
+    return message;
   }
   if (/^unauthorized$/i.test(message.trim())) {
     return "Session expired. Sign out and sign in again as a student.";
   }
   if (/unauthorized client/i.test(message)) {
-    return `${message} Redeploy after confirming AGENTROUTER_API_KEY is valid.`;
-  }
-  if (/not set|not configured|is not configured/i.test(message)) {
-    return `${message} Add AGENTROUTER_API_KEY on Vercel (frontend) and/or Railway (backend), then redeploy.`;
+    return "Agent Router rejected the request. Add GEMINI_API_KEY on Vercel as a backup, redeploy, and try again.";
   }
   return message;
 }

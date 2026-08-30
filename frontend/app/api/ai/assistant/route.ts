@@ -11,10 +11,10 @@ import {
 } from "@/lib/ai/sage";
 import type { AuthUser } from "@/types";
 
-function hasAnyAiKey() {
+function hasFrontendAiKey() {
   return Boolean(
-    process.env.AGENTROUTER_API_KEY?.trim() ||
-      process.env.GEMINI_API_KEY?.trim() ||
+    process.env.GEMINI_API_KEY?.trim() ||
+      process.env.AGENTROUTER_API_KEY?.trim() ||
       process.env.OPENAI_API_KEY?.trim()
   );
 }
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Could not reach the API server. Check NEXT_PUBLIC_API_URL (must end with /api) and that Strapi/Railway is running.",
+          "Could not reach the API server. Check NEXT_PUBLIC_API_URL (must end with /api).",
       },
       { status: 502 }
     );
@@ -97,10 +97,8 @@ export async function POST(request: Request) {
   };
   const hasAttachment = trimmed.some((m) => m.attachment?.dataBase64);
 
-  let localError: string | undefined;
-
-  // Prefer Next.js env (Vercel / .env.local) for text chat — no Strapi hop needed.
-  if (!hasAttachment && hasAnyAiKey()) {
+  // Run on Vercel when any AI key is set (Gemini recommended for production).
+  if (!hasAttachment && hasFrontendAiKey()) {
     try {
       const result = await generateSageReply(trimmed, sageContext);
       return NextResponse.json({
@@ -112,18 +110,13 @@ export async function POST(request: Request) {
         },
         meta: { role, studentId: user.id, source: "frontend-env" },
       });
-    } catch (localErr) {
-      localError =
-        localErr instanceof Error ? localErr.message : "Local Sage failed";
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Sage failed";
+      return NextResponse.json({ error: msg }, { status: 502 });
     }
   }
 
-  // Fallback: Strapi on Railway (AGENTROUTER_* in backend/.env)
-  const payload = JSON.stringify({
-    messages: trimmed,
-    context: { enrolledCourses: body.context?.enrolledCourses },
-  });
-
+  // No keys on Vercel — try Railway backend once.
   try {
     const upstream = await fetch(`${getApiBaseUrl()}/lms/ai/assistant`, {
       method: "POST",
@@ -131,7 +124,10 @@ export async function POST(request: Request) {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: payload,
+      body: JSON.stringify({
+        messages: trimmed,
+        context: { enrolledCourses: body.context?.enrolledCourses },
+      }),
       cache: "no-store",
     });
 
@@ -141,9 +137,8 @@ export async function POST(request: Request) {
     if (responseText.startsWith("<")) {
       return NextResponse.json(
         {
-          error: localError
-            ? `Backend returned HTML (check NEXT_PUBLIC_API_URL). Also: ${localError}`
-            : "Backend returned HTML instead of JSON. Set AGENTROUTER_API_KEY on Vercel (server env) OR on Railway, and confirm NEXT_PUBLIC_API_URL points to your Strapi /api URL.",
+          error:
+            "Backend returned HTML. Check NEXT_PUBLIC_API_URL on Vercel, or add GEMINI_API_KEY on Vercel and redeploy.",
         },
         { status: 502 }
       );
@@ -153,7 +148,10 @@ export async function POST(request: Request) {
     try {
       data = responseText ? JSON.parse(responseText) : null;
     } catch {
-      data = { error: text || "Invalid response from API" };
+      return NextResponse.json(
+        { error: "Invalid response from API server." },
+        { status: 502 }
+      );
     }
 
     if (upstream.ok) {
@@ -167,22 +165,14 @@ export async function POST(request: Request) {
       "Sage AI unavailable on server";
 
     return NextResponse.json(
-      {
-        error: localError ? `${errMsg} (frontend: ${localError})` : errMsg,
-      },
+      { error: errMsg },
       { status: upstream.status >= 400 ? upstream.status : 502 }
     );
   } catch {
-    if (localError) {
-      return NextResponse.json(
-        { error: `Could not reach Strapi. Frontend Sage error: ${localError}` },
-        { status: 502 }
-      );
-    }
     return NextResponse.json(
       {
         error:
-          "Sage is not configured. Add AGENTROUTER_API_KEY to Vercel (frontend project, Production) and redeploy — or set it on Railway (backend) and keep NEXT_PUBLIC_API_URL correct.",
+          "Sage is not configured. Add GEMINI_API_KEY (free at aistudio.google.com/apikey) on Vercel → Environment Variables, then redeploy.",
       },
       { status: 502 }
     );

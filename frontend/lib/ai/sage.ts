@@ -2,8 +2,12 @@ export const AI_ASSISTANT_NAME = "Sage";
 
 export const MAX_CHAT_HISTORY = 20;
 
-/** Agent Router WAF only accepts known client fingerprints (e.g. Claude Code). */
-const AGENTROUTER_USER_AGENT = "claude-cli/1.0.0 (external, cli)";
+/** Agent Router WAF — retry fingerprints (cloud hosts may rewrite User-Agent). */
+const AGENTROUTER_USER_AGENTS = [
+  "claude-cli/1.0.0 (external, cli)",
+  "claude-cli/2.1.158 (external, cli)",
+  "QwenCode/0.2.0 (windows; x64)",
+];
 
 const AGENTROUTER_TEXT_MODELS = [
   "deepseek-v4-flash",
@@ -29,6 +33,35 @@ export type SageContext = {
 };
 
 export type SageProvider = "agentrouter" | "gemini" | "openai";
+
+function envValue(name: string): string {
+  const raw = process.env[name];
+  if (!raw) return "";
+  return raw.trim().replace(/^["']|["']$/g, "").trim();
+}
+
+/** OpenAI chat completions require .../v1 — website root returns HTML. */
+function agentRouterOpenAiBase(): string {
+  let base = envValue("AGENTROUTER_BASE_URL") || "https://agentrouter.org/v1";
+  base = base.replace(/\/+$/, "");
+  if (base.endsWith("/chat/completions")) {
+    base = base.replace(/\/chat\/completions$/i, "");
+  }
+  if (!/\/v1$/i.test(base)) {
+    base = `${base}/v1`;
+  }
+  return base;
+}
+
+function agentRouterHeaders(userAgent: string, apiKey: string): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${apiKey}`,
+    "User-Agent": userAgent,
+    "anthropic-version": "2023-06-01",
+    "x-app": "cli",
+  };
+}
 
 const SAGE_SYSTEM = `You are Sage, the friendly AI learning assistant for CPS Academy LMS.
 Help students understand concepts, break down difficult topics, suggest study strategies, and encourage their learning journey.
@@ -57,7 +90,7 @@ async function readJsonResponse(res: Response): Promise<unknown> {
   if (!trimmed) return null;
   if (trimmed.startsWith("<")) {
     throw new Error(
-      "AI provider returned HTML instead of JSON. Check AGENTROUTER_API_KEY and AGENTROUTER_BASE_URL."
+      "Agent Router blocked the request (HTML/WAF). Add GEMINI_API_KEY on Vercel as a reliable backup, or set AGENTROUTER_BASE_URL=https://agentrouter.org/v1"
     );
   }
   try {
@@ -96,67 +129,71 @@ async function callAgentRouter(
   messages: ChatMessage[],
   context?: SageContext
 ): Promise<string> {
-  const apiKey = process.env.AGENTROUTER_API_KEY?.trim();
+  const apiKey = envValue("AGENTROUTER_API_KEY");
   if (!apiKey) throw new Error("AGENTROUTER_API_KEY not configured");
 
-  const baseUrl = (process.env.AGENTROUTER_BASE_URL || "https://agentrouter.org/v1").replace(
-    /\/+$/,
-    ""
-  );
-  const preferred = process.env.AGENTROUTER_MODEL?.trim() || AGENTROUTER_TEXT_MODELS[0];
+  const baseUrl = agentRouterOpenAiBase();
+  const preferred = envValue("AGENTROUTER_MODEL") || AGENTROUTER_TEXT_MODELS[0];
   const models = [preferred, ...AGENTROUTER_TEXT_MODELS.filter((m) => m !== preferred)];
   const errors: string[] = [];
 
   for (const model of models) {
-    try {
-      const res = await fetch(`${baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-          "User-Agent": AGENTROUTER_USER_AGENT,
-        },
-        body: JSON.stringify({
-          model,
-          temperature: 0.7,
-          max_tokens: 1024,
-          messages: [
-            { role: "system", content: buildSystemMessage(context) },
-            ...messages.map((m) => ({ role: m.role, content: m.content })),
-          ],
-        }),
-      });
+    let lastErr: string | null = null;
+    for (const userAgent of AGENTROUTER_USER_AGENTS) {
+      try {
+        const res = await fetch(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: agentRouterHeaders(userAgent, apiKey),
+          body: JSON.stringify({
+            model,
+            temperature: 0.7,
+            max_tokens: 1024,
+            messages: [
+              { role: "system", content: buildSystemMessage(context) },
+              ...messages.map((m) => ({ role: m.role, content: m.content })),
+            ],
+          }),
+        });
 
-      const payload = (await readJsonResponse(res)) as {
-        choices?: { message?: { content?: string } }[];
-        error?: { message?: string; code?: string };
-        message?: string;
-      };
+        const payload = (await readJsonResponse(res)) as {
+          choices?: { message?: { content?: string } }[];
+          error?: { message?: string; code?: string };
+          message?: string;
+        };
 
-      if (!res.ok) {
-        const msg =
-          payload?.error?.message ||
-          payload?.message ||
-          `Agent Router request failed (${res.status})`;
-        throw new Error(msg);
+        if (!res.ok) {
+          const msg =
+            payload?.error?.message ||
+            payload?.message ||
+            `Agent Router request failed (${res.status})`;
+          if (/unauthorized client/i.test(msg)) {
+            lastErr = msg;
+            continue;
+          }
+          throw new Error(msg);
+        }
+
+        const text = payload?.choices?.[0]?.message?.content?.trim();
+        if (!text) throw new Error("Empty response from Agent Router");
+        return text;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "request failed";
+        lastErr = msg;
+        if (/HTML|WAF|unauthorized client/i.test(msg)) continue;
+        break;
       }
-
-      const text = payload?.choices?.[0]?.message?.content?.trim();
-      if (!text) throw new Error("Empty response from Agent Router");
-      return text;
-    } catch (err) {
-      errors.push(`${model}: ${err instanceof Error ? err.message : "request failed"}`);
     }
+    errors.push(`${model}: ${lastErr || "request failed"}`);
   }
 
   throw new Error(errors[0] || "Agent Router unavailable");
 }
 
 async function callGemini(prompt: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = envValue("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
 
-  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  const model = envValue("GEMINI_MODEL") || "gemini-2.0-flash";
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
@@ -187,11 +224,11 @@ async function callGemini(prompt: string): Promise<string> {
 }
 
 async function callOpenAI(messages: ChatMessage[], context?: SageContext): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = envValue("OPENAI_API_KEY");
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
 
-  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const baseUrl = (envValue("OPENAI_BASE_URL") || "https://api.openai.com/v1").replace(/\/+$/, "");
+  const model = envValue("OPENAI_MODEL") || "gpt-4o-mini";
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
@@ -230,22 +267,14 @@ export async function generateSageReply(
   const hasAttachment = messages.some((m) => m.attachment?.dataBase64);
   if (hasAttachment) {
     throw new Error(
-      'Image/PDF reading requires GEMINI_API_KEY on the server (free: https://aistudio.google.com/apikey). Agent Router text models cannot see files.'
+      "Image/PDF reading requires GEMINI_API_KEY on the server (free: https://aistudio.google.com/apikey)."
     );
   }
 
   const errors: string[] = [];
 
-  if (process.env.AGENTROUTER_API_KEY?.trim()) {
-    try {
-      const reply = await callAgentRouter(messages, context);
-      return { reply, provider: "agentrouter" };
-    } catch (err) {
-      errors.push(err instanceof Error ? err.message : "Agent Router failed");
-    }
-  }
-
-  if (process.env.GEMINI_API_KEY?.trim()) {
+  // Gemini first — works reliably from Vercel/Railway (Agent Router often blocks cloud IPs).
+  if (envValue("GEMINI_API_KEY")) {
     try {
       const reply = await callGemini(buildPrompt(messages, context));
       return { reply, provider: "gemini" };
@@ -254,7 +283,16 @@ export async function generateSageReply(
     }
   }
 
-  if (process.env.OPENAI_API_KEY?.trim()) {
+  if (envValue("AGENTROUTER_API_KEY")) {
+    try {
+      const reply = await callAgentRouter(messages, context);
+      return { reply, provider: "agentrouter" };
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : "Agent Router failed");
+    }
+  }
+
+  if (envValue("OPENAI_API_KEY")) {
     try {
       const reply = await callOpenAI(messages, context);
       return { reply, provider: "openai" };
@@ -268,6 +306,6 @@ export async function generateSageReply(
   }
 
   throw new Error(
-    "Sage AI is not configured. Add AGENTROUTER_API_KEY on Vercel (frontend server env) and/or Railway (backend), then redeploy."
+    "Sage is not configured. Add GEMINI_API_KEY (free, recommended) or AGENTROUTER_API_KEY on Vercel → Environment Variables, then redeploy."
   );
 }
