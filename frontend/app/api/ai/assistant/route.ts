@@ -11,12 +11,88 @@ import {
 } from "@/lib/ai/sage";
 import type { AuthUser } from "@/types";
 
+function envSet(name: string) {
+  const v = process.env[name];
+  return Boolean(v?.trim());
+}
+
 function hasFrontendAiKey() {
-  return Boolean(
-    process.env.GEMINI_API_KEY?.trim() ||
-      process.env.AGENTROUTER_API_KEY?.trim() ||
-      process.env.OPENAI_API_KEY?.trim()
-  );
+  return envSet("GEMINI_API_KEY") || envSet("AGENTROUTER_API_KEY") || envSet("OPENAI_API_KEY");
+}
+
+/** Agent Router from Vercel is often blocked — prefer Railway when only that key is set. */
+function preferBackendFirst() {
+  return envSet("AGENTROUTER_API_KEY") && !envSet("GEMINI_API_KEY") && !envSet("OPENAI_API_KEY");
+}
+
+async function callFrontendSage(
+  messages: ChatMessage[],
+  context: { studentName?: string | null; enrolledCourses?: string[] | undefined },
+  role: string,
+  studentId: string | number
+) {
+  const result = await generateSageReply(messages, context);
+  return NextResponse.json({
+    data: {
+      role: "assistant",
+      content: result.reply,
+      provider: result.provider,
+      assistantName: AI_ASSISTANT_NAME,
+    },
+    meta: { role, studentId, source: "frontend-env" },
+  });
+}
+
+async function callBackendSage(
+  token: string,
+  messages: ChatMessage[],
+  enrolledCourses: string[] | undefined
+): Promise<{ ok: true; body: unknown } | { ok: false; status: number; error: string }> {
+  const upstream = await fetch(`${getApiBaseUrl()}/lms/ai/assistant`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messages,
+      context: { enrolledCourses },
+    }),
+    cache: "no-store",
+  });
+
+  const text = (await upstream.text()).trim();
+
+  if (text.startsWith("<")) {
+    return {
+      ok: false,
+      status: 502,
+      error: "Backend returned HTML instead of JSON. Check NEXT_PUBLIC_API_URL on Vercel.",
+    };
+  }
+
+  let data: unknown = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    return { ok: false, status: 502, error: "Invalid response from API server." };
+  }
+
+  if (upstream.ok) {
+    return { ok: true, body: data };
+  }
+
+  const errMsg =
+    (data as { error?: { message?: string } })?.error?.message ||
+    (data as { error?: string })?.error ||
+    (data as { message?: string })?.message ||
+    "Sage AI unavailable on server";
+
+  return {
+    ok: false,
+    status: upstream.status >= 400 ? upstream.status : 502,
+    error: errMsg,
+  };
 }
 
 export async function POST(request: Request) {
@@ -96,85 +172,62 @@ export async function POST(request: Request) {
     enrolledCourses: body.context?.enrolledCourses,
   };
   const hasAttachment = trimmed.some((m) => m.attachment?.dataBase64);
+  const errors: string[] = [];
 
-  // Run on Vercel when any AI key is set (Gemini recommended for production).
-  if (!hasAttachment && hasFrontendAiKey()) {
+  const tryFrontend = async () => {
+    if (hasAttachment || !hasFrontendAiKey()) return null;
     try {
-      const result = await generateSageReply(trimmed, sageContext);
-      return NextResponse.json({
-        data: {
-          role: "assistant",
-          content: result.reply,
-          provider: result.provider,
-          assistantName: AI_ASSISTANT_NAME,
-        },
-        meta: { role, studentId: user.id, source: "frontend-env" },
-      });
+      return await callFrontendSage(trimmed, sageContext, role ?? "student", user.id);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Sage failed";
-      return NextResponse.json({ error: msg }, { status: 502 });
+      errors.push(err instanceof Error ? err.message : "Frontend Sage failed");
+      return null;
     }
-  }
+  };
 
-  // No keys on Vercel — try Railway backend once.
-  try {
-    const upstream = await fetch(`${getApiBaseUrl()}/lms/ai/assistant`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        messages: trimmed,
-        context: { enrolledCourses: body.context?.enrolledCourses },
-      }),
-      cache: "no-store",
-    });
-
-    const text = await upstream.text();
-    const responseText = text.trim();
-
-    if (responseText.startsWith("<")) {
-      return NextResponse.json(
-        {
-          error:
-            "Backend returned HTML. Check NEXT_PUBLIC_API_URL on Vercel, or add GEMINI_API_KEY on Vercel and redeploy.",
-        },
-        { status: 502 }
-      );
-    }
-
-    let data: unknown = null;
+  const tryBackend = async () => {
     try {
-      data = responseText ? JSON.parse(responseText) : null;
+      const result = await callBackendSage(token, trimmed, body.context?.enrolledCourses);
+      if (result.ok) {
+        return NextResponse.json(result.body);
+      }
+      errors.push(result.error);
+      return null;
     } catch {
-      return NextResponse.json(
-        { error: "Invalid response from API server." },
-        { status: 502 }
-      );
+      errors.push("Could not reach Railway backend for Sage");
+      return null;
     }
+  };
 
-    if (upstream.ok) {
-      return NextResponse.json(data);
-    }
-
-    const errMsg =
-      (data as { error?: { message?: string } })?.error?.message ||
-      (data as { error?: string })?.error ||
-      (data as { message?: string })?.message ||
-      "Sage AI unavailable on server";
-
+  // Attachments always go through backend (vision/Gemini).
+  if (hasAttachment) {
+    const backendRes = await tryBackend();
+    if (backendRes) return backendRes;
     return NextResponse.json(
-      { error: errMsg },
-      { status: upstream.status >= 400 ? upstream.status : 502 }
-    );
-  } catch {
-    return NextResponse.json(
-      {
-        error:
-          "Sage is not configured. Add GEMINI_API_KEY (free at aistudio.google.com/apikey) on Vercel → Environment Variables, then redeploy.",
-      },
+      { error: errors[0] || "Sage could not process the attachment." },
       { status: 502 }
     );
   }
+
+  // Agent Router from Vercel is unreliable — try Railway first when only that key is on Vercel.
+  if (preferBackendFirst()) {
+    const backendRes = await tryBackend();
+    if (backendRes) return backendRes;
+    const frontendRes = await tryFrontend();
+    if (frontendRes) return frontendRes;
+  } else {
+    const frontendRes = await tryFrontend();
+    if (frontendRes) return frontendRes;
+    const backendRes = await tryBackend();
+    if (backendRes) return backendRes;
+  }
+
+  const unique = [...new Set(errors.filter(Boolean))];
+  return NextResponse.json(
+    {
+      error:
+        unique[0] ||
+        "Sage is not configured. Add GEMINI_API_KEY (free at aistudio.google.com/apikey) on Vercel or Railway, then redeploy.",
+    },
+    { status: 502 }
+  );
 }

@@ -29,17 +29,14 @@ const IMAGE_UPLOAD_COMING_SOON =
   "Image upload is coming soon. For now, Sage supports text chat only — type your question below.";
 
 function formatSageError(message: string): string {
-  if (/HTML|WAF|blocked the request/i.test(message)) {
-    return "Sage could not reach Agent Router from the cloud. Add a free GEMINI_API_KEY on Vercel (aistudio.google.com/apikey), redeploy, and try again.";
+  if (/HTML|WAF|blocked|returned HTML/i.test(message)) {
+    return "Sage is temporarily unavailable. Please try again in a moment.";
   }
-  if (/GEMINI_API_KEY|not configured/i.test(message)) {
+  if (/not configured|GEMINI_API_KEY/i.test(message)) {
     return message;
   }
   if (/^unauthorized$/i.test(message.trim())) {
     return "Session expired. Sign out and sign in again as a student.";
-  }
-  if (/unauthorized client/i.test(message)) {
-    return "Agent Router rejected the request. Add GEMINI_API_KEY on Vercel as a backup, redeploy, and try again.";
   }
   return message;
 }
