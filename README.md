@@ -23,7 +23,7 @@ Production-oriented Learning Management System — **Junior Software Engineer Pr
 | **Admin panel** — users, roles, courses, stats | ✅ Done | `/admin/*` dashboard + users CRUD |
 | **Blog** — draft/publish, public list + single post | ✅ Done | CM/Admin write; public `/blog` |
 | **README** — local run + features completed | ✅ Done | This file |
-| **Deployed app** (Vercel + Railway) | ⚠️ You submit | Set URLs in submission form |
+| **Deployed app** (Vercel + Railway) | ✅ Live | [Frontend](https://cpslms.vercel.app/) · [API](https://cps-lms-production.up.railway.app) |
 | **10-min video walkthrough** | ⚠️ You record | Demo all roles + explain your code |
 
 ### Permission matrix (implemented)
@@ -191,17 +191,24 @@ Covers progress calculation, role helpers, and quiz grading.
 
 ## Deployment
 
+### Live URLs
+
+| Service | URL |
+|---------|-----|
+| **Frontend (Vercel)** | https://cpslms.vercel.app/ |
+| **Backend (Railway)** | https://cps-lms-production.up.railway.app |
+
 ### Backend (Railway)
 
 1. Deploy `backend/` with env from `.env.example`
-2. Set `DATABASE_URL` (PostgreSQL), `CORS_ORIGIN` = your Vercel URL
-3. Set `PUBLIC_URL` to Railway public domain (not `0.0.0.0`)
+2. Set `DATABASE_URL` (PostgreSQL), `CORS_ORIGIN=https://cpslms.vercel.app`
+3. Set `PUBLIC_URL=https://cps-lms-production.up.railway.app` (not `0.0.0.0`)
 
 ### Frontend (Vercel)
 
 1. Root directory: `frontend/`
-2. `NEXT_PUBLIC_API_URL=https://<railway-host>/api`
-3. `NEXT_PUBLIC_SITE_URL=https://<vercel-domain>`
+2. `NEXT_PUBLIC_API_URL=https://cps-lms-production.up.railway.app/api`
+3. `NEXT_PUBLIC_SITE_URL=https://cpslms.vercel.app`
 
 ---
 
@@ -210,8 +217,8 @@ Covers progress calculation, role helpers, and quiz grading.
 Before **30 August 2026, 11:59 PM**:
 
 1. ✅ GitHub repo (public) with commit history
-2. ⚠️ Live **Vercel** frontend URL
-3. ⚠️ Live **Railway** backend URL
+2. ✅ Live **Vercel** frontend: https://cpslms.vercel.app/
+3. ✅ Live **Railway** backend: https://cps-lms-production.up.railway.app
 4. ⚠️ **10-minute video** (screen + voice): student flow, staff flow, admin roles, data flow, backend RBAC, progress logic, quiz grading, blog publish, deployment env vars
 
 ---
