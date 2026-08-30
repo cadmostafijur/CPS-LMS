@@ -20,9 +20,9 @@ function hasFrontendAiKey() {
   return envSet("GEMINI_API_KEY") || envSet("AGENTROUTER_API_KEY") || envSet("OPENAI_API_KEY");
 }
 
-/** Agent Router from Vercel is often blocked — prefer Railway when only that key is set. */
+/** Try Railway backend first when Vercel has no Gemini key (backend may have it). */
 function preferBackendFirst() {
-  return envSet("AGENTROUTER_API_KEY") && !envSet("GEMINI_API_KEY") && !envSet("OPENAI_API_KEY");
+  return !envSet("GEMINI_API_KEY");
 }
 
 async function callFrontendSage(
@@ -225,8 +225,8 @@ export async function POST(request: Request) {
   return NextResponse.json(
     {
       error:
-        unique[0] ||
-        "Sage is not configured. Add GEMINI_API_KEY (free at aistudio.google.com/apikey) on Vercel or Railway, then redeploy.",
+        unique.join(" · ") ||
+        "Sage is not configured. Add GEMINI_API_KEY (free at aistudio.google.com/apikey) on Vercel and Railway, then redeploy.",
     },
     { status: 502 }
   );

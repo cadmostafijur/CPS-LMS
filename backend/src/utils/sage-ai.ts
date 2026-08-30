@@ -320,7 +320,13 @@ async function callGemini(messages: SageChatMessage[], context?: SageContext): P
   };
 
   if (!res.ok) {
-    throw new Error(payload?.error?.message || 'Gemini request failed');
+    const errText = payload?.error?.message || 'Gemini request failed';
+    if (/API key not valid|INVALID_ARGUMENT|API_KEY_INVALID/i.test(errText)) {
+      throw new Error(
+        'GEMINI_API_KEY is invalid. Get a new key at aistudio.google.com/apikey (starts with AIza...).'
+      );
+    }
+    throw new Error(errText);
   }
 
   const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
