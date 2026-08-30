@@ -29,14 +29,14 @@ const IMAGE_UPLOAD_COMING_SOON =
   "Image upload is coming soon. For now, Sage supports text chat only — type your question below.";
 
 function formatSageError(message: string): string {
-  if (/API key not valid|INVALID_ARGUMENT|API_KEY_INVALID|permission denied/i.test(message)) {
-    return "GEMINI_API_KEY is invalid. Get a new free key at aistudio.google.com/apikey (starts with AIza...), add it on Vercel and Railway, then redeploy.";
+  if (/GEMINI_API_KEY was rejected|API key not valid|API_KEY_INVALID|ACCESS_TOKEN_TYPE_UNSUPPORTED/i.test(message)) {
+    return "Gemini rejected the API key. Add GEMINI_API_KEY on Vercel → Settings → Environment Variables (Production), then Redeploy.";
+  }
+  if (/GEMINI_API_KEY not configured|not set on the server|not configured/i.test(message) && /GEMINI|Sage is not configured/i.test(message)) {
+    return "Sage needs GEMINI_API_KEY on Vercel (Settings → Environment Variables → Production). Then Redeploy. Get a free key at aistudio.google.com/apikey";
   }
   if (/HTML|WAF|blocked|Agent Router/i.test(message)) {
-    return "Agent Router is blocked from the cloud server. Add GEMINI_API_KEY (free at aistudio.google.com/apikey) on Vercel and Railway, then redeploy.";
-  }
-  if (/not configured|GEMINI_API_KEY/i.test(message)) {
-    return message;
+    return "Sage needs GEMINI_API_KEY on Vercel (Settings → Environment Variables → Production), then Redeploy. Agent Router does not work from cloud servers.";
   }
   if (/Could not reach|NEXT_PUBLIC_API_URL|Railway backend/i.test(message)) {
     return "Cannot reach the API server. Check NEXT_PUBLIC_API_URL on Vercel points to your Railway URL ending in /api.";

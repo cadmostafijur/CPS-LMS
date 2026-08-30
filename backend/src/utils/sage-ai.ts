@@ -101,9 +101,7 @@ async function readJsonResponse(res: Response): Promise<unknown> {
   const trimmed = text.trim();
   if (!trimmed) return null;
   if (trimmed.startsWith('<')) {
-    throw new Error(
-      'Agent Router blocked the request (HTML/WAF). Add GEMINI_API_KEY on Railway as a reliable backup.'
-    );
+    throw new Error('AI provider returned HTML instead of JSON (blocked or wrong URL).');
   }
   try {
     return JSON.parse(trimmed);
@@ -263,11 +261,35 @@ async function callAgentRouter(
   throw new Error(errors[0] || 'Agent Router unavailable');
 }
 
+function geminiModelList(): string[] {
+  const preferred = envValue('GEMINI_MODEL') || 'gemini-2.0-flash';
+  const rest = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
+  return [preferred, ...rest.filter((m) => m !== preferred)];
+}
+
+async function geminiRequest(apiKey: string, model: string, body: unknown): Promise<Response> {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const headerRes = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify(body),
+  });
+  if (headerRes.ok || apiKey.startsWith('AQ.')) return headerRes;
+
+  return fetch(`${endpoint}?key=${encodeURIComponent(apiKey)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
 async function callGemini(messages: SageChatMessage[], context?: SageContext): Promise<string> {
   const apiKey = envValue('GEMINI_API_KEY');
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set on the server');
 
-  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
   const lastAttachmentId = findLastUserAttachmentIndex(messages);
 
   const contents = messages.map((m, index) => {
@@ -298,40 +320,40 @@ async function callGemini(messages: SageChatMessage[], context?: SageContext): P
     };
   });
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: buildSystemMessage(context) }] },
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1024,
-        },
-      }),
-    }
-  );
-
-  const payload = (await readJsonResponse(res)) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
-    error?: { message?: string };
+  const body = {
+    systemInstruction: { parts: [{ text: buildSystemMessage(context) }] },
+    contents,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 1024,
+    },
   };
 
-  if (!res.ok) {
-    const errText = payload?.error?.message || 'Gemini request failed';
-    if (/API key not valid|INVALID_ARGUMENT|API_KEY_INVALID/i.test(errText)) {
-      throw new Error(
-        'GEMINI_API_KEY is invalid. Get a new key at aistudio.google.com/apikey (starts with AIza...).'
-      );
+  let lastErr = 'Gemini request failed';
+  for (const model of geminiModelList()) {
+    const res = await geminiRequest(apiKey, model, body);
+    const payload = (await readJsonResponse(res)) as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+      error?: { message?: string };
+    };
+
+    if (!res.ok) {
+      lastErr = payload?.error?.message || `Gemini request failed (${res.status})`;
+      if (/not found|NOT_FOUND/i.test(lastErr)) continue;
+      if (/API key not valid|API_KEY_INVALID|ACCESS_TOKEN_TYPE_UNSUPPORTED|UNAUTHENTICATED/i.test(lastErr)) {
+        throw new Error(
+          'GEMINI_API_KEY was rejected. Add the key from aistudio.google.com/apikey on Railway, then redeploy.'
+        );
+      }
+      continue;
     }
-    throw new Error(errText);
+
+    const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    if (text) return text;
+    lastErr = 'Empty response from Gemini';
   }
 
-  const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-  if (!text) throw new Error('Empty response from Gemini');
-  return text;
+  throw new Error(lastErr);
 }
 
 const VISION_SETUP_HINT =
@@ -382,7 +404,8 @@ export async function generateSageReply(
     }
   }
 
-  if (envValue('AGENTROUTER_API_KEY')) {
+  const skipAgentRouter = Boolean(process.env.VERCEL);
+  if (envValue('AGENTROUTER_API_KEY') && !skipAgentRouter) {
     try {
       const reply = await callAgentRouter(messages, context);
       return { reply, provider: 'agentrouter', assistantName: AI_ASSISTANT_NAME };
