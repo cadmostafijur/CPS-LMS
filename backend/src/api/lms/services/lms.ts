@@ -19,6 +19,7 @@ import { sanitizeUser } from '../../../utils/sanitize';
 import { ensureUniqueSlug } from '../../../utils/slug';
 import { notifyUser, notifyCourseStudents } from '../../../utils/notify-user';
 import { savePublicUpload, readUploadedFile } from '../../../utils/mail-upload';
+import { runAuditedAction } from '../../../utils/audit-log';
 import { createOpsHandlers } from './ops';
 import { createExtrasHandlers } from './extras';
 
@@ -1597,183 +1598,236 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     const admin = await getAuthUser(ctx, strapi);
     if (!isAdmin(admin)) throw new ForbiddenError('Admin required');
 
-    const { userId } = ctx.params;
-    const { role: roleName, confirmSelfRoleChange } = ctx.request.body || {};
-
-    if (!roleName || !Object.values(ROLE_NAMES).includes(roleName)) {
-      throw new ValidationError(
-        `role must be one of: ${Object.values(ROLE_NAMES).join(', ')}`
-      );
-    }
-
-    const target = await resolveByIdOrDocumentId(
+    return runAuditedAction(
       strapi,
-      'plugin::users-permissions.user',
-      userId
+      ctx,
+      admin,
+      {
+        action: 'user.role.update',
+        entity: 'user',
+        entityId: ctx.params.userId,
+        meta: () => ({ role: ctx.request.body?.role }),
+      },
+      async () => {
+        const { userId } = ctx.params;
+        const { role: roleName, confirmSelfRoleChange } = ctx.request.body || {};
+
+        if (!roleName || !Object.values(ROLE_NAMES).includes(roleName)) {
+          throw new ValidationError(
+            `role must be one of: ${Object.values(ROLE_NAMES).join(', ')}`
+          );
+        }
+
+        const target = await resolveByIdOrDocumentId(
+          strapi,
+          'plugin::users-permissions.user',
+          userId
+        );
+        if (!target) throw new NotFoundError('User not found');
+
+        const isSelf = String(target.id) === String(admin.id);
+        if (isSelf && roleName !== ROLE_NAMES.ADMIN && !confirmSelfRoleChange) {
+          throw new ValidationError(
+            'Changing your own admin role requires confirmSelfRoleChange: true to prevent lockout'
+          );
+        }
+
+        const role = await strapi.db.query('plugin::users-permissions.role').findOne({
+          where: { name: roleName },
+        });
+        if (!role) throw new NotFoundError(`Role ${roleName} not found`);
+
+        const updated = await strapi.db.query('plugin::users-permissions.user').update({
+          where: { id: target.id },
+          data: { role: role.id },
+          populate: { role: true },
+        });
+
+        return { data: sanitizeUser(updated) };
+      }
     );
-    if (!target) throw new NotFoundError('User not found');
-
-    const isSelf = String(target.id) === String(admin.id);
-    if (isSelf && roleName !== ROLE_NAMES.ADMIN && !confirmSelfRoleChange) {
-      throw new ValidationError(
-        'Changing your own admin role requires confirmSelfRoleChange: true to prevent lockout'
-      );
-    }
-
-    const role = await strapi.db.query('plugin::users-permissions.role').findOne({
-      where: { name: roleName },
-    });
-    if (!role) throw new NotFoundError(`Role ${roleName} not found`);
-
-    const updated = await strapi.db.query('plugin::users-permissions.user').update({
-      where: { id: target.id },
-      data: { role: role.id },
-      populate: { role: true },
-    });
-
-    return { data: sanitizeUser(updated) };
   },
 
   async adminUpdateUserStatus(ctx: Ctx) {
     const admin = await getAuthUser(ctx, strapi);
     if (!isAdmin(admin)) throw new ForbiddenError('Admin required');
 
-    const { userId } = ctx.params;
-    const { isActive } = ctx.request.body || {};
-
-    if (typeof isActive !== 'boolean') {
-      throw new ValidationError('isActive boolean is required');
-    }
-
-    const target = await resolveByIdOrDocumentId(
+    return runAuditedAction(
       strapi,
-      'plugin::users-permissions.user',
-      userId
-    );
-    if (!target) throw new NotFoundError('User not found');
-
-    if (String(target.id) === String(admin.id) && isActive === false) {
-      throw new ValidationError('Cannot deactivate your own account');
-    }
-
-    const updated = await strapi.db.query('plugin::users-permissions.user').update({
-      where: { id: target.id },
-      data: {
-        isActive,
-        blocked: !isActive,
+      ctx,
+      admin,
+      {
+        action: 'user.status.update',
+        entity: 'user',
+        entityId: ctx.params.userId,
+        meta: () => ({ isActive: ctx.request.body?.isActive }),
       },
-      populate: { role: true },
-    });
+      async () => {
+        const { userId } = ctx.params;
+        const { isActive } = ctx.request.body || {};
 
-    return { data: sanitizeUser(updated) };
+        if (typeof isActive !== 'boolean') {
+          throw new ValidationError('isActive boolean is required');
+        }
+
+        const target = await resolveByIdOrDocumentId(
+          strapi,
+          'plugin::users-permissions.user',
+          userId
+        );
+        if (!target) throw new NotFoundError('User not found');
+
+        if (String(target.id) === String(admin.id) && isActive === false) {
+          throw new ValidationError('Cannot deactivate your own account');
+        }
+
+        const updated = await strapi.db.query('plugin::users-permissions.user').update({
+          where: { id: target.id },
+          data: {
+            isActive,
+            blocked: !isActive,
+          },
+          populate: { role: true },
+        });
+
+        return { data: sanitizeUser(updated) };
+      }
+    );
   },
 
   async adminCreateUser(ctx: Ctx) {
     const admin = await getAuthUser(ctx, strapi);
     if (!isAdmin(admin)) throw new ForbiddenError('Admin required');
 
-    const body = ctx.request.body || {};
-    const { name, email, username, password, role: roleName } = body;
+    return runAuditedAction(
+      strapi,
+      ctx,
+      admin,
+      {
+        action: 'user.create',
+        entity: 'user',
+        resolveEntityId: (result: any) => result?.data?.id,
+        meta: () => ({
+          email: ctx.request.body?.email,
+          role: ctx.request.body?.role,
+        }),
+      },
+      async () => {
+        const body = ctx.request.body || {};
+        const { name, email, username, password, role: roleName } = body;
 
-    if (!name || !email || !password) {
-      throw new ValidationError('name, email, and password are required');
-    }
-    if (!roleName || !Object.values(ROLE_NAMES).includes(roleName)) {
-      throw new ValidationError(
-        `role must be one of: ${Object.values(ROLE_NAMES).join(', ')}`
-      );
-    }
-    if (String(password).length < 8) {
-      throw new ValidationError('password must be at least 8 characters');
-    }
+        if (!name || !email || !password) {
+          throw new ValidationError('name, email, and password are required');
+        }
+        if (!roleName || !Object.values(ROLE_NAMES).includes(roleName)) {
+          throw new ValidationError(
+            `role must be one of: ${Object.values(ROLE_NAMES).join(', ')}`
+          );
+        }
+        if (String(password).length < 8) {
+          throw new ValidationError('password must be at least 8 characters');
+        }
 
-    const role = await strapi.db.query('plugin::users-permissions.role').findOne({
-      where: { name: roleName },
-    });
-    if (!role) throw new NotFoundError(`Role ${roleName} not found`);
+        const role = await strapi.db.query('plugin::users-permissions.role').findOne({
+          where: { name: roleName },
+        });
+        if (!role) throw new NotFoundError(`Role ${roleName} not found`);
 
-    const existingEmail = await strapi.db.query('plugin::users-permissions.user').findOne({
-      where: { email: String(email).toLowerCase().trim() },
-    });
-    if (existingEmail) throw new ValidationError('Email already in use');
+        const existingEmail = await strapi.db.query('plugin::users-permissions.user').findOne({
+          where: { email: String(email).toLowerCase().trim() },
+        });
+        if (existingEmail) throw new ValidationError('Email already in use');
 
-    const uname =
-      (username && String(username).trim()) ||
-      String(email)
-        .split('@')[0]
-        .replace(/[^a-zA-Z0-9._-]/g, '')
-        .slice(0, 24) ||
-      `user${Date.now()}`;
+        const uname =
+          (username && String(username).trim()) ||
+          String(email)
+            .split('@')[0]
+            .replace(/[^a-zA-Z0-9._-]/g, '')
+            .slice(0, 24) ||
+          `user${Date.now()}`;
 
-    const existingUsername = await strapi.db
-      .query('plugin::users-permissions.user')
-      .findOne({ where: { username: uname } });
-    const finalUsername = existingUsername ? `${uname}${Date.now().toString().slice(-4)}` : uname;
+        const existingUsername = await strapi.db
+          .query('plugin::users-permissions.user')
+          .findOne({ where: { username: uname } });
+        const finalUsername = existingUsername ? `${uname}${Date.now().toString().slice(-4)}` : uname;
 
-    const created = await strapi.plugin('users-permissions').service('user').add({
-      username: finalUsername,
-      email: String(email).toLowerCase().trim(),
-      password: String(password),
-      name: String(name).trim(),
-      confirmed: true,
-      blocked: false,
-      isActive: true,
-      provider: 'local',
-      role: role.id,
-    });
+        const created = await strapi.plugin('users-permissions').service('user').add({
+          username: finalUsername,
+          email: String(email).toLowerCase().trim(),
+          password: String(password),
+          name: String(name).trim(),
+          confirmed: true,
+          blocked: false,
+          isActive: true,
+          provider: 'local',
+          role: role.id,
+        });
 
-    const withRole = await strapi.db.query('plugin::users-permissions.user').findOne({
-      where: { id: created.id },
-      populate: { role: true },
-    });
+        const withRole = await strapi.db.query('plugin::users-permissions.user').findOne({
+          where: { id: created.id },
+          populate: { role: true },
+        });
 
-    return { data: sanitizeUser(withRole) };
+        return { data: sanitizeUser(withRole) };
+      }
+    );
   },
 
   async adminDeleteUser(ctx: Ctx) {
     const admin = await getAuthUser(ctx, strapi);
     if (!isAdmin(admin)) throw new ForbiddenError('Admin required');
 
-    const { userId } = ctx.params;
-    const target = await resolveByIdOrDocumentId(
+    return runAuditedAction(
       strapi,
-      'plugin::users-permissions.user',
-      userId
+      ctx,
+      admin,
+      {
+        action: 'user.delete',
+        entity: 'user',
+        entityId: ctx.params.userId,
+      },
+      async () => {
+        const { userId } = ctx.params;
+        const target = await resolveByIdOrDocumentId(
+          strapi,
+          'plugin::users-permissions.user',
+          userId
+        );
+        if (!target) throw new NotFoundError('User not found');
+
+        if (String(target.id) === String(admin.id)) {
+          throw new ValidationError('Cannot delete your own account');
+        }
+
+        const attempts = await strapi.db.query('api::quiz-attempt.quiz-attempt').findMany({
+          where: { student: target.id },
+          select: ['id'],
+        });
+        for (const attempt of attempts) {
+          await strapi.db.query('api::quiz-answer.quiz-answer').deleteMany({
+            where: { attempt: attempt.id },
+          });
+        }
+        await strapi.db.query('api::quiz-attempt.quiz-attempt').deleteMany({
+          where: { student: target.id },
+        });
+        await strapi.db.query('api::lesson-progress.lesson-progress').deleteMany({
+          where: { student: target.id },
+        });
+        await strapi.db.query('api::certificate.certificate').deleteMany({
+          where: { student: target.id },
+        });
+        await strapi.db.query('api::enrollment.enrollment').deleteMany({
+          where: { student: target.id },
+        });
+
+        await strapi.db.query('plugin::users-permissions.user').delete({
+          where: { id: target.id },
+        });
+
+        return { data: { id: target.id, deleted: true } };
+      }
     );
-    if (!target) throw new NotFoundError('User not found');
-
-    if (String(target.id) === String(admin.id)) {
-      throw new ValidationError('Cannot delete your own account');
-    }
-
-    // Clean related LMS data before removing the user
-    const attempts = await strapi.db.query('api::quiz-attempt.quiz-attempt').findMany({
-      where: { student: target.id },
-      select: ['id'],
-    });
-    for (const attempt of attempts) {
-      await strapi.db.query('api::quiz-answer.quiz-answer').deleteMany({
-        where: { attempt: attempt.id },
-      });
-    }
-    await strapi.db.query('api::quiz-attempt.quiz-attempt').deleteMany({
-      where: { student: target.id },
-    });
-    await strapi.db.query('api::lesson-progress.lesson-progress').deleteMany({
-      where: { student: target.id },
-    });
-    await strapi.db.query('api::certificate.certificate').deleteMany({
-      where: { student: target.id },
-    });
-    await strapi.db.query('api::enrollment.enrollment').deleteMany({
-      where: { student: target.id },
-    });
-
-    await strapi.db.query('plugin::users-permissions.user').delete({
-      where: { id: target.id },
-    });
-
-    return { data: { id: target.id, deleted: true } };
   },
 
   async myCertificates(ctx: Ctx) {
@@ -1952,33 +2006,45 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     if (!isAdmin(user) && !isContentManager(user)) {
       throw new ForbiddenError('Content Manager or Admin required');
     }
-    const body = ctx.request.body || {};
-    const title = String(body.title || '').trim();
-    const imageUrl = body.imageUrl ? String(body.imageUrl).trim() : '';
-    if (!title && !imageUrl) {
-      throw new ValidationError('Add a banner image or a title');
-    }
-    const created = await strapi.db.query('api::banner.banner').create({
-      data: {
-        title: title || 'Banner',
-        subtitle: body.subtitle || null,
-        eyebrow: body.eyebrow || null,
-        personRole: body.personRole || null,
-        ctaLabel: body.ctaLabel || null,
-        linkUrl: body.linkUrl || null,
-        imageUrl: body.imageUrl || null,
-        placement: body.placement || 'BOTH',
-        style: normalizeBannerStyle(body.style),
-        showTitle: body.showTitle !== false,
-        showSubtitle: body.showSubtitle !== false,
-        showCta: body.showCta === true,
-        showBrowseCourses: body.showBrowseCourses === true,
-        showAuthButton: body.showAuthButton === true,
-        isActive: body.isActive !== false,
-        sortOrder: Number(body.sortOrder || 0),
+    return runAuditedAction(
+      strapi,
+      ctx,
+      user,
+      {
+        action: 'banner.create',
+        entity: 'banner',
+        resolveEntityId: (result: any) => result?.data?.id,
       },
-    });
-    return { data: sanitizeBanner(created) };
+      async () => {
+        const body = ctx.request.body || {};
+        const title = String(body.title || '').trim();
+        const imageUrl = body.imageUrl ? String(body.imageUrl).trim() : '';
+        if (!title && !imageUrl) {
+          throw new ValidationError('Add a banner image or a title');
+        }
+        const created = await strapi.db.query('api::banner.banner').create({
+          data: {
+            title: title || 'Banner',
+            subtitle: body.subtitle || null,
+            eyebrow: body.eyebrow || null,
+            personRole: body.personRole || null,
+            ctaLabel: body.ctaLabel || null,
+            linkUrl: body.linkUrl || null,
+            imageUrl: body.imageUrl || null,
+            placement: body.placement || 'BOTH',
+            style: normalizeBannerStyle(body.style),
+            showTitle: body.showTitle !== false,
+            showSubtitle: body.showSubtitle !== false,
+            showCta: body.showCta === true,
+            showBrowseCourses: body.showBrowseCourses === true,
+            showAuthButton: body.showAuthButton === true,
+            isActive: body.isActive !== false,
+            sortOrder: Number(body.sortOrder || 0),
+          },
+        });
+        return { data: sanitizeBanner(created) };
+      }
+    );
   },
 
   async adminUpdateBanner(ctx: Ctx) {
@@ -1986,42 +2052,54 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     if (!isAdmin(user) && !isContentManager(user)) {
       throw new ForbiddenError('Content Manager or Admin required');
     }
-    const target = await resolveByIdOrDocumentId(
+    return runAuditedAction(
       strapi,
-      'api::banner.banner',
-      ctx.params.id
-    );
-    if (!target) throw new NotFoundError('Banner not found');
-    const body = ctx.request.body || {};
-    const data: any = {};
-    for (const key of [
-      'title',
-      'subtitle',
-      'eyebrow',
-      'personRole',
-      'ctaLabel',
-      'linkUrl',
-      'imageUrl',
-      'placement',
-      'style',
-      'showTitle',
-      'showSubtitle',
-      'showCta',
-      'showBrowseCourses',
-      'showAuthButton',
-      'isActive',
-      'sortOrder',
-    ]) {
-      if (body[key] !== undefined) {
-        data[key] =
-          key === 'style' ? normalizeBannerStyle(body[key]) : body[key];
+      ctx,
+      user,
+      {
+        action: 'banner.update',
+        entity: 'banner',
+        entityId: ctx.params.id,
+      },
+      async () => {
+        const target = await resolveByIdOrDocumentId(
+          strapi,
+          'api::banner.banner',
+          ctx.params.id
+        );
+        if (!target) throw new NotFoundError('Banner not found');
+        const body = ctx.request.body || {};
+        const data: any = {};
+        for (const key of [
+          'title',
+          'subtitle',
+          'eyebrow',
+          'personRole',
+          'ctaLabel',
+          'linkUrl',
+          'imageUrl',
+          'placement',
+          'style',
+          'showTitle',
+          'showSubtitle',
+          'showCta',
+          'showBrowseCourses',
+          'showAuthButton',
+          'isActive',
+          'sortOrder',
+        ]) {
+          if (body[key] !== undefined) {
+            data[key] =
+              key === 'style' ? normalizeBannerStyle(body[key]) : body[key];
+          }
+        }
+        const updated = await strapi.db.query('api::banner.banner').update({
+          where: { id: target.id },
+          data,
+        });
+        return { data: sanitizeBanner(updated) };
       }
-    }
-    const updated = await strapi.db.query('api::banner.banner').update({
-      where: { id: target.id },
-      data,
-    });
-    return { data: sanitizeBanner(updated) };
+    );
   },
 
   async adminDeleteBanner(ctx: Ctx) {
@@ -2029,14 +2107,26 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     if (!isAdmin(user) && !isContentManager(user)) {
       throw new ForbiddenError('Content Manager or Admin required');
     }
-    const target = await resolveByIdOrDocumentId(
+    return runAuditedAction(
       strapi,
-      'api::banner.banner',
-      ctx.params.id
+      ctx,
+      user,
+      {
+        action: 'banner.delete',
+        entity: 'banner',
+        entityId: ctx.params.id,
+      },
+      async () => {
+        const target = await resolveByIdOrDocumentId(
+          strapi,
+          'api::banner.banner',
+          ctx.params.id
+        );
+        if (!target) throw new NotFoundError('Banner not found');
+        await strapi.db.query('api::banner.banner').delete({ where: { id: target.id } });
+        return { data: { id: target.id, deleted: true } };
+      }
     );
-    if (!target) throw new NotFoundError('Banner not found');
-    await strapi.db.query('api::banner.banner').delete({ where: { id: target.id } });
-    return { data: { id: target.id, deleted: true } };
   },
 
   async adminListCoupons(ctx: Ctx) {
@@ -2051,72 +2141,109 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   async adminCreateCoupon(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
     if (!isAdmin(user)) throw new ForbiddenError('Admin required');
-    const body = ctx.request.body || {};
-    if (!body.code) throw new ValidationError('code is required');
-    if (body.discountValue === undefined || body.discountValue === null) {
-      throw new ValidationError('discountValue is required');
-    }
-    const code = String(body.code).trim().toUpperCase();
-    const existing = await strapi.db.query('api::coupon.coupon').findOne({ where: { code } });
-    if (existing) throw new ValidationError('Coupon code already exists');
-
-    const created = await strapi.db.query('api::coupon.coupon').create({
-      data: {
-        code,
-        description: body.description || null,
-        discountType: body.discountType === 'FIXED' ? 'FIXED' : 'PERCENT',
-        discountValue: Number(body.discountValue),
-        isActive: body.isActive !== false,
-        maxUses: body.maxUses != null ? Number(body.maxUses) : null,
-        usedCount: 0,
-        expiresAt: body.expiresAt || null,
-        minAmount: Number(body.minAmount || 0),
+    return runAuditedAction(
+      strapi,
+      ctx,
+      user,
+      {
+        action: 'coupon.create',
+        entity: 'coupon',
+        resolveEntityId: (result: any) => result?.data?.id,
+        meta: () => ({ code: ctx.request.body?.code }),
       },
-    });
-    return { data: sanitizeCoupon(created) };
+      async () => {
+        const body = ctx.request.body || {};
+        if (!body.code) throw new ValidationError('code is required');
+        if (body.discountValue === undefined || body.discountValue === null) {
+          throw new ValidationError('discountValue is required');
+        }
+        const code = String(body.code).trim().toUpperCase();
+        const existing = await strapi.db.query('api::coupon.coupon').findOne({ where: { code } });
+        if (existing) throw new ValidationError('Coupon code already exists');
+
+        const created = await strapi.db.query('api::coupon.coupon').create({
+          data: {
+            code,
+            description: body.description || null,
+            discountType: body.discountType === 'FIXED' ? 'FIXED' : 'PERCENT',
+            discountValue: Number(body.discountValue),
+            isActive: body.isActive !== false,
+            maxUses: body.maxUses != null ? Number(body.maxUses) : null,
+            usedCount: 0,
+            expiresAt: body.expiresAt || null,
+            minAmount: Number(body.minAmount || 0),
+          },
+        });
+        return { data: sanitizeCoupon(created) };
+      }
+    );
   },
 
   async adminUpdateCoupon(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
     if (!isAdmin(user)) throw new ForbiddenError('Admin required');
-    const target = await resolveByIdOrDocumentId(
+    return runAuditedAction(
       strapi,
-      'api::coupon.coupon',
-      ctx.params.id
+      ctx,
+      user,
+      {
+        action: 'coupon.update',
+        entity: 'coupon',
+        entityId: ctx.params.id,
+      },
+      async () => {
+        const target = await resolveByIdOrDocumentId(
+          strapi,
+          'api::coupon.coupon',
+          ctx.params.id
+        );
+        if (!target) throw new NotFoundError('Coupon not found');
+        const body = ctx.request.body || {};
+        const data: any = {};
+        if (body.code !== undefined) data.code = String(body.code).trim().toUpperCase();
+        for (const key of [
+          'description',
+          'discountType',
+          'discountValue',
+          'isActive',
+          'maxUses',
+          'expiresAt',
+          'minAmount',
+        ]) {
+          if (body[key] !== undefined) data[key] = body[key];
+        }
+        const updated = await strapi.db.query('api::coupon.coupon').update({
+          where: { id: target.id },
+          data,
+        });
+        return { data: sanitizeCoupon(updated) };
+      }
     );
-    if (!target) throw new NotFoundError('Coupon not found');
-    const body = ctx.request.body || {};
-    const data: any = {};
-    if (body.code !== undefined) data.code = String(body.code).trim().toUpperCase();
-    for (const key of [
-      'description',
-      'discountType',
-      'discountValue',
-      'isActive',
-      'maxUses',
-      'expiresAt',
-      'minAmount',
-    ]) {
-      if (body[key] !== undefined) data[key] = body[key];
-    }
-    const updated = await strapi.db.query('api::coupon.coupon').update({
-      where: { id: target.id },
-      data,
-    });
-    return { data: sanitizeCoupon(updated) };
   },
 
   async adminDeleteCoupon(ctx: Ctx) {
     const user = await getAuthUser(ctx, strapi);
     if (!isAdmin(user)) throw new ForbiddenError('Admin required');
-    const target = await resolveByIdOrDocumentId(
+    return runAuditedAction(
       strapi,
-      'api::coupon.coupon',
-      ctx.params.id
+      ctx,
+      user,
+      {
+        action: 'coupon.delete',
+        entity: 'coupon',
+        entityId: ctx.params.id,
+      },
+      async () => {
+        const target = await resolveByIdOrDocumentId(
+          strapi,
+          'api::coupon.coupon',
+          ctx.params.id
+        );
+        if (!target) throw new NotFoundError('Coupon not found');
+        await strapi.db.query('api::coupon.coupon').delete({ where: { id: target.id } });
+        return { data: { id: target.id, deleted: true } };
+      }
     );
-    if (!target) throw new NotFoundError('Coupon not found');
-    await strapi.db.query('api::coupon.coupon').delete({ where: { id: target.id } });
-    return { data: { id: target.id, deleted: true } };
   },
 
   async validateCoupon(ctx: Ctx) {
@@ -2520,22 +2647,35 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     if (!isAdmin(user) && !isContentManager(user)) {
       throw new ForbiddenError('Content Manager or Admin required');
     }
-    const body = ctx.request.body || {};
-    if (!body.name) throw new ValidationError('name is required');
-    const slug = await ensureUniqueSlug(
+    return runAuditedAction(
       strapi,
-      'api::course-category.course-category',
-      body.name
-    );
-    const created = await strapi.db.query('api::course-category.course-category').create({
-      data: {
-        name: String(body.name).trim(),
-        slug,
-        description: body.description || null,
-        isActive: body.isActive !== false,
+      ctx,
+      user,
+      {
+        action: 'category.create',
+        entity: 'course-category',
+        resolveEntityId: (result: any) => result?.data?.id,
+        meta: () => ({ name: ctx.request.body?.name }),
       },
-    });
-    return { data: sanitizeCategory(created) };
+      async () => {
+        const body = ctx.request.body || {};
+        if (!body.name) throw new ValidationError('name is required');
+        const slug = await ensureUniqueSlug(
+          strapi,
+          'api::course-category.course-category',
+          body.name
+        );
+        const created = await strapi.db.query('api::course-category.course-category').create({
+          data: {
+            name: String(body.name).trim(),
+            slug,
+            description: body.description || null,
+            isActive: body.isActive !== false,
+          },
+        });
+        return { data: sanitizeCategory(created) };
+      }
+    );
   },
 
   async adminUpdateCategory(ctx: Ctx) {
@@ -2543,30 +2683,42 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     if (!isAdmin(user) && !isContentManager(user)) {
       throw new ForbiddenError('Content Manager or Admin required');
     }
-    const target = await resolveByIdOrDocumentId(
+    return runAuditedAction(
       strapi,
-      'api::course-category.course-category',
-      ctx.params.id
+      ctx,
+      user,
+      {
+        action: 'category.update',
+        entity: 'course-category',
+        entityId: ctx.params.id,
+      },
+      async () => {
+        const target = await resolveByIdOrDocumentId(
+          strapi,
+          'api::course-category.course-category',
+          ctx.params.id
+        );
+        if (!target) throw new NotFoundError('Category not found');
+        const body = ctx.request.body || {};
+        const data: any = {};
+        if (body.name !== undefined) {
+          data.name = body.name;
+          data.slug = await ensureUniqueSlug(
+            strapi,
+            'api::course-category.course-category',
+            body.name,
+            target.id
+          );
+        }
+        if (body.description !== undefined) data.description = body.description;
+        if (body.isActive !== undefined) data.isActive = body.isActive;
+        const updated = await strapi.db.query('api::course-category.course-category').update({
+          where: { id: target.id },
+          data,
+        });
+        return { data: sanitizeCategory(updated) };
+      }
     );
-    if (!target) throw new NotFoundError('Category not found');
-    const body = ctx.request.body || {};
-    const data: any = {};
-    if (body.name !== undefined) {
-      data.name = body.name;
-      data.slug = await ensureUniqueSlug(
-        strapi,
-        'api::course-category.course-category',
-        body.name,
-        target.id
-      );
-    }
-    if (body.description !== undefined) data.description = body.description;
-    if (body.isActive !== undefined) data.isActive = body.isActive;
-    const updated = await strapi.db.query('api::course-category.course-category').update({
-      where: { id: target.id },
-      data,
-    });
-    return { data: sanitizeCategory(updated) };
   },
 
   async adminDeleteCategory(ctx: Ctx) {
@@ -2574,20 +2726,32 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     if (!isAdmin(user) && !isContentManager(user)) {
       throw new ForbiddenError('Content Manager or Admin required');
     }
-    const target = await resolveByIdOrDocumentId(
+    return runAuditedAction(
       strapi,
-      'api::course-category.course-category',
-      ctx.params.id
+      ctx,
+      user,
+      {
+        action: 'category.delete',
+        entity: 'course-category',
+        entityId: ctx.params.id,
+      },
+      async () => {
+        const target = await resolveByIdOrDocumentId(
+          strapi,
+          'api::course-category.course-category',
+          ctx.params.id
+        );
+        if (!target) throw new NotFoundError('Category not found');
+        await strapi.db.query('api::course.course').updateMany({
+          where: { category: target.id },
+          data: { category: null },
+        });
+        await strapi.db.query('api::course-category.course-category').delete({
+          where: { id: target.id },
+        });
+        return { data: { id: target.id, deleted: true } };
+      }
     );
-    if (!target) throw new NotFoundError('Category not found');
-    await strapi.db.query('api::course.course').updateMany({
-      where: { category: target.id },
-      data: { category: null },
-    });
-    await strapi.db.query('api::course-category.course-category').delete({
-      where: { id: target.id },
-    });
-    return { data: { id: target.id, deleted: true } };
   },
 
   async listCourseModules(ctx: Ctx) {

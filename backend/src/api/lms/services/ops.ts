@@ -3,6 +3,7 @@ import type { Core } from '@strapi/strapi';
 import { getAuthUser } from '../../../utils/auth';
 import { isAdmin, isContentManager, ROLE_NAMES } from '../../../utils/roles';
 import { sanitizeUser } from '../../../utils/sanitize';
+import { runAuditedAction } from '../../../utils/audit-log';
 
 const { ForbiddenError, NotFoundError, ValidationError } = errors;
 
@@ -29,29 +30,6 @@ async function requireStaff(ctx: Ctx, strapi: Core.Strapi) {
     throw new ForbiddenError('Staff required');
   }
   return user;
-}
-
-async function audit(
-  strapi: Core.Strapi,
-  user: any,
-  action: string,
-  entity?: string,
-  entityId?: string | number,
-  meta?: any
-) {
-  try {
-    await strapi.db.query('api::audit-log.audit-log').create({
-      data: {
-        action,
-        entity: entity || null,
-        entityId: entityId != null ? String(entityId) : null,
-        meta: meta || null,
-        user: user?.id || null,
-      },
-    });
-  } catch {
-    // non-blocking
-  }
 }
 
 function code(prefix: string) {
@@ -105,42 +83,65 @@ export function createOpsHandlers(strapi: Core.Strapi) {
 
     async adminForceEnroll(ctx: Ctx) {
       const admin = await requireAdmin(ctx, strapi);
-      const { studentId, courseId } = ctx.request.body || {};
-      if (!studentId || !courseId) {
-        throw new ValidationError('studentId and courseId are required');
-      }
-      const student = await resolve(strapi, 'plugin::users-permissions.user', String(studentId));
-      const course = await resolve(strapi, 'api::course.course', String(courseId));
-      if (!student || !course) throw new NotFoundError('Student or course not found');
-      const existing = await strapi.db.query('api::enrollment.enrollment').findOne({
-        where: { student: student.id, course: course.id },
-      });
-      if (existing) throw new ValidationError('Already enrolled');
-      const enrollment = await strapi.db.query('api::enrollment.enrollment').create({
-        data: {
-          student: student.id,
-          course: course.id,
-          enrolledAt: new Date().toISOString(),
-          isFreeEnrollment: true,
-          originalPrice: 0,
-          amountPaid: 0,
+      return runAuditedAction(
+        strapi,
+        ctx,
+        admin,
+        {
+          action: 'enrollment.force',
+          entity: 'enrollment',
+          resolveEntityId: (result: any) => result?.data?.id,
+          meta: () => ({
+            studentId: ctx.request.body?.studentId,
+            courseId: ctx.request.body?.courseId,
+          }),
         },
-        populate: { student: true, course: true },
-      });
-      await audit(strapi, admin, 'enrollment.force', 'enrollment', enrollment.id, {
-        studentId: student.id,
-        courseId: course.id,
-      });
-      return { data: enrollment };
+        async () => {
+          const { studentId, courseId } = ctx.request.body || {};
+          if (!studentId || !courseId) {
+            throw new ValidationError('studentId and courseId are required');
+          }
+          const student = await resolve(strapi, 'plugin::users-permissions.user', String(studentId));
+          const course = await resolve(strapi, 'api::course.course', String(courseId));
+          if (!student || !course) throw new NotFoundError('Student or course not found');
+          const existing = await strapi.db.query('api::enrollment.enrollment').findOne({
+            where: { student: student.id, course: course.id },
+          });
+          if (existing) throw new ValidationError('Already enrolled');
+          const enrollment = await strapi.db.query('api::enrollment.enrollment').create({
+            data: {
+              student: student.id,
+              course: course.id,
+              enrolledAt: new Date().toISOString(),
+              isFreeEnrollment: true,
+              originalPrice: 0,
+              amountPaid: 0,
+            },
+            populate: { student: true, course: true },
+          });
+          return { data: enrollment };
+        }
+      );
     },
 
     async adminRemoveEnrollment(ctx: Ctx) {
       const admin = await requireAdmin(ctx, strapi);
-      const target = await resolve(strapi, 'api::enrollment.enrollment', ctx.params.id);
-      if (!target) throw new NotFoundError('Enrollment not found');
-      await strapi.db.query('api::enrollment.enrollment').delete({ where: { id: target.id } });
-      await audit(strapi, admin, 'enrollment.remove', 'enrollment', target.id);
-      return { data: { id: target.id, deleted: true } };
+      return runAuditedAction(
+        strapi,
+        ctx,
+        admin,
+        {
+          action: 'enrollment.remove',
+          entity: 'enrollment',
+          entityId: ctx.params.id,
+        },
+        async () => {
+          const target = await resolve(strapi, 'api::enrollment.enrollment', ctx.params.id);
+          if (!target) throw new NotFoundError('Enrollment not found');
+          await strapi.db.query('api::enrollment.enrollment').delete({ where: { id: target.id } });
+          return { data: { id: target.id, deleted: true } };
+        }
+      );
     },
 
     async adminCrudList(ctx: Ctx) {
@@ -167,16 +168,27 @@ export function createOpsHandlers(strapi: Core.Strapi) {
       const uid = String(ctx.params.uid || '');
       const allowed = UID_MAP[uid];
       if (!allowed) throw new ValidationError('Unknown resource');
-      const body = ctx.request.body || {};
-      const data = allowed.prepareCreate
-        ? await Promise.resolve(allowed.prepareCreate(body, admin, strapi))
-        : body;
-      const created = await strapi.db.query(allowed.uid).create({
-        data,
-        populate: allowed.populate || true,
-      });
-      await audit(strapi, admin, `${uid}.create`, uid, created.id);
-      return { data: created };
+      return runAuditedAction(
+        strapi,
+        ctx,
+        admin,
+        {
+          action: `${uid}.create`,
+          entity: uid,
+          resolveEntityId: (result: any) => result?.data?.id,
+        },
+        async () => {
+          const body = ctx.request.body || {};
+          const data = allowed.prepareCreate
+            ? await Promise.resolve(allowed.prepareCreate(body, admin, strapi))
+            : body;
+          const created = await strapi.db.query(allowed.uid).create({
+            data,
+            populate: allowed.populate || true,
+          });
+          return { data: created };
+        }
+      );
     },
 
     async adminCrudUpdate(ctx: Ctx) {
@@ -184,19 +196,30 @@ export function createOpsHandlers(strapi: Core.Strapi) {
       const uid = String(ctx.params.uid || '');
       const allowed = UID_MAP[uid];
       if (!allowed) throw new ValidationError('Unknown resource');
-      const target = await resolve(strapi, allowed.uid, ctx.params.id);
-      if (!target) throw new NotFoundError('Not found');
-      const body = ctx.request.body || {};
-      const data = allowed.prepareUpdate
-        ? await Promise.resolve(allowed.prepareUpdate(body, admin, strapi))
-        : body;
-      const updated = await strapi.db.query(allowed.uid).update({
-        where: { id: target.id },
-        data,
-        populate: allowed.populate || true,
-      });
-      await audit(strapi, admin, `${uid}.update`, uid, target.id);
-      return { data: updated };
+      return runAuditedAction(
+        strapi,
+        ctx,
+        admin,
+        {
+          action: `${uid}.update`,
+          entity: uid,
+          entityId: ctx.params.id,
+        },
+        async () => {
+          const target = await resolve(strapi, allowed.uid, ctx.params.id);
+          if (!target) throw new NotFoundError('Not found');
+          const body = ctx.request.body || {};
+          const data = allowed.prepareUpdate
+            ? await Promise.resolve(allowed.prepareUpdate(body, admin, strapi))
+            : body;
+          const updated = await strapi.db.query(allowed.uid).update({
+            where: { id: target.id },
+            data,
+            populate: allowed.populate || true,
+          });
+          return { data: updated };
+        }
+      );
     },
 
     async adminCrudDelete(ctx: Ctx) {
@@ -204,66 +227,100 @@ export function createOpsHandlers(strapi: Core.Strapi) {
       const uid = String(ctx.params.uid || '');
       const allowed = UID_MAP[uid];
       if (!allowed) throw new ValidationError('Unknown resource');
-      const target = await resolve(strapi, allowed.uid, ctx.params.id);
-      if (!target) throw new NotFoundError('Not found');
-      await strapi.db.query(allowed.uid).delete({ where: { id: target.id } });
-      await audit(strapi, admin, `${uid}.delete`, uid, target.id);
-      return { data: { id: target.id, deleted: true } };
+      return runAuditedAction(
+        strapi,
+        ctx,
+        admin,
+        {
+          action: `${uid}.delete`,
+          entity: uid,
+          entityId: ctx.params.id,
+        },
+        async () => {
+          const target = await resolve(strapi, allowed.uid, ctx.params.id);
+          if (!target) throw new NotFoundError('Not found');
+          await strapi.db.query(allowed.uid).delete({ where: { id: target.id } });
+          return { data: { id: target.id, deleted: true } };
+        }
+      );
     },
 
     async adminStockAdjust(ctx: Ctx) {
       const admin = await requireAdmin(ctx, strapi);
-      const { itemId, quantity, type, reason } = ctx.request.body || {};
-      if (!itemId || quantity == null || !type) {
-        throw new ValidationError('itemId, quantity, type required');
-      }
-      const item = await resolve(strapi, 'api::inventory-item.inventory-item', String(itemId));
-      if (!item) throw new NotFoundError('Item not found');
-      const prev = Number(item.quantity || 0);
-      const qty = Number(quantity);
-      let next = prev;
-      if (type === 'IN') next = prev + qty;
-      else if (type === 'OUT') next = prev - qty;
-      else if (type === 'ADJUSTMENT') next = qty;
-      else throw new ValidationError('Invalid movement type');
-      if (next < 0) throw new ValidationError('Stock cannot be negative');
-      let status = 'IN_STOCK';
-      if (next === 0) status = 'OUT_OF_STOCK';
-      else if (next <= Number(item.reorderLevel || item.minStock || 0)) status = 'LOW_STOCK';
-      const updated = await strapi.db.query('api::inventory-item.inventory-item').update({
-        where: { id: item.id },
-        data: { quantity: next, status },
-      });
-      await strapi.db.query('api::stock-movement.stock-movement').create({
-        data: {
-          type,
-          quantity: qty,
-          previousQuantity: prev,
-          newQuantity: next,
-          reason: reason || null,
-          item: item.id,
-          warehouse: item.warehouse || null,
-          createdByUser: admin.id,
+      return runAuditedAction(
+        strapi,
+        ctx,
+        admin,
+        {
+          action: 'inventory.stock',
+          entity: 'inventory-item',
+          resolveEntityId: (result: any) => result?.data?.id,
+          meta: () => ({
+            itemId: ctx.request.body?.itemId,
+            type: ctx.request.body?.type,
+            quantity: ctx.request.body?.quantity,
+          }),
         },
-      });
-      await audit(strapi, admin, 'inventory.stock', 'inventory-item', item.id, {
-        type,
-        prev,
-        next,
-      });
-      return { data: updated };
+        async () => {
+          const { itemId, quantity, type, reason } = ctx.request.body || {};
+          if (!itemId || quantity == null || !type) {
+            throw new ValidationError('itemId, quantity, type required');
+          }
+          const item = await resolve(strapi, 'api::inventory-item.inventory-item', String(itemId));
+          if (!item) throw new NotFoundError('Item not found');
+          const prev = Number(item.quantity || 0);
+          const qty = Number(quantity);
+          let next = prev;
+          if (type === 'IN') next = prev + qty;
+          else if (type === 'OUT') next = prev - qty;
+          else if (type === 'ADJUSTMENT') next = qty;
+          else throw new ValidationError('Invalid movement type');
+          if (next < 0) throw new ValidationError('Stock cannot be negative');
+          let status = 'IN_STOCK';
+          if (next === 0) status = 'OUT_OF_STOCK';
+          else if (next <= Number(item.reorderLevel || item.minStock || 0)) status = 'LOW_STOCK';
+          const updated = await strapi.db.query('api::inventory-item.inventory-item').update({
+            where: { id: item.id },
+            data: { quantity: next, status },
+          });
+          await strapi.db.query('api::stock-movement.stock-movement').create({
+            data: {
+              type,
+              quantity: qty,
+              previousQuantity: prev,
+              newQuantity: next,
+              reason: reason || null,
+              item: item.id,
+              warehouse: item.warehouse || null,
+              createdByUser: admin.id,
+            },
+          });
+          return { data: updated };
+        }
+      );
     },
 
     async adminRevokeCertificate(ctx: Ctx) {
       const admin = await requireAdmin(ctx, strapi);
-      const cert = await resolve(strapi, 'api::certificate.certificate', ctx.params.id);
-      if (!cert) throw new NotFoundError('Certificate not found');
-      const updated = await strapi.db.query('api::certificate.certificate').update({
-        where: { id: cert.id },
-        data: { status: 'REVOKED' },
-      });
-      await audit(strapi, admin, 'certificate.revoke', 'certificate', cert.id);
-      return { data: updated };
+      return runAuditedAction(
+        strapi,
+        ctx,
+        admin,
+        {
+          action: 'certificate.revoke',
+          entity: 'certificate',
+          entityId: ctx.params.id,
+        },
+        async () => {
+          const cert = await resolve(strapi, 'api::certificate.certificate', ctx.params.id);
+          if (!cert) throw new NotFoundError('Certificate not found');
+          const updated = await strapi.db.query('api::certificate.certificate').update({
+            where: { id: cert.id },
+            data: { status: 'REVOKED' },
+          });
+          return { data: updated };
+        }
+      );
     },
 
     async verifyCertificate(ctx: Ctx) {
@@ -561,24 +618,35 @@ export function createOpsHandlers(strapi: Core.Strapi) {
 
     async adminSaveSettings(ctx: Ctx) {
       const admin = await requireAdmin(ctx, strapi);
-      const body = ctx.request.body || {};
-      for (const [key, value] of Object.entries(body)) {
-        const existing = await strapi.db.query('api::setting.setting').findOne({
-          where: { key },
-        });
-        if (existing) {
-          await strapi.db.query('api::setting.setting').update({
-            where: { id: existing.id },
-            data: { value },
-          });
-        } else {
-          await strapi.db.query('api::setting.setting').create({
-            data: { key, value, group: 'general' },
-          });
+      return runAuditedAction(
+        strapi,
+        ctx,
+        admin,
+        {
+          action: 'settings.update',
+          entity: 'setting',
+          entityId: 'general',
+        },
+        async () => {
+          const body = ctx.request.body || {};
+          for (const [key, value] of Object.entries(body)) {
+            const existing = await strapi.db.query('api::setting.setting').findOne({
+              where: { key },
+            });
+            if (existing) {
+              await strapi.db.query('api::setting.setting').update({
+                where: { id: existing.id },
+                data: { value },
+              });
+            } else {
+              await strapi.db.query('api::setting.setting').create({
+                data: { key, value, group: 'general' },
+              });
+            }
+          }
+          return { data: { ok: true } };
         }
-      }
-      await audit(strapi, admin, 'settings.update', 'setting', 'general');
-      return { data: { ok: true } };
+      );
     },
   };
 }

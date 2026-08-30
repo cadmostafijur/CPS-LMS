@@ -1,6 +1,7 @@
 import type { Core } from '@strapi/strapi';
 import { ROLE_NAMES } from '../utils/roles';
 import { slugify } from '../utils/slug';
+import { writeAuditLog } from '../utils/audit-log';
 
 type RoleMap = Record<string, { id: number }>;
 
@@ -1020,6 +1021,19 @@ export async function seedDemoData(strapi: Core.Strapi, roleMap: RoleMap) {
   }
 
   const finalCourseCount = await strapi.db.query('api::course.course').count();
+
+  const auditCount = await strapi.db.query('api::audit-log.audit-log').count();
+  if (auditCount === 0) {
+    await writeAuditLog(strapi, {
+      user: admin,
+      action: 'system.bootstrap',
+      entity: 'system',
+      entityId: 'seed',
+      meta: { message: 'Demo audit trail initialized', courses: finalCourseCount },
+      success: true,
+    });
+  }
+
   strapi.log.info(
     `[LMS] Seed ensure complete. Courses=${finalCourseCount}. Admin: ${adminEmail}. Student: student@lms-demo.com / ${DEMO_PASSWORD_STUDENT}`
   );
